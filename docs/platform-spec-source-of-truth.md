@@ -34,8 +34,9 @@ TanStack Start v1 (React 19 + Vite 7), SSR, Cloudflare Workers (pure JS + fetch,
 Current tabs: **Dashboard, Contacts, Conversations, Feedback, Automations, Upload Customers, Settings**.
 
 **Settings tab must hold these per-client configurable values:**
-- Timezone (drives all SMS send windows).
-- Send window (default **09:00–19:00**, client timezone) — applies to ALL SMS automation.
+- Timezone (drives all SMS windows).
+- **SMS Send window** (default **09:00–19:00**, client timezone) — applies to MARKETING/FOLLOW-UP SMS only (review drip, one-year drip, reactivation). Purpose: don't annoy past customers.
+- **Business Hours** (separate per-client window) — applies to the LEAD-FORM drip only (§7). Purpose: decide whether a fresh web lead gets the live in-hours response or the after-hours message. Independent from the SMS Send window. [BUILD — new field]
 - **Daily SMS send cap** (customizable per client) — max messages dispatched/day.
 - **Daily enrollment cap** (customizable per client, **default 50**) — max NEW contacts entering the review drip/day; overflow waits to next day. *(Distinct from send cap.)*
 - Existing: business identity, review config (place ID, link, gate mode, threshold), template_vars, Twilio config, sending subdomain.
@@ -53,8 +54,9 @@ Current tabs: **Dashboard, Contacts, Conversations, Feedback, Automations, Uploa
 ## 4. FEATURE — Review Request SMS Drip [LOCKED copy / BUILD click-tracking]
 
 ### Enrollment
-- Source: the client enrolls a customer via the **mobile app "Review Request" tab** (first name, last name, phone, email). Also enrolls them into the Customer Review Request Email Drip simultaneously (two enrollments). [email drip = TBD §7]
+- Source: the client enrolls a customer via the **mobile app "Review Request" tab** (first name, last name, phone, email). Enrolls into the Review Request SMS Drip ONLY (email drip scrapped — see §7c). One enrollment.
 - Subject to the **daily enrollment cap** (default 50/day, overflow queues to next day).
+- **Re-enrollment guard [LOCKED]:** a contact already enrolled in the review automation (by client_id + phone) cannot be re-enrolled — block with "contact already enrolled." Applies to both the form and the §7 auto-enroll button.
 
 ### Link tracking [BUILD — does not exist yet, skill must construct]
 - The review link in every SMS is a **per-contact tracked redirect**, NOT the raw Google URL.
@@ -146,13 +148,64 @@ Note: the "they replied" interest notification (copy above) fires on a reply aft
 New keys (set per-client in `/admin-view` Settings, added to template_vars contract): `discount__on_referral`, `company_website_link`. Plus existing `company_owner_first_name`, `company_name`. Dynamic (not template_vars): `message.body`.
 
 ## 6. `/opt-in-forms` — forms → automations map [LOCKED]
-- **Mobile app "Review Request" tab form** (first_name, last_name, phone, email) → enrolls into Review Request SMS Drip (§4) AND Customer Review Request Email Drip (§7), subject to the daily enrollment cap. This is the ONLY human entry point for the review/1-year feature chain.
+- **Mobile app "Review Request" tab form** (first_name, last_name, phone, email) → enrolls into Review Request SMS Drip (§4) ONLY. Subject to the daily enrollment cap. This is the ONLY human entry point for the review/1-year feature chain. **Re-enrollment guard:** a contact already enrolled in the review automation (by client_id + phone) cannot be re-enrolled — block and show "contact already enrolled" so owners can safely re-attempt without double-texting.
 - **One-Year Follow-Up drip has NO form** — automatic handoff from review-drip completion (§4/§5).
+- **Public website lead form** (first_name, last_name, phone, email, your_message) → enrolls into the Lead-Form drip (§7). Public route, anon insert constrained to `source IN ('web_form','review_enroll')`.
 - Existing public funnel pages: `/r/rate`, `/r/feedback`, `/r/enroll`.
 - Discount-claim form (§7b) — TBD.
 
-## 7. FEATURE — Customer Review Request Email Drip [TBD — steps coming from user]
-Triggered alongside the mobile-app review enrollment (§6). Must go through the **external email sender** (Resend etc.), NOT Lovable native email (transactional-only). Steps/copy/timing TBD.
+## 7. FEATURE — Website Lead-Form Drip [LOCKED copy]
+
+**Purpose:** instant response + owner alerting when a lead submits the public website form requesting a quote/contact.
+
+**Enrollment:** public website lead form (first_name, last_name, phone, email, your_message). source = `web_form`.
+
+**Two-window model [LOCKED — see §2]:** the lead-form drip branches on **Business Hours** (a SEPARATE per-client setting from the marketing SMS Send Window). Business Hours = "is the owner reachable / open" and governs lead-form branching only. SMS Send Window (9am–7pm) governs marketing/follow-up drips only. They are independent values.
+
+**Lead-form SMS is transactional** (the lead just requested contact) — it does NOT defer to the marketing send window; it branches on Business Hours instead.
+
+### Branch A — submitted DURING Business Hours
+1. Wait 30s → internal notification to client.
+2. SMS #1 to the lead — **[INTENTIONAL TYPO — DO NOT CORRECT: "touchr"]**.
+3. Wait 30s → SMS #2 to the lead (the correction) — **skip if the lead already replied**.
+4. Day 10 → owner reminder (see below).
+
+### Branch B — submitted OUTSIDE Business Hours
+1. Single after-hours SMS to the lead (no typo, no second text).
+2. After-hours owner notification (so they see it when back).
+3. Day 10 → owner reminder (same as Branch A — fires on BOTH paths).
+(After-hours customer-facing drip ends after the single SMS; the normal two-text sequence does NOT fire later.)
+
+### Exact copy [LOCKED]
+Naming convention (consistent across all skills): `{first_name}` in customer-facing texts; `{full_name}` in internal notifications. `{request_time}` = submission time rendered in the CLIENT's timezone, human-readable; dynamic, not a template_var.
+
+**Internal notification to client (both branches, ~30s / on submit):**
+> New Lead from Website lead-form! Info: - Name: {full_name} - Phone: {phone} - Message: {your_message}  We've let them know you'll be in touch soon! (Do NOT reply to this message; it's not the client!)
+
+**SMS #1 to lead — Branch A only — [INTENTIONAL TYPO, DO NOT CORRECT]:**
+> Hey {first_name}! Just got your form! I'll be in touchr shortly! -{company_owner_first_name} with {company_name}
+
+**SMS #2 to lead — Branch A only, the correction (skip if lead already replied):**
+> I'll be in *touch* shortly! Sorry I haven't had enough coffee today haha! Talk soon!
+
+**After-hours SMS to lead — Branch B only (replaces #1 and #2):**
+> Hey {first_name}! Just got your form! We'll be in touch as soon as possible! -{company_owner_first_name} with {company_name}
+
+**After-hours owner notification — Branch B only (fires after the after-hours SMS):**
+> Hey {company_owner_first_name}! {full_name} submitted a request on your website at {request_time} — outside your business hours, so we sent them an after-hours reply. Reach out when you're back: {phone}. (Do NOT reply to this message; it's not the client!)
+
+**Day-10 owner reminder — BOTH branches. Suppress if the lead's phone is now enrolled in the review automation. Includes an auto-enroll button:**
+> Hey {company_owner_first_name}, It's been about 10 days since {full_name} filled out a request on your website. If you've worked with them, please remember to add their info to your marketing form. This is important! Contact Info: - Name: {full_name} - Phone: {phone}  If you haven't added them yet, add their info into the Review Request form. If you'd like to auto-enroll them, click here: [Auto-Enroll button]  (Do NOT reply to this message; it's not the client!)
+
+**Auto-Enroll button [BUILD]:** in the mobile-app Notifications tab, the button enrolls this contact into the Review Request drip directly (no manual form entry). It runs the same re-enrollment guard — if already enrolled, it displays "contact already enrolled" instead of enrolling.
+
+### Exit / build notes
+- If the lead replies before SMS #2 (Branch A) → skip SMS #2. [BUILD: reply detection on the inbound webhook tied to this drip]
+- Branch selection happens at submission time based on Business Hours in the client's timezone.
+- [BUILD] Business Hours is a NEW per-client Settings field, separate from the SMS Send Window (§2).
+
+## 7c. Customer Review Request Email Drip — REMOVED
+Scrapped. Review request is SMS-only. The mobile-app Review Request form enrolls into the SMS drip only (one enrollment, not two).
 
 ## 7b. FEATURE — Discount-Claim Form & lead handling [TBD — details coming from user]
 The `{company_website_link}/get-your-discount` destination. A form a contact fills to claim the referral/return discount, plus how that contact is then treated (status change, handoff to client, any follow-on automation, whether the link needs tracking after all). Full details to be provided.
@@ -175,14 +228,16 @@ Mobile-first PWA, scoped to the logged-in client's `client_id`.
 ---
 
 ## 10. Open items blocking skill authoring
-- [TBD] Email drip steps (§7).
 - [TBD] Discount-claim form + lead handling (§7b) — incl. whether discount links need tracking after all.
 - [TBD] Copy-strategy decision (templatize hardcoded marketing copy vs rewrite per vertical) — blocks `/theme-to-brand`.
 - [TBD] Onboarding form vs SQL/settings (`createClient` only takes 4 fields today) — blocks `/onboard-from-form`.
-- [BUILD] Tracked-redirect link system for review drip (§4), daily enrollment cap (§3), Notifications subsystem (§8), mobile Review Request tab (§8), "pass" keyword added to opt-out (§4), on-reply handler capturing `message.body` for 1-year notifications (§5).
+- [BUILD] Tracked-redirect link system for review drip (§4); daily enrollment cap (§3); Notifications subsystem (§8); mobile Review Request tab + Auto-Enroll button (§7/§8); "pass" keyword → opt-out (§4); on-reply handler capturing `message.body` (§5) and lead reply-detection (§7); **Business Hours setting + lead-form branching (§2/§7)**; re-enrollment guard (§4/§6).
 
 ## 11. Locked & done (captured above)
-- Review Request SMS drip — full copy, tokenized tracking, exit-on-click (§4).
+- Review Request SMS drip — full copy, tokenized tracking, exit-on-click, SMS-only (§4).
 - Review→1-Year handoff rule — enroll unless opted out (§4).
 - One-Year Follow-Up SMS drip — full copy, exit-on-reply-or-opt-out, no form (§5).
-- opt-in-forms map (§6). Send window + two caps (§3). admin-view tabs (§2).
+- Website Lead-Form drip — full copy, two-window branching, intentional-typo guard, day-10 reminder + auto-enroll button (§7).
+- Email drip — SCRAPPED, SMS-only (§7c).
+- Re-enrollment guard (§4/§6). opt-in-forms map (§6). Two-window model + two caps (§2/§3). admin-view tabs (§2).
+- Naming convention: `{first_name}` customer-facing, `{full_name}` internal notifications.
