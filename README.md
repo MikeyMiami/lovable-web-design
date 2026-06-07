@@ -51,7 +51,7 @@ Derived from the spec (§1). Checked = authored in this repo.
 
 - [ ] `/scratch-foundation` — deterministic core (schema, RLS, helpers, server-fn/route skeleton, auth/roles)
 - [ ] `/features` — per-feature mechanics & build scope
-- [ ] `/automation-config` — exact message copy + timing
+- [x] `/automation-config` — exact message copy + timing
 - [ ] `/opt-in-forms` — which forms feed which automations
 - [ ] `/mobile-app` — client app (Conversations, Review Request, Notifications)
 - [ ] `/admin-view` — admin tabs/settings on the client website
@@ -63,4 +63,4 @@ Derived from the spec (§1). Checked = authored in this repo.
 ## Index of authored skills
 
 <!-- Add a line here for each skill as its SKILL.md is created -->
-_No skills authored yet — derive the first one from the spec._
+- [`/automation-config`](skills/automation-config/SKILL.md) — canonical copy, timing & exit rules for the review-request and one-year follow-up SMS drips (content snapshot to seed verbatim).
