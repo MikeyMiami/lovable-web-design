@@ -1,6 +1,6 @@
 ---
 name: automation-config
-description: Use when seeding, editing, or reviewing the exact message copy, timing, and exit rules for the automation drips on a client site — the review-request SMS drip, the one-year follow-up SMS drip, the website lead-form drip, the discount-claim drip, and the owner email notifications. This is the canonical content "snapshot" so messages are not written per client. NOT for feature mechanics (use features) or form field layouts (use opt-in-forms).
+description: Use when seeding, editing, or reviewing the exact message copy, timing, and exit rules for the automation drips on a client site — the review-request SMS drip, the one-year follow-up SMS drip, the website lead-form drip, the discount-claim drip, the missed-call textback drip, and the owner email notifications. This is the canonical content "snapshot" so messages are not written per client. NOT for feature mechanics (use features) or form field layouts (use opt-in-forms).
 ---
 
 # Automation Config — canonical copy, timing & exit rules
@@ -10,7 +10,8 @@ Seed these EXACTLY (casing/punctuation/typos/line breaks included). All copy is 
 Merge keys:
 - Built-in: `first_name`, `phone`, `review_link` (per-contact tracked redirect, review drip only).
 - Per-client template_vars: `company_owner_first_name`, `company_name`, `review_request_link`, `discount__on_referral`, `company_website_link`, `discount_amount`, `website_terms_page_link`.
-- Dynamic (not template_vars): `message.body`, `request_time` (client tz, human-readable), `full_name`, `your_message`.
+- Per-client template_vars also include `quote_form_link` (defaults to the site lander `{company_website_link}`; overridable in /admin-view Settings — the page hosting the quote form).
+- Dynamic (not template_vars): `message.body`, `request_time` (client tz, human-readable), `full_name`, `your_message`, `caller_phone`, `call_time` (client tz).
 - Naming: `{first_name}` customer-facing; `{full_name}` internal notifications.
 - Formatting standard: internal notifications + emails stack details (Name / Phone / Message) on separate lines — never inline.
 
@@ -204,14 +205,14 @@ Then ends.
 ---
 
 ## Drip 5 — Missed-Call Textback
-Fires 24/7 (live call; not gated by send window or Business Hours). Trigger: inbound call status busy/cancelled/no-answer/voicemail. Re-eligibility: fires only if this contact (client_id + phone) has NOT received a missed-call textback in the last 7 days (boundary = 7 days from the last send). Wait 1 min → SMS #1 + internal notification → wait 2 min → SMS #2 only if no reply.
+Fires 24/7 (live call; not gated by send window or Business Hours). Trigger: Twilio call status `busy`/`no-answer`/`canceled`/`failed` (literal Twilio strings; voicemail reports as `completed` and does NOT fire). Re-eligibility: fires only if this contact (client_id + phone) has NOT received a missed-call textback in the last 7 days (boundary = 7 days from the last send). Wait 1 min → SMS #1 + internal notification → wait 2 min → SMS #2 only if no reply.
 
 **SMS #1 (after 1-min wait):**
 > Hey, sorry I missed you! I'll get back to you as soon as possible!
 >
 > If you want to give me a few details about the job, that would be great. You can click this link for a free quote:
 >
-> {company_website_link}/contact
+> {quote_form_link}
 > -{company_owner_first_name} from {company_name}
 
 **SMS #2 (after 2-min wait, only if no reply):**
@@ -222,7 +223,7 @@ Fires 24/7 (live call; not gated by send window or Business Hours). Trigger: inb
 >
 > View the conversation here: [Open conversation button]
 
-Dynamic keys: `{caller_phone}`, `{call_time}` (client tz). A brand-new caller has no name — notification keys off phone + time.
+`{quote_form_link}` defaults to the site lander, overridable in Settings. Dynamic keys: `{caller_phone}`, `{call_time}` (client tz). A brand-new caller has no name — notification keys off phone + time. If the caller submits the quote form, they also enter the Lead-Form drip (intentional, independent).
 
 ---
 
