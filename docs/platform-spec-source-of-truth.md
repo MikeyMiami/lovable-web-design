@@ -113,7 +113,7 @@ Placeholders use the project's merge system. Charity-meal angle throughout. Opt-
 
 ### Dynamic / build notes [BUILD]
 - The "they replied" notification injects `{message.body}` — the on-reply handler must capture the triggering inbound message body and merge it into the notification. (`message.body` is dynamic, not a template_var.)
-- Discount links are plain marketing URLs (`{company_website_link}/get-your-discount`), same for everyone, NOT per-contact tracked. (A separate discount-claim form governs what happens after a click — see §7b.)
+- Discount links are plain marketing URLs (`{company_website_link}/get-your-discount`), same for everyone, NOT per-contact tracked. (A separate discount-claim form governs what happens after a click — see §7b, details TBD.)
 
 ### Sequence & exact copy [LOCKED]
 All sends obey the global send window (9am–7pm client tz) and daily send cap. Day offsets are from enrollment into THIS drip.
@@ -206,6 +206,49 @@ Naming convention (consistent across all skills): `{first_name}` in customer-fac
 
 ## 7c. Customer Review Request Email Drip — REMOVED
 Scrapped. Review request is SMS-only. The mobile-app Review Request form enrolls into the SMS drip only (one enrollment, not two).
+
+## 7d. FEATURE — Owner Email Notifications [LOCKED]
+
+When a lead-form or discount-form submission fires its in-app notification, the owner ALSO gets an email pointing them to the app. The in-app notification still fires — the email is additive. **One email per lead** (the after-hours case is a variant of the website-lead email, not a second email).
+
+**Channel:** Lovable NATIVE transactional email (this is a system event-notification to the account owner = legitimately transactional, unlike customer marketing email). Sends from the client's verified sending subdomain; SPF/DKIM/DMARC auto-handled; low volume, no warmup concern. Does NOT use the external marketing sender.
+
+**Formatting standard [applies to ALL notification + email copy]:** stack details on separate lines for scannability — never run "Name: X Phone: Y Message: Z" inline. Apply this to the in-app notifications too.
+
+### Email — Subject: `New Website Lead` (business-hours version)
+> Hey {company_owner_first_name},
+>
+> You've got a new lead from your website form!
+>
+> Name: {full_name}
+> Phone: {phone}
+> Message: {your_message}
+>
+> We've already texted them to say you'll be in touch. Open your app to see the conversation.
+
+### Email — Subject: `New Website Lead` (after-hours version)
+> Hey {company_owner_first_name},
+>
+> You've got a new lead from your website form — submitted at {request_time}, outside your business hours, so we sent them an after-hours reply.
+>
+> Name: {full_name}
+> Phone: {phone}
+> Message: {your_message}
+>
+> Open your app and reach out when you're back.
+
+### Email — Subject: `New Referral/Discount Lead`
+> Hey {company_owner_first_name},
+>
+> {first_name} just filled out your discount form!
+>
+> Name: {full_name}
+> Phone: {phone}
+> Message: {your_message}
+>
+> We've told them you'll be reaching out soon. Open your app to see the details.
+
+Note: in email, the phone displays as text (no click-to-call); the click-to-call `tel:` link lives in the in-app notification.
 
 ## 7b. FEATURE — Discount-Claim Form & Drip [LOCKED]
 
