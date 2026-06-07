@@ -113,7 +113,7 @@ Placeholders use the project's merge system. Charity-meal angle throughout. Opt-
 
 ### Dynamic / build notes [BUILD]
 - The "they replied" notification injects `{message.body}` — the on-reply handler must capture the triggering inbound message body and merge it into the notification. (`message.body` is dynamic, not a template_var.)
-- Discount links are plain marketing URLs (`{company_website_link}/get-your-discount`), same for everyone, NOT per-contact tracked. (A separate discount-claim form governs what happens after a click — see §7b, details TBD.)
+- Discount links are plain marketing URLs (`{company_website_link}/get-your-discount`), same for everyone, NOT per-contact tracked. (A separate discount-claim form governs what happens after a click — see §7b.)
 
 ### Sequence & exact copy [LOCKED]
 All sends obey the global send window (9am–7pm client tz) and daily send cap. Day offsets are from enrollment into THIS drip.
@@ -151,8 +151,8 @@ New keys (set per-client in `/admin-view` Settings, added to template_vars contr
 - **Mobile app "Review Request" tab form** (first_name, last_name, phone, email) → enrolls into Review Request SMS Drip (§4) ONLY. Subject to the daily enrollment cap. This is the ONLY human entry point for the review/1-year feature chain. **Re-enrollment guard:** a contact already enrolled in the review automation (by client_id + phone) cannot be re-enrolled — block and show "contact already enrolled" so owners can safely re-attempt without double-texting.
 - **One-Year Follow-Up drip has NO form** — automatic handoff from review-drip completion (§4/§5).
 - **Public website lead form** (first_name, last_name, phone, email, your_message) → enrolls into the Lead-Form drip (§7). Public route, anon insert constrained to `source IN ('web_form','review_enroll')`.
+- **Discount-claim form** (first_name, last_name, phone, your_message) at `/get-your-discount` → enrolls into the Discount-Claim drip (§7b). Public route, anon insert constrained to `source = 'web_form'`.
 - Existing public funnel pages: `/r/rate`, `/r/feedback`, `/r/enroll`.
-- Discount-claim form (§7b) — TBD.
 
 ## 7. FEATURE — Website Lead-Form Drip [LOCKED copy]
 
@@ -207,8 +207,35 @@ Naming convention (consistent across all skills): `{first_name}` in customer-fac
 ## 7c. Customer Review Request Email Drip — REMOVED
 Scrapped. Review request is SMS-only. The mobile-app Review Request form enrolls into the SMS drip only (one enrollment, not two).
 
-## 7b. FEATURE — Discount-Claim Form & lead handling [TBD — details coming from user]
-The `{company_website_link}/get-your-discount` destination. A form a contact fills to claim the referral/return discount, plus how that contact is then treated (status change, handoff to client, any follow-on automation, whether the link needs tracking after all). Full details to be provided.
+## 7b. FEATURE — Discount-Claim Form & Drip [LOCKED]
+
+The page at `{company_website_link}/get-your-discount` (destination of the one-year drip links). A public lead-capture form on the client's site.
+
+### Form structure [LOCKED]
+**Banner:** company name + logo; headline **"Get {discount_amount} with us!"**
+**Fields:** First Name, Last Name, Phone, Your Message
+**Consent checkbox:** "I agree to [terms & conditions]({website_terms_page_link}) provided by the company. By providing my phone number, I agree to receive text messages from the business."
+**Button:** "Get My Discount!"
+
+- Public form → inserts a contact with source constrained to `web_form` (per tightened RLS). Phone normalized to E.164.
+- Terms link points to the CLIENT's own terms page (`{website_terms_page_link}` template_var, or the site `/terms` route) — NOT any external/leadconnector URL.
+
+### One-year drip interaction [LOCKED]
+- If the submitting contact is currently in the One-Year Follow-Up drip, the submission **EXITS them from that drip** (a form submission with contact info + consent is real re-engagement — distinct from a raw link click, which does NOT exit). Fire the one-year "they engaged" handling (owner sees the discount-form notification below, which serves that purpose).
+
+### Drip & exact copy [LOCKED]
+Naming: `{full_name}` internal, `{first_name}` customer-facing.
+
+**On submit → internal notification to client (immediate):**
+> Hey {company_owner_first_name}, {first_name} just filled out your discount form on the website. Info: - Name: {full_name} - Phone: {phone} - Message: {your_message}  We've told them you'll be reaching out soon! (Do NOT reply to this message; it's not the client!)
+
+**Wait 2 minutes → SMS to the lead:**
+> Hey {first_name}! Just got your discounted request! I'll be in touch shortly and get you that discount! -{company_owner_first_name} with {company_name}
+
+Then the drip ends.
+
+### Merge keys
+New: `{discount_amount}` (banner display amount — SEPARATE from `{discount__on_referral}` used in the one-year SMS), `{website_terms_page_link}`. Existing: `company_owner_first_name`, `company_name`.
 
 ---
 
@@ -228,16 +255,16 @@ Mobile-first PWA, scoped to the logged-in client's `client_id`.
 ---
 
 ## 10. Open items blocking skill authoring
-- [TBD] Discount-claim form + lead handling (§7b) — incl. whether discount links need tracking after all.
 - [TBD] Copy-strategy decision (templatize hardcoded marketing copy vs rewrite per vertical) — blocks `/theme-to-brand`.
 - [TBD] Onboarding form vs SQL/settings (`createClient` only takes 4 fields today) — blocks `/onboard-from-form`.
-- [BUILD] Tracked-redirect link system for review drip (§4); daily enrollment cap (§3); Notifications subsystem (§8); mobile Review Request tab + Auto-Enroll button (§7/§8); "pass" keyword → opt-out (§4); on-reply handler capturing `message.body` (§5) and lead reply-detection (§7); **Business Hours setting + lead-form branching (§2/§7)**; re-enrollment guard (§4/§6).
+- [BUILD] Tracked-redirect link system for review drip (§4); daily enrollment cap (§3); Notifications subsystem (§8); mobile Review Request tab + Auto-Enroll button (§7/§8); "pass" keyword → opt-out (§4); on-reply handler capturing `message.body` (§5) and lead reply-detection (§7); Business Hours setting + lead-form branching (§2/§7); re-enrollment guard (§4/§6); discount-form-submit exits one-year drip (§7b); constrained RLS (no wide-open anon inserts) baked into `/scratch-foundation`.
 
 ## 11. Locked & done (captured above)
 - Review Request SMS drip — full copy, tokenized tracking, exit-on-click, SMS-only (§4).
 - Review→1-Year handoff rule — enroll unless opted out (§4).
 - One-Year Follow-Up SMS drip — full copy, exit-on-reply-or-opt-out, no form (§5).
 - Website Lead-Form drip — full copy, two-window branching, intentional-typo guard, day-10 reminder + auto-enroll button (§7).
+- Discount-Claim Form & drip — form structure, copy, exits one-year drip on submit (§7b).
 - Email drip — SCRAPPED, SMS-only (§7c).
-- Re-enrollment guard (§4/§6). opt-in-forms map (§6). Two-window model + two caps (§2/§3). admin-view tabs (§2).
+- Re-enrollment guard (§4/§6). opt-in-forms map (§6 — now FINITE). Two-window model + two caps (§2/§3). admin-view tabs (§2).
 - Naming convention: `{first_name}` customer-facing, `{full_name}` internal notifications.
