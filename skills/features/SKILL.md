@@ -15,7 +15,7 @@ Stack invariants (always): TanStack Start v1, Cloudflare Workers (pure JS + fetc
 
 **Purpose:** get a customer to leave a Google review via a 4-message SMS sequence that stops the moment they click the review link.
 
-**Enrollment:** the ONLY human entry point is the mobile-app "Review Request" form (first_name, last_name, phone, email). That single enrollment enrolls the contact into BOTH this drip AND the Customer Review Request Email Drip (two enrollment rows). Subject to the daily enrollment cap (default 50/day per client; overflow queues to the next day).
+**Enrollment:** the ONLY human entry point is the mobile-app "Review Request" form (first_name, last_name, phone, email). That single enrollment enrolls the contact into this drip ONLY — one enrollment row (the email drip was scrapped; review request is SMS-only). Subject to the daily enrollment cap (default 50/day per client; overflow queues to the next day).
 
 **Tracked review link [BUILD — construct this; it does not exist yet]:**
 - The link in every SMS is a per-contact tracked redirect, NOT the raw Google URL.

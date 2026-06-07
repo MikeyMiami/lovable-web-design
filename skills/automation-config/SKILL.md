@@ -68,7 +68,6 @@ Enrollment: automatic handoff from review-drip completion (no form). Exit on REP
 ---
 
 ## TBD (do not seed yet)
-- Customer Review Request Email Drip — steps pending.
 - Reactivation / missed-call / one-year discount-claim copy may be revised — confirm before seeding.
 
 ## Seeding rules
