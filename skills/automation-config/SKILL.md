@@ -203,6 +203,29 @@ Then ends.
 
 ---
 
+## Drip 5 — Missed-Call Textback
+Fires 24/7 (live call; not gated by send window or Business Hours). Trigger: inbound call status busy/cancelled/no-answer/voicemail. Re-eligibility: fires only if this contact (client_id + phone) has NOT received a missed-call textback in the last 7 days (boundary = 7 days from the last send). Wait 1 min → SMS #1 + internal notification → wait 2 min → SMS #2 only if no reply.
+
+**SMS #1 (after 1-min wait):**
+> Hey, sorry I missed you! I'll get back to you as soon as possible!
+>
+> If you want to give me a few details about the job, that would be great. You can click this link for a free quote:
+>
+> {company_website_link}/contact
+> -{company_owner_first_name} from {company_name}
+
+**SMS #2 (after 2-min wait, only if no reply):**
+> Look forward to hearing from you!... In the meantime are there any quick questions I can answer here for ya?
+
+**Internal notification (fires with SMS #1):**
+> You missed a call from {caller_phone} at {call_time}, so we sent them a text.
+>
+> View the conversation here: [Open conversation button]
+
+Dynamic keys: `{caller_phone}`, `{call_time}` (client tz). A brand-new caller has no name — notification keys off phone + time.
+
+---
+
 ## Owner Email Notifications (§7d)
 Sent in ADDITION to the in-app notification when a lead-form or discount-form submission occurs. One email per lead. Channel: Lovable NATIVE transactional email (from the client's sending subdomain; not the external marketing sender). Phone displays as text (no click-to-call in email).
 
