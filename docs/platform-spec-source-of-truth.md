@@ -205,7 +205,7 @@ Note: the "they replied" interest notification (copy above) fires on a reply aft
 New keys (set per-client in `/admin-view` Settings, added to template_vars contract): `discount__on_referral`, `company_website_link`. Plus existing `company_owner_first_name`, `company_name`. Dynamic (not template_vars): `message.body`.
 
 ## 6. `/opt-in-forms` — forms → automations map [LOCKED]
-- **Mobile app "Review Request" tab form** (first_name, last_name, phone, email) → enrolls into Review Request SMS Drip (§4) ONLY. Subject to the daily enrollment cap. This is the ONLY human entry point for the review/1-year feature chain. **Re-enrollment guard:** a contact already enrolled in the review automation (by client_id + phone) cannot be re-enrolled — block and show "contact already enrolled" so owners can safely re-attempt without double-texting.
+- **Mobile app "Review Request" tab form** (first_name, last_name, phone, email) → enrolls into Review Request SMS Drip (§4) ONLY. Subject to the daily enrollment cap. This is the only CLIENT-INITIATED entry point for the review/1-year chain. (Customers can also self-enroll via the public `/r/enroll` funnel page — that's a customer-initiated entry, not a contradiction.) **Re-enrollment guard:** a contact already enrolled in the review automation (by client_id + phone) cannot be re-enrolled — block and show "contact already enrolled" so owners can safely re-attempt without double-texting.
 - **One-Year Follow-Up drip has NO form** — automatic handoff from review-drip completion (§4/§5).
 - **Public website lead form** (first_name, last_name, phone, email, your_message) → enrolls into the Lead-Form drip (§7). Public route, anon insert constrained to `source IN ('web_form','review_enroll')`.
 - Existing public funnel pages: `/r/rate`, `/r/feedback`, `/r/enroll`.
@@ -383,7 +383,7 @@ New: `{discount_amount}` (banner display amount — SEPARATE from `{discount__on
 ## 8. `/mobile-app` — client app at `app.theirdomain.com` [LOCKED scope / BUILD tabs]
 Mobile-first PWA, scoped to the logged-in client's `client_id`.
 - **Conversations tab** — SMS threads across all contacts in this client's CRM. (Exists at `/app`.)
-- **Review Request tab** — the enrollment form (first/last/phone/email) → enrolls into Review SMS Drip + Email Drip, subject to daily enrollment cap. [BUILD]
+- **Review Request tab** — the enrollment form (first/last/phone/email) → enrolls into Review SMS Drip, subject to daily enrollment cap. [BUILD]
 - **Notifications tab** — internal notifications to the client: automation-finished alerts (e.g. §4 step-5), weekly/monthly stats, messages. Needs a notifications table + automations writing to it + app UI reading it. [BUILD — net-new subsystem]
 
 ---
@@ -391,13 +391,13 @@ Mobile-first PWA, scoped to the logged-in client's `client_id`.
 ## 9. Other features (status)
 
 ### FEATURE — Missed-Call Textback [LOCKED]
-**Trigger:** inbound call to the client's Twilio number ends with status **busy, cancelled, no-answer, or voicemail**. (All four included; "cancelled" intentionally kept to catch more leads.)
+**Trigger:** inbound call to the client's Twilio number ends with a Twilio call status of **`busy`, `no-answer`, `canceled`, or `failed`** (matched against Twilio's literal status strings — note `no-answer` hyphenated, `canceled` one L). Voice-status webhook (`/api/public/twilio/voice-status`). Note: a call that rolls to voicemail reports as `completed` and does NOT fire (catching voicemail would require Answering Machine Detection — out of scope).
 **Timing:** fires 24/7 — a missed call is a live signal, so it is NOT gated by the SMS Send Window or Business Hours. Transactional; exempt from the bulk marketing throttle.
 **Contact handling:** create/match the contact by `phone_e164`, log the missed call (event), send the drip. Replies flow into the normal inbox/conversation.
 **Re-eligibility (7-day rule):** the drip fires only if this contact (client_id + phone) has NOT received a missed-call textback in the last 7 days. First missed call → fires + records `last_missed_call_textback_at`. Any missed call within 7 days of the last send → logged but suppressed (no re-send). A missed call ≥7 days after the last send → eligible again, re-enrolls and fires. (Boundary = 7 days from the last actual textback SEND, per client_id + phone.)
 
 **Flow:**
-1. On missed-call status → **wait 1 minute** (so it doesn't feel like a bot).
+1. On qualifying missed-call status → **wait 1 minute** (so it doesn't feel like a bot).
 2. Send **SMS #1** to the caller + fire the **internal notification** to the client (same time).
 3. **Wait 2 minutes.** If the caller replied in that window → skip SMS #2. Else → send **SMS #2**.
 
@@ -406,7 +406,7 @@ Mobile-first PWA, scoped to the logged-in client's `client_id`.
 >
 > If you want to give me a few details about the job, that would be great. You can click this link for a free quote:
 >
-> {company_website_link}/contact
+> {quote_form_link}
 > -{company_owner_first_name} from {company_name}
 
 **SMS #2 (after 2-min wait, only if no reply):**
@@ -417,7 +417,8 @@ Mobile-first PWA, scoped to the logged-in client's `client_id`.
 >
 > View the conversation here: [Open conversation button]
 
-**Merge keys:** `{company_website_link}`, `{company_owner_first_name}`, `{company_name}` (existing template_vars). Dynamic (not template_vars): `{caller_phone}`, `{call_time}` (client tz, human-readable). Note: a brand-new caller has no name yet, so the notification keys off phone + time, not name.
+**Merge keys:** `{quote_form_link}` (per-client, defaults to the site lander `{company_website_link}`; overridable in `/admin-view` Settings — the page where the quote form lives), `{company_owner_first_name}`, `{company_name}`. Dynamic (not template_vars): `{caller_phone}`, `{call_time}` (client tz, human-readable). A brand-new caller has no name yet, so the notification keys off phone + time.
+**Note:** the SMS link goes to the client's quote-form page; if the caller submits that form, they also enter the Lead-Form drip (§7) — intentional (the form submission gets its own acknowledgment). The two drips run independently.
 
 ### Other features
 - **Customer reactivation** [scope to confirm] — CSV/paste upload → dedupe → enroll in `reactivation_drip` (day 0/3/7, exits on `reviewed`), conservative throttle profile. Copy not yet reviewed/finalized.
