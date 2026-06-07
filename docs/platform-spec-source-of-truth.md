@@ -389,7 +389,37 @@ Mobile-first PWA, scoped to the logged-in client's `client_id`.
 ---
 
 ## 9. Other features (status)
-- **Missed-call textback** [NEEDS FULL SCOPE — see §12] — original system has the plumbing (voice webhook → no-answer/busy → fire `missed_call_textback` template, 30-min dedupe, throttle-exempt), but the SMS copy, contact handling, and behavior have NOT been defined by the user. Do not treat as final.
+
+### FEATURE — Missed-Call Textback [LOCKED]
+**Trigger:** inbound call to the client's Twilio number ends with status **busy, cancelled, no-answer, or voicemail**. (All four included; "cancelled" intentionally kept to catch more leads.)
+**Timing:** fires 24/7 — a missed call is a live signal, so it is NOT gated by the SMS Send Window or Business Hours. Transactional; exempt from the bulk marketing throttle.
+**Contact handling:** create/match the contact by `phone_e164`, log the missed call (event), send the drip. Replies flow into the normal inbox/conversation.
+**Re-eligibility (7-day rule):** the drip fires only if this contact (client_id + phone) has NOT received a missed-call textback in the last 7 days. First missed call → fires + records `last_missed_call_textback_at`. Any missed call within 7 days of the last send → logged but suppressed (no re-send). A missed call ≥7 days after the last send → eligible again, re-enrolls and fires. (Boundary = 7 days from the last actual textback SEND, per client_id + phone.)
+
+**Flow:**
+1. On missed-call status → **wait 1 minute** (so it doesn't feel like a bot).
+2. Send **SMS #1** to the caller + fire the **internal notification** to the client (same time).
+3. **Wait 2 minutes.** If the caller replied in that window → skip SMS #2. Else → send **SMS #2**.
+
+**SMS #1 (after 1-min wait):**
+> Hey, sorry I missed you! I'll get back to you as soon as possible!
+>
+> If you want to give me a few details about the job, that would be great. You can click this link for a free quote:
+>
+> {company_website_link}/contact
+> -{company_owner_first_name} from {company_name}
+
+**SMS #2 (after 2-min wait, only if no reply):**
+> Look forward to hearing from you!... In the meantime are there any quick questions I can answer here for ya?
+
+**Internal notification (fires with SMS #1):**
+> You missed a call from {caller_phone} at {call_time}, so we sent them a text.
+>
+> View the conversation here: [Open conversation button]
+
+**Merge keys:** `{company_website_link}`, `{company_owner_first_name}`, `{company_name}` (existing template_vars). Dynamic (not template_vars): `{caller_phone}`, `{call_time}` (client tz, human-readable). Note: a brand-new caller has no name yet, so the notification keys off phone + time, not name.
+
+### Other features
 - **Customer reactivation** [scope to confirm] — CSV/paste upload → dedupe → enroll in `reactivation_drip` (day 0/3/7, exits on `reviewed`), conservative throttle profile. Copy not yet reviewed/finalized.
 - **Inbound SMS → CRM** [built] — every inbound creates/updates conversation + message; STOP/HELP/START + `pass` handled at webhook.
 
@@ -398,7 +428,7 @@ Mobile-first PWA, scoped to the logged-in client's `client_id`.
 ## 10. Open items blocking skill authoring
 - [TBD] Copy-strategy decision (templatize hardcoded marketing copy vs rewrite per vertical) — blocks `/theme-to-brand`.
 - [TBD] Onboarding form vs SQL/settings (`createClient` only takes 4 fields today) — blocks `/onboard-from-form`.
-- [BUILD] Tracked-redirect link system for review drip (§4); daily enrollment cap (§3); Notifications subsystem (§8); mobile Review Request tab + Auto-Enroll button (§7/§8); "pass" keyword → opt-out (§4); on-reply handler capturing `message.body` (§5) and lead reply-detection (§7); Business Hours setting + lead-form branching (§2/§7); re-enrollment guard (§4/§6); discount-form-submit exits one-year drip (§7b); constrained RLS (no wide-open anon inserts) baked into `/scratch-foundation`.
+- [BUILD] Tracked-redirect link system for review drip (§4); daily enrollment cap (§3); Notifications subsystem (§8); mobile Review Request tab + Auto-Enroll button (§7/§8); "pass" keyword → opt-out (§4); on-reply handler capturing `message.body` (§5) and lead reply-detection (§7); Business Hours setting + lead-form branching (§2/§7); re-enrollment guard (§4/§6); discount-form-submit exits one-year drip (§7b); per-contact `last_missed_call_textback_at` timestamp + 7-day re-eligibility check (§9); constrained RLS (no wide-open anon inserts) baked into `/scratch-foundation`.
 
 ## 11. Locked & done (captured above)
 - Review Request SMS drip — full copy, tokenized tracking, exit-on-click, SMS-only (§4).
@@ -407,6 +437,7 @@ Mobile-first PWA, scoped to the logged-in client's `client_id`.
 - Website Lead-Form drip — full copy, two-window branching, intentional-typo guard, day-10 reminder + auto-enroll button (§7).
 - Discount-Claim Form & drip — form structure, copy, exits one-year drip on submit (§7b).
 - Owner Email Notifications — Lovable native transactional, one per lead, formatted with line breaks (§7d).
+- Missed-Call Textback — full scope + copy: 24/7, 4 triggers, 1-min/2-min drip, reply-skip, 7-day re-eligibility per contact, internal notification (§9).
 - Email drip — SCRAPPED, SMS-only (§7c).
 - Re-enrollment guard (§4/§6). opt-in-forms map (§6 — now FINITE). Two-window model + two caps (§2/§3). admin-view tabs (§2).
 - Naming convention: `{first_name}` customer-facing, `{full_name}` internal notifications.
@@ -420,7 +451,6 @@ Mobile-first PWA, scoped to the logged-in client's `client_id`.
 - Pick from "FEATURES STILL TO DEFINE" below, or write `/scratch-foundation`, or make an architecture decision.
 
 ### FEATURES STILL TO DEFINE (not yet scoped — full definition needed)
-- **Missed-Call Textback — NEEDS FULL SCOPE.** Plumbing exists (voice webhook → no-answer/busy → fire template, 30-min dedupe, throttle-exempt), but the SMS copy, contact creation/handling, and behavior have NOT been defined. Needs the same detailed pass as the other drips.
 - **Review Automation Funnel form/page — NEEDS FULL SETUP.** The funnel direction (`/r/rate`, gating, `/r/enroll`) has NOT been detailed. Detailed setup: page look/flow, contact movement, gating config, ties to review drip + tracked link.
 - **Chat-Widget Lead Opt-In — NEEDS FULL BUILD DIRECTION.** Separate chat-widget feature for leads who opt in via an on-site widget. Needs whole layout/build direction: widget look, lead capture, what it collects, which drip it feeds, how it differs from the website lead form.
 
