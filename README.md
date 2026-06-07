@@ -53,7 +53,7 @@ Derived from the spec (§1). Checked = authored in this repo.
 - [x] `/features` — per-feature mechanics & build scope
 - [x] `/automation-config` — exact message copy + timing
 - [x] `/opt-in-forms` — which forms feed which automations
-- [ ] `/mobile-app` — client app (Conversations, Review Request, Notifications)
+- [x] `/mobile-app` — client app (Conversations, Review Request, Notifications, Dashboard)
 - [x] `/admin-view` — admin tabs/settings on the client website
 - [ ] `/launch-check` — pre-go-live verification gate
 - [ ] `/new-client-site` — orchestrates the from-scratch build
@@ -67,3 +67,4 @@ Derived from the spec (§1). Checked = authored in this repo.
 - [`/features`](skills/features/SKILL.md) — mechanics & from-scratch build for each feature (review drip, one-year drip, missed-call textback, reactivation, inbound SMS, tracked review redirect).
 - [`/admin-view`](skills/admin-view/SKILL.md) — admin dashboard tabs and the per-client Settings fields (timezone, SMS send window, Business Hours, caps, business identity, review config, template_vars, messaging config).
 - [`/opt-in-forms`](skills/opt-in-forms/SKILL.md) — every form (mobile Review Request, public lead form, discount-claim form, review-funnel pages) and the sequence each enrolls into.
+- [`/mobile-app`](skills/mobile-app/SKILL.md) — client PWA tabs (Conversations, Review Request, Notifications, Dashboard), in-app notification copy, day-10 Auto-Enroll button, and owner email notifications. Reference for the stacked/line-broken formatting standard.
