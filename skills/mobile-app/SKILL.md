@@ -22,10 +22,10 @@ The client's enrollment form for the Review Request SMS drip.
 - **Re-enrollment guard:** if the contact (client_id + phone) is already enrolled in the review automation, block and show "contact already enrolled."
 
 ## Tab 3 — Notifications
-A simple feed of notification records for this client. **No read/unread tracking** — each notification is just a message filled with the relevant data. Records are written by automations as they fire (timings follow the drip specs). All are informational EXCEPT the day-10 lead reminder, which carries one action.
+A simple feed of notification records for this client. **No read/unread tracking** — each notification is just a message filled with the relevant data. Records are written by automations as they fire (timings follow the drip specs). All are informational EXCEPT two that carry actions: the day-10 lead reminder (Auto-Enroll button) and the missed-call notification (Open-conversation deeplink).
 
 - **Click-to-call:** render every phone number as a `tel:` link so the owner can tap to call directly.
-- **Day-10 lead reminder — the only actionable notification:** includes an **Auto-Enroll button** that enrolls the contact into the Review Request drip directly (no manual form entry). It runs the same re-enrollment guard — if already enrolled, it shows "contact already enrolled" instead of enrolling. Suppress the whole reminder if the lead's phone is already in the review automation.
+- **Day-10 lead reminder — actionable:** includes an **Auto-Enroll button** that enrolls the contact into the Review Request drip directly (no manual form entry). It runs the same re-enrollment guard — if already enrolled, it shows "contact already enrolled" instead of enrolling. Suppress the whole reminder if the lead's phone is already in the review automation.
 
 Notification copy (sources: review drip §4, one-year §5, lead-form §7, discount §7b — reproduced here line-broken; copy is canonical in automation-config / spec):
 
@@ -118,6 +118,13 @@ Notification copy (sources: review drip §4, one-year §5, lead-form §7, discou
 > We've told them you'll be reaching out soon.
 >
 > (Do NOT reply to this message; it's not the client!)
+
+**Missed-call textback — fires with SMS #1 (actionable: Open-conversation deeplink):**
+> You missed a call from {caller_phone} at {call_time}, so we sent them a text.
+>
+> View the conversation here: [Open conversation button]
+
+The Open-conversation button deep-links to that contact's thread in the Conversations tab. {caller_phone}/{call_time} are dynamic (client tz); a brand-new caller has no name yet.
 
 ## Tab 4 — Dashboard
 Weekly + monthly stat counters, computed from `events` scoped to this client. Four counters:
