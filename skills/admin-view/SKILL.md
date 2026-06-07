@@ -23,7 +23,7 @@ The admin dashboard lives at `/admin` on the client website, gated to `admin` / 
 - **Daily enrollment cap** — customizable per client, **default 50**; max NEW contacts entering the review drip per day. Overflow waits to the next day. Enforced at the enrollment path (mobile-app enroll fn + uploads). This is DISTINCT from the send cap — do not conflate them.
 - **Business identity** — business_name, tagline, phone_display, email, address, hours, license_number, logo, brand_color.
 - **Review config** — review_place_id, review_link, google_review_toggle (gated|all|off), star_threshold (default 4).
-- **template_vars** — free-form per-client placeholder values. Must cover all custom keys referenced by templates; the required set today: `company_owner_first_name`, `company_name`, `review_request_link`, `discount__on_referral`, `company_website_link`, and `discount`. Surface missing keys to prompt the agency to fill them.
+- **template_vars** — free-form per-client placeholder values. Must cover all custom keys referenced by templates; the required set today: `company_owner_first_name`, `company_name`, `review_request_link`, `discount__on_referral`, and `company_website_link`. Surface missing keys to prompt the agency to fill them.
 - **Messaging config** — twilio_number, twilio_messaging_service_sid, sending_subdomain, dkim_status.
 
 ## Notes
