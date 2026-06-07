@@ -63,8 +63,13 @@ Stack invariants: TanStack Start v1, Cloudflare Workers (pure JS + fetch, no nat
 
 ---
 
-## Feature: Missed-Call Textback (built — scope)
-Twilio voice-status webhook (`/api/public/twilio/voice-status`): on no-answer/busy/failed, send `missed_call_textback` to the caller from the client's number, deduped per (client, caller, 30-min) via `events`. Transactional/webhook-driven; EXEMPT from the bulk cron throttle (sends immediately). Caller replies flow into the normal inbound path.
+## Feature: Missed-Call Textback [LOCKED]
+**Trigger:** inbound call to the client's Twilio number ends with status busy / cancelled / no-answer / voicemail (all four). Voice-status webhook (`/api/public/twilio/voice-status`).
+**Timing:** fires 24/7 — live signal, NOT gated by SMS Send Window or Business Hours. Transactional; exempt from the bulk throttle.
+**Re-eligibility (7-day rule) [BUILD]:** fires only if the contact (client_id + phone) has no missed-call textback in the last 7 days. Track a per-contact `last_missed_call_textback_at` timestamp; on a missed call, fire only if `now - last_missed_call_textback_at >= 7 days` (or never sent); update the timestamp on send. Within 7 days → log but suppress. This replaces the old 30-min dedupe.
+**Flow:** on missed-call status → wait 1 min → send SMS #1 + fire internal notification (same time) → wait 2 min → if the caller replied in that window, skip SMS #2; else send SMS #2. (Copy in automation-config.)
+**Contact handling:** create/match the contact by `phone_e164`, log the missed call (event); replies flow into the normal inbox. A brand-new caller has no name yet — the internal notification keys off `{caller_phone}` + `{call_time}`, with an "Open conversation" button.
+**SMS #2 reply-skip** uses the same inbound-webhook reply detection as the lead-form drip.
 
 ## Feature: Customer Reactivation (built — scope)
 Admin uploads CSV/paste at `/admin/reactivation` → normalize phones → upsert contacts deduped by (client_id, phone) then (client_id, email), source `reactivation` → enroll in `reactivation_drip`. Uses the conservative throttle profile. Copy/timing in automation-config.
