@@ -52,7 +52,7 @@ Derived from the spec (§1). Checked = authored in this repo.
 - [ ] `/scratch-foundation` — deterministic core (schema, RLS, helpers, server-fn/route skeleton, auth/roles)
 - [x] `/features` — per-feature mechanics & build scope
 - [x] `/automation-config` — exact message copy + timing
-- [ ] `/opt-in-forms` — which forms feed which automations
+- [x] `/opt-in-forms` — which forms feed which automations
 - [ ] `/mobile-app` — client app (Conversations, Review Request, Notifications)
 - [x] `/admin-view` — admin tabs/settings on the client website
 - [ ] `/launch-check` — pre-go-live verification gate
@@ -65,4 +65,5 @@ Derived from the spec (§1). Checked = authored in this repo.
 <!-- Add a line here for each skill as its SKILL.md is created -->
 - [`/automation-config`](skills/automation-config/SKILL.md) — canonical copy, timing & exit rules for the review-request and one-year follow-up SMS drips (content snapshot to seed verbatim).
 - [`/features`](skills/features/SKILL.md) — mechanics & from-scratch build for each feature (review drip, one-year drip, missed-call textback, reactivation, inbound SMS, tracked review redirect).
-- [`/admin-view`](skills/admin-view/SKILL.md) — admin dashboard tabs and the per-client Settings fields (timezone, send window, caps, business identity, review config, template_vars, messaging config).
+- [`/admin-view`](skills/admin-view/SKILL.md) — admin dashboard tabs and the per-client Settings fields (timezone, SMS send window, Business Hours, caps, business identity, review config, template_vars, messaging config).
+- [`/opt-in-forms`](skills/opt-in-forms/SKILL.md) — every form (mobile Review Request, public lead form, discount-claim form, review-funnel pages) and the sequence each enrolls into.
