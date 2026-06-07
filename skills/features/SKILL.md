@@ -64,7 +64,7 @@ Stack invariants: TanStack Start v1, Cloudflare Workers (pure JS + fetch, no nat
 ---
 
 ## Feature: Missed-Call Textback [LOCKED]
-**Trigger:** inbound call to the client's Twilio number ends with status busy / cancelled / no-answer / voicemail (all four). Voice-status webhook (`/api/public/twilio/voice-status`).
+**Trigger:** inbound call to the client's Twilio number ends with a Twilio status of `busy` / `no-answer` / `canceled` / `failed` (literal Twilio strings; voicemail reports as `completed` and does NOT fire — catching it needs AMD, out of scope). Voice-status webhook (`/api/public/twilio/voice-status`).
 **Timing:** fires 24/7 — live signal, NOT gated by SMS Send Window or Business Hours. Transactional; exempt from the bulk throttle.
 **Re-eligibility (7-day rule) [BUILD]:** fires only if the contact (client_id + phone) has no missed-call textback in the last 7 days. Track a per-contact `last_missed_call_textback_at` timestamp; on a missed call, fire only if `now - last_missed_call_textback_at >= 7 days` (or never sent); update the timestamp on send. Within 7 days → log but suppress. This replaces the old 30-min dedupe.
 **Flow:** on missed-call status → wait 1 min → send SMS #1 + fire internal notification (same time) → wait 2 min → if the caller replied in that window, skip SMS #2; else send SMS #2. (Copy in automation-config.)
