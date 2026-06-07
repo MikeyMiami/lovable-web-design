@@ -70,19 +70,38 @@ Current tabs: **Dashboard, Contacts, Conversations, Feedback, Automations, Uploa
 Placeholders use the project's merge system. Charity-meal angle throughout. Opt-out keyword is **"pass"** (added to global opt-out set — whole-word match).
 
 **SMS 1 — day 0 (on enrollment, respecting send window):**
-> Hey {first_name}, this is {company_owner_first_name}! I hope you had a great experience with {company_name}! We donate a meal to charity for every customer who takes 10 seconds to leave a review. Here's the link: {review_link}
+> Hey {first_name}, this is {company_owner_first_name}! I hope you had a great experience with {company_name}!
+>
+> We donate a meal to charity for every customer who takes 10 seconds to leave a review. Here's the link: {review_link}
 
 **Wait 4 days → check click status. Clicked → mark `Review Completed`, exit. Not clicked → SMS 2:**
-> Hey {first_name}! I wanted to follow-up because I saw you haven't left a review yet. We donate a meal to charity for every customer that leaves a review! If you have 10 seconds to help someone you don't know, you're our kind of people. Click here: {review_link}  P.S. Just say 'pass' if you want me to stop texting you
+> Hey {first_name}! I wanted to follow-up because I saw you haven't left a review yet. We donate a meal to charity for every customer that leaves a review!
+>
+> If you have 10 seconds to help someone you don't know, you're our kind of people. Click here: {review_link}
+>
+> P.S. Just say 'pass' if you want me to stop texting you
 
 **Wait 7 days → check. Clicked → exit. Not clicked → SMS 3:**
-> Little review reminder incase you got extra busy this week (we give a free meal to someone in need for each new review). Here's the link again: {review_link}
+> Little review reminder incase you got extra busy this week (we give a free meal to someone in need for each new review).
+>
+> Here's the link again: {review_link}
 
 **Wait 7 days → check. Clicked → exit. Not clicked → SMS 4:**
-> Hey {first_name}! This is the last time I'll request a review from you I promise... if you have a sec to leave one we'll donate a meal to a person in need. Here's the link and thanks for helping those in need! {review_link}
+> Hey {first_name}! This is the last time I'll request a review from you I promise...
+>
+> if you have a sec to leave one we'll donate a meal to a person in need. Here's the link and thanks for helping those in need! {review_link}
 
 **Wait 48 hours → check. Clicked → mark `Review Completed`, exit. Not clicked → fire internal notification to client's mobile app Notifications tab:**
-> Hey {company_owner_first_name}! We've attempted to get {first_name} to leave you a review 4 times over the course of the last 4 weeks. Try to get in touch with them to leave you a review. They'll have the link in their text messages. Their information: Name: {first_name} Phone: {phone}  Here's your direct review link again if you need it: {review_request_link}
+> Hey {company_owner_first_name}!
+>
+> We've attempted to get {first_name} to leave you a review 4 times over the last 4 weeks. Try to get in touch with them — they'll have the link in their text messages.
+>
+> Name: {first_name}
+> Phone: {phone}
+>
+> Here's your direct review link if you need it: {review_request_link}
+>
+> (Do NOT reply to this message; it's not the client!)
 
 ### Status semantics [LOCKED]
 - Any exit caused by a detected click (at ANY check stage: day 4 / +7 / +7 / +48h) → contact status = **`Review Completed`**.
@@ -119,28 +138,66 @@ Placeholders use the project's merge system. Charity-meal angle throughout. Opt-
 All sends obey the global send window (9am–7pm client tz) and daily send cap. Day offsets are from enrollment into THIS drip.
 
 **SMS 1 — day 30:**
-> Hey {first_name}! I'm running a season special this week and giving {discount__on_referral}. It's only for the first three people, so if you're interested (or know someone who might be), just tap this link: {company_website_link}/get-your-discount  -{company_owner_first_name} from {company_name}
+> Hey {first_name}! I'm running a season special this week and giving {discount__on_referral}.
+>
+> It's only for the first three people, so if you're interested (or know someone who might be), just tap this link: {company_website_link}/get-your-discount
+>
+> -{company_owner_first_name} from {company_name}
 
 **On reply at any point → exit + internal notification:**
-> Hey {company_owner_first_name}, {first_name} just replied to your return/referral discount offer in the 1-year follow-up sequence! Here's their response: {message.body}  You can reach them at {phone} if needed. (Do NOT reply to this message; it's not the client!)
+> Hey {company_owner_first_name},
+>
+> {first_name} just replied to your return/referral discount offer in the 1-year follow-up sequence!
+>
+> Their response: {message.body}
+>
+> You can reach them at {phone} if needed.
+>
+> (Do NOT reply to this message; it's not the client!)
 
 **Wait 8 weeks (no reply / no opt-out) → SMS 2:**
-> Hey {first_name}! I'm running a customer anniversary special for the next 6 days and giving {discount__on_referral}, so if you're interested (or know someone who might be), just tap this link: {company_website_link}/get-your-discount  -{company_owner_first_name} from {company_name}
+> Hey {first_name}! I'm running a customer anniversary special for the next 6 days and giving {discount__on_referral}, so if you're interested (or know someone who might be), just tap this link: {company_website_link}/get-your-discount
+>
+> -{company_owner_first_name} from {company_name}
 
 **After SMS 2 → internal notification to client:**
-> {company_owner_first_name}, it's been 3 months since you added {first_name} into your 1 year follow up sequence. We just sent them a little discount offer to ask for referrals! Their number is {phone} if you want to reach out / or they contact you! (Do NOT reply to this message; it's not the client!)
+> {company_owner_first_name}, it's been 3 months since you added {first_name} into your 1-year follow-up sequence.
+>
+> We just sent them a discount offer to ask for referrals!
+>
+> Their number is {phone} if you want to reach out / or they contact you.
+>
+> (Do NOT reply to this message; it's not the client!)
 
 **Wait 3 months → SMS 3:**
-> Hey {first_name}! I'm running a loyalty special this week and giving {discount__on_referral}. It's only for the first three people, so if you're interested (or know someone who might be), just tap this link: {company_website_link}/get-your-discount  -{company_owner_first_name} from {company_name}
+> Hey {first_name}! I'm running a loyalty special this week and giving {discount__on_referral}.
+>
+> It's only for the first three people, so if you're interested (or know someone who might be), just tap this link: {company_website_link}/get-your-discount
+>
+> -{company_owner_first_name} from {company_name}
 
 **Wait 3 months → SMS 4:**
-> Hey {first_name}! I'm running a special this week and giving {discount__on_referral}. It's only for the first four people, so if you're interested (or know someone who might be), just tap this link: {company_website_link}/get-your-discount  -{company_owner_first_name} from {company_name}
+> Hey {first_name}! I'm running a special this week and giving {discount__on_referral}.
+>
+> It's only for the first four people, so if you're interested (or know someone who might be), just tap this link: {company_website_link}/get-your-discount
+>
+> -{company_owner_first_name} from {company_name}
 
 **Wait 3 months → SMS 5:**
-> Hey {first_name}! I'm running an anniversary special giving {discount__on_referral}. It's only for the next 6 days, so if you're interested (or know someone who might be), just tap this link: {company_website_link}/get-your-discount  -{company_owner_first_name} from {company_name}
+> Hey {first_name}! I'm running an anniversary special giving {discount__on_referral}.
+>
+> It's only for the next 6 days, so if you're interested (or know someone who might be), just tap this link: {company_website_link}/get-your-discount
+>
+> -{company_owner_first_name} from {company_name}
 
 **After SMS 5 → final internal notification + remove from sequence (end of drip):**
-> Hey {company_owner_first_name}! It's been about a year since we added {first_name} to your 1 year follow up sequence for referrals / return customer discounts. We are removing them from further follow up. If you want to contact them for a referral or to see if they'd like to use your service again please contact them at {phone}! (Do NOT reply to this message; it's not the client!)
+> Hey {company_owner_first_name}!
+>
+> It's been about a year since we added {first_name} to your 1-year follow-up sequence for referrals / return-customer discounts. We're removing them from further follow-up.
+>
+> If you'd like to contact them for a referral or to see if they'd use your service again, reach them at {phone}.
+>
+> (Do NOT reply to this message; it's not the client!)
 
 Note: the "they replied" interest notification (copy above) fires on a reply after ANY of SMS 1–5, not just SMS 1.
 
@@ -180,22 +237,52 @@ New keys (set per-client in `/admin-view` Settings, added to template_vars contr
 Naming convention (consistent across all skills): `{first_name}` in customer-facing texts; `{full_name}` in internal notifications. `{request_time}` = submission time rendered in the CLIENT's timezone, human-readable; dynamic, not a template_var.
 
 **Internal notification to client (both branches, ~30s / on submit):**
-> New Lead from Website lead-form! Info: - Name: {full_name} - Phone: {phone} - Message: {your_message}  We've let them know you'll be in touch soon! (Do NOT reply to this message; it's not the client!)
+> New Lead from Website lead-form!
+>
+> Name: {full_name}
+> Phone: {phone}
+> Message: {your_message}
+>
+> We've let them know you'll be in touch soon.
+>
+> (Do NOT reply to this message; it's not the client!)
 
 **SMS #1 to lead — Branch A only — [INTENTIONAL TYPO, DO NOT CORRECT]:**
-> Hey {first_name}! Just got your form! I'll be in touchr shortly! -{company_owner_first_name} with {company_name}
+> Hey {first_name}! Just got your form! I'll be in touchr shortly!
+> -{company_owner_first_name} with {company_name}
 
 **SMS #2 to lead — Branch A only, the correction (skip if lead already replied):**
-> I'll be in *touch* shortly! Sorry I haven't had enough coffee today haha! Talk soon!
+> I'll be in *touch* shortly! Sorry I haven't had enough coffee today haha!
+> Talk soon!
 
 **After-hours SMS to lead — Branch B only (replaces #1 and #2):**
-> Hey {first_name}! Just got your form! We'll be in touch as soon as possible! -{company_owner_first_name} with {company_name}
+> Hey {first_name}, just got your form. We'll be in touch as soon as possible!
+> -{company_owner_first_name} with {company_name}
 
 **After-hours owner notification — Branch B only (fires after the after-hours SMS):**
-> Hey {company_owner_first_name}! {full_name} submitted a request on your website at {request_time} — outside your business hours, so we sent them an after-hours reply. Reach out when you're back: {phone}. (Do NOT reply to this message; it's not the client!)
+> Hey {company_owner_first_name}!
+>
+> {full_name} submitted a request on your website at {request_time} — outside your business hours, so we sent them an after-hours reply.
+>
+> Phone: {phone}
+>
+> Reach out when you're back.
+>
+> (Do NOT reply to this message; it's not the client!)
 
 **Day-10 owner reminder — BOTH branches. Suppress if the lead's phone is now enrolled in the review automation. Includes an auto-enroll button:**
-> Hey {company_owner_first_name}, It's been about 10 days since {full_name} filled out a request on your website. If you've worked with them, please remember to add their info to your marketing form. This is important! Contact Info: - Name: {full_name} - Phone: {phone}  If you haven't added them yet, add their info into the Review Request form. If you'd like to auto-enroll them, click here: [Auto-Enroll button]  (Do NOT reply to this message; it's not the client!)
+> Hey {company_owner_first_name},
+>
+> It's been about 10 days since {full_name} filled out a request on your website. If you've worked with them, please remember to add their info to your marketing form. This is important!
+>
+> Name: {full_name}
+> Phone: {phone}
+>
+> If you haven't added them yet, add their info into the Review Request form — or auto-enroll them below.
+>
+> [Auto-Enroll button]
+>
+> (Do NOT reply to this message; it's not the client!)
 
 **Auto-Enroll button [BUILD]:** in the mobile-app Notifications tab, the button enrolls this contact into the Review Request drip directly (no manual form entry). It runs the same re-enrollment guard — if already enrolled, it displays "contact already enrolled" instead of enrolling.
 
@@ -270,10 +357,21 @@ The page at `{company_website_link}/get-your-discount` (destination of the one-y
 Naming: `{full_name}` internal, `{first_name}` customer-facing.
 
 **On submit → internal notification to client (immediate):**
-> Hey {company_owner_first_name}, {first_name} just filled out your discount form on the website. Info: - Name: {full_name} - Phone: {phone} - Message: {your_message}  We've told them you'll be reaching out soon! (Do NOT reply to this message; it's not the client!)
+> Hey {company_owner_first_name},
+>
+> {first_name} just filled out your discount form on the website!
+>
+> Name: {full_name}
+> Phone: {phone}
+> Message: {your_message}
+>
+> We've told them you'll be reaching out soon.
+>
+> (Do NOT reply to this message; it's not the client!)
 
 **Wait 2 minutes → SMS to the lead:**
-> Hey {first_name}! Just got your discounted request! I'll be in touch shortly and get you that discount! -{company_owner_first_name} with {company_name}
+> Hey {first_name}, just got your discounted request! I'll be in touch shortly and get you that discount!
+> -{company_owner_first_name} with {company_name}
 
 Then the drip ends.
 
@@ -315,16 +413,19 @@ Mobile-first PWA, scoped to the logged-in client's `client_id`.
 
 ## 12. Backlog / Work Queue (ordered)
 
-### >>> NEXT UP (active) <<<
-- **SMS automation formatting pass** — finalize the customer-facing SMS copy across all drips (review, one-year, lead-form, discount) with the intended line breaks/spacing preserved (some original copy had deliberate breaks, e.g. the "P.S." line, that got flattened). Goal: lay out every customer SMS so it can be proofread/approved one by one. THEN, same pass: reformat the in-app notification + email copy in §4/§5/§7/§7b + `/automation-config` + `/features` to stacked form (per §7d standard), and add the §7d owner-email copy into `/automation-config`. Coordinate across spec + `/automation-config` + `/features` + `/mobile-app` so nothing desyncs. (Customer SMS stay editable on-site after, but lock the canonical version here.)
+### DONE
+- ~~SMS automation formatting pass~~ ✓ COMPLETE — all customer-facing SMS finalized with intended line breaks (proofread/approved); all internal notifications + emails reformatted to stacked form (§4/§5/§7/§7b + `/automation-config` + `/mobile-app`); owner-email copy added to `/automation-config`. `/features` is mechanics-only (no inline copy). Customer SMS remain editable on-site.
+
+### >>> NEXT UP <<<
+- Pick from "FEATURES STILL TO DEFINE" below, or write `/scratch-foundation`, or make an architecture decision.
 
 ### FEATURES STILL TO DEFINE (not yet scoped — full definition needed)
-- **Missed-Call Textback — NEEDS FULL SCOPE.** Currently only "[LOCKED-ish]" in §9 from the original system (voice webhook → no-answer/busy → fire template, 30-min dedupe). We have NOT written the actual SMS copy, defined how the contact is created/treated, whether it enrolls them anywhere, or finalized the behavior. Treat as undefined — needs the same detailed pass as the other drips: copy, contact handling, any follow-on.
-- **Review Automation Funnel form/page — NEEDS FULL SETUP.** The review funnel direction (the rate page `/r/rate`, gating, the enroll page `/r/enroll`) has NOT been detailed by the user. This is a detailed setup: how the funnel pages look/flow, how a contact moves through them, gating config, how it ties to the review drip + tracked link. Needs full definition.
-- **Chat-Widget Lead Opt-In — NEEDS FULL BUILD DIRECTION.** A separate chat-widget feature for leads who opt in via an on-site chat widget. Needs a whole layout/build direction: how the widget looks, how a chat lead is captured, what it collects, which automation/drip it feeds, how it differs from the website lead form. Net-new feature, fully undefined.
+- **Missed-Call Textback — NEEDS FULL SCOPE.** Plumbing exists (voice webhook → no-answer/busy → fire template, 30-min dedupe, throttle-exempt), but the SMS copy, contact creation/handling, and behavior have NOT been defined. Needs the same detailed pass as the other drips.
+- **Review Automation Funnel form/page — NEEDS FULL SETUP.** The funnel direction (`/r/rate`, gating, `/r/enroll`) has NOT been detailed. Detailed setup: page look/flow, contact movement, gating config, ties to review drip + tracked link.
+- **Chat-Widget Lead Opt-In — NEEDS FULL BUILD DIRECTION.** Separate chat-widget feature for leads who opt in via an on-site widget. Needs whole layout/build direction: widget look, lead capture, what it collects, which drip it feeds, how it differs from the website lead form.
 
 ### LATER / PARKED (non-blocking)
-- **PWA web-push notifications** — superseded for now by owner email notifications (§7d); revisit if real-time phone push becomes wanted (installed PWA; iOS needs home-screen install).
+- **PWA web-push notifications** — superseded by owner email notifications (§7d); revisit if real-time phone push wanted.
 - **Stats label** — decided: dashboard uses "New Google Reviews" (counts review-link clicks).
 
 ### ARCHITECTURE DECISIONS PENDING (block 2 skills)
