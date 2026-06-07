@@ -151,8 +151,8 @@ New keys (set per-client in `/admin-view` Settings, added to template_vars contr
 - **Mobile app "Review Request" tab form** (first_name, last_name, phone, email) → enrolls into Review Request SMS Drip (§4) ONLY. Subject to the daily enrollment cap. This is the ONLY human entry point for the review/1-year feature chain. **Re-enrollment guard:** a contact already enrolled in the review automation (by client_id + phone) cannot be re-enrolled — block and show "contact already enrolled" so owners can safely re-attempt without double-texting.
 - **One-Year Follow-Up drip has NO form** — automatic handoff from review-drip completion (§4/§5).
 - **Public website lead form** (first_name, last_name, phone, email, your_message) → enrolls into the Lead-Form drip (§7). Public route, anon insert constrained to `source IN ('web_form','review_enroll')`.
-- **Discount-claim form** (first_name, last_name, phone, your_message) at `/get-your-discount` → enrolls into the Discount-Claim drip (§7b). Public route, anon insert constrained to `source = 'web_form'`.
 - Existing public funnel pages: `/r/rate`, `/r/feedback`, `/r/enroll`.
+- Discount-claim form (§7b) — TBD.
 
 ## 7. FEATURE — Website Lead-Form Drip [LOCKED copy]
 
@@ -290,10 +290,10 @@ Mobile-first PWA, scoped to the logged-in client's `client_id`.
 
 ---
 
-## 9. Other existing features (to be scoped in `/features`)
-- **Missed-call textback** [LOCKED-ish] — voice webhook → no-answer/busy → fires `missed_call_textback` template to caller, deduped per (client, caller, 30-min). Exempt from bulk throttle. Confirm scope.
-- **Customer reactivation** — CSV/paste upload → dedupe → enroll in `reactivation_drip` (day 0/3/7, exits on `reviewed`), conservative throttle profile. Confirm scope.
-- **Inbound SMS → CRM** — every inbound creates/updates conversation + message; STOP/HELP/START + now **"pass"** handled at webhook.
+## 9. Other features (status)
+- **Missed-call textback** [NEEDS FULL SCOPE — see §12] — original system has the plumbing (voice webhook → no-answer/busy → fire `missed_call_textback` template, 30-min dedupe, throttle-exempt), but the SMS copy, contact handling, and behavior have NOT been defined by the user. Do not treat as final.
+- **Customer reactivation** [scope to confirm] — CSV/paste upload → dedupe → enroll in `reactivation_drip` (day 0/3/7, exits on `reviewed`), conservative throttle profile. Copy not yet reviewed/finalized.
+- **Inbound SMS → CRM** [built] — every inbound creates/updates conversation + message; STOP/HELP/START + `pass` handled at webhook.
 
 ---
 
@@ -308,6 +308,25 @@ Mobile-first PWA, scoped to the logged-in client's `client_id`.
 - One-Year Follow-Up SMS drip — full copy, exit-on-reply-or-opt-out, no form (§5).
 - Website Lead-Form drip — full copy, two-window branching, intentional-typo guard, day-10 reminder + auto-enroll button (§7).
 - Discount-Claim Form & drip — form structure, copy, exits one-year drip on submit (§7b).
+- Owner Email Notifications — Lovable native transactional, one per lead, formatted with line breaks (§7d).
 - Email drip — SCRAPPED, SMS-only (§7c).
 - Re-enrollment guard (§4/§6). opt-in-forms map (§6 — now FINITE). Two-window model + two caps (§2/§3). admin-view tabs (§2).
 - Naming convention: `{first_name}` customer-facing, `{full_name}` internal notifications.
+
+## 12. Backlog / Work Queue (ordered)
+
+### >>> NEXT UP (active) <<<
+- **SMS automation formatting pass** — finalize the customer-facing SMS copy across all drips (review, one-year, lead-form, discount) with the intended line breaks/spacing preserved (some original copy had deliberate breaks, e.g. the "P.S." line, that got flattened). Goal: lay out every customer SMS so it can be proofread/approved one by one. THEN, same pass: reformat the in-app notification + email copy in §4/§5/§7/§7b + `/automation-config` + `/features` to stacked form (per §7d standard), and add the §7d owner-email copy into `/automation-config`. Coordinate across spec + `/automation-config` + `/features` + `/mobile-app` so nothing desyncs. (Customer SMS stay editable on-site after, but lock the canonical version here.)
+
+### FEATURES STILL TO DEFINE (not yet scoped — full definition needed)
+- **Missed-Call Textback — NEEDS FULL SCOPE.** Currently only "[LOCKED-ish]" in §9 from the original system (voice webhook → no-answer/busy → fire template, 30-min dedupe). We have NOT written the actual SMS copy, defined how the contact is created/treated, whether it enrolls them anywhere, or finalized the behavior. Treat as undefined — needs the same detailed pass as the other drips: copy, contact handling, any follow-on.
+- **Review Automation Funnel form/page — NEEDS FULL SETUP.** The review funnel direction (the rate page `/r/rate`, gating, the enroll page `/r/enroll`) has NOT been detailed by the user. This is a detailed setup: how the funnel pages look/flow, how a contact moves through them, gating config, how it ties to the review drip + tracked link. Needs full definition.
+- **Chat-Widget Lead Opt-In — NEEDS FULL BUILD DIRECTION.** A separate chat-widget feature for leads who opt in via an on-site chat widget. Needs a whole layout/build direction: how the widget looks, how a chat lead is captured, what it collects, which automation/drip it feeds, how it differs from the website lead form. Net-new feature, fully undefined.
+
+### LATER / PARKED (non-blocking)
+- **PWA web-push notifications** — superseded for now by owner email notifications (§7d); revisit if real-time phone push becomes wanted (installed PWA; iOS needs home-screen install).
+- **Stats label** — decided: dashboard uses "New Google Reviews" (counts review-link clicks).
+
+### ARCHITECTURE DECISIONS PENDING (block 2 skills)
+- Copy-strategy: templatize hardcoded marketing copy vs rewrite per vertical → blocks `/theme-to-brand`.
+- Onboarding form vs SQL/settings (`createClient` takes 4 fields today) → blocks `/onboard-from-form`.
