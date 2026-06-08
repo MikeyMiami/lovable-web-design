@@ -22,7 +22,8 @@ TanStack Start v1 (React 19 + Vite 7), SSR, Cloudflare Workers (pure JS + fetch,
 2. `/features` — reference + build instructions for each feature's mechanics & scope.
 3. `/automation-config` — exact message copy + timing (the "snapshot").
 4. `/opt-in-forms` — which forms feed which automations.
-5. `/mobile-app` — the client app (`app.theirdomain.com`): Conversations, Review Request, Notifications tabs.
+5. `/chat-widget` — the AI chat widget (§7e): opt-in gate, FAQ retrieval, pricing guardrail, request→lead-form handoff.
+6. `/mobile-app` — the client app (`app.theirdomain.com`): Conversations, Review Request, Notifications tabs.
 6. `/admin-view` — the admin tabs/settings on the client website (what's editable where).
 7. `/launch-check` — pre-go-live verification gate.
 8. `/new-client-site` — orchestrates the from-scratch build for a new client.
@@ -414,6 +415,54 @@ New: `{discount_amount}` (banner display amount — SEPARATE from `{discount__on
 
 ---
 
+## 7e. FEATURE — AI Chat Widget Lead Opt-In [LOCKED — own skill `/chat-widget`]
+
+A corner chat widget on the client's website. An AI assistant answers FAQs from the client's business data and routes quote/pricing interest into the same lead pipeline as the website lead form. Net-new; the largest single feature — gets its own `/chat-widget` skill.
+
+### AI model & knowledge source
+- **Model:** Lovable's native/built-in AI capability (no third-party API setup — Lovable can build this self-contained). NOT per-client fine-tuning — uses retrieval: the client's business info is provided to the model as context at chat time.
+- **Knowledge source [DEPENDENCY]:** the AI answers from (a) the client's website content and (b) the **business onboarding form data** (services, hours, business details — the same data that builds the site copy). This is a HARD dependency on the onboarding form (TBD architecture decision) — the AI's answer quality = the onboarding data captured. Until the onboarding form is defined, the exact fields the AI receives are pending; the widget's flow/behavior below is locked regardless.
+
+### Opt-in gate [LOCKED]
+- The widget opens with: **"What do you need help with?"** → two options: **Question** and **Request Services / Contact Us**.
+- BEFORE the AI converses on either path, the person opts in with: **First Name, Last Name, Email, Phone, and their message/question.** (SMS opt-in + terms consent language required, since phone is collected for texting.)
+- Contact created with source **`chat_widget`** (distinct from `web_form`, so leads are attributable to the widget). Phone E.164.
+
+### Behavior [LOCKED]
+- **Question (FAQ) path:** the AI answers general questions about the business and its services from the business data (e.g. "do you offer drain cleaning?", "what are your hours?").
+- **Pricing/quote guardrail:** the AI must NOT quote prices or give official pricing. Any question asking a price or a quote → the AI directs them to submit a request ("Let me get you an accurate quote — fill in your request and the team will reach out"). General service *info* is answered; *pricing/quotes* are redirected. This is a system-prompt guardrail (strong but soft — instruct firmly).
+- **Request path:** works exactly like the main website lead form (§7) — creates the contact, enrolls into the SAME lead-form drip + automations (business-hours branching, the typo/correction texts, day-10 reminder, owner email). After a request is submitted, the AI confirms: it sent the request to the team and they'll hear back shortly.
+- **The ONLY difference from the website lead form:** the owner notification (in-app + email) reads **"New Website AI Chat Lead"** instead of "New Website Lead." All downstream automation/enrollment is identical.
+
+### AI hard rules (system prompt guardrails) [LOCKED]
+- Never quote prices or give official pricing → always redirect to the request form.
+- Only discuss this business and its services; don't answer off-topic/general questions unrelated to the business.
+- Don't make promises or commitments on the owner's behalf beyond "the team will reach out."
+- If unsure / lacks the info → direct them to submit a request so the team can follow up.
+
+### Owner notification copy (variant of §7 / §7d)
+**In-app + email subject: New Website AI Chat Lead** (otherwise identical body to the website-lead notification/email):
+> Hey {company_owner_first_name},
+>
+> You've got a new lead from your website AI chat!
+>
+> Name: {full_name}
+> Phone: {phone}
+> Message: {your_message}
+>
+> We've already replied to them in the chat. Open your app to see the conversation.
+
+(Business-hours / after-hours branching applies the same as §7, since it feeds the same lead-form drip. The notification label is the only copy difference.)
+
+### Build notes [BUILD]
+- Real-time AI chat UI (corner widget) on the client site; Lovable native AI for responses.
+- Opt-in gate before chat; consent capture; `chat_widget` contact source.
+- Retrieval context assembled from onboarding data + site content.
+- Request path reuses the §7 lead-form enrollment exactly; only the owner-notification label differs.
+- DEPENDENCY: onboarding form must be defined to finalize the AI's knowledge inputs.
+
+---
+
 ## 8. `/mobile-app` — client app at `app.theirdomain.com` [LOCKED scope / BUILD tabs]
 Mobile-first PWA, scoped to the logged-in client's `client_id`.
 - **Conversations tab** — SMS threads across all contacts in this client's CRM. (Exists at `/app`.)
@@ -474,6 +523,7 @@ Mobile-first PWA, scoped to the logged-in client's `client_id`.
 - Owner Email Notifications — Lovable native transactional, one per lead, formatted with line breaks (§7d).
 - Missed-Call Textback — full scope + copy: 24/7, 4 triggers, 1-min/2-min drip, reply-skip, 7-day re-eligibility per contact, internal notification (§9).
 - Review Funnel — `/r/rate` (1–5, inclusive threshold), landing exits drip, ≥thr → Google + Review Completed + One-Year handoff, <thr → /r/feedback + Negative Review (no handoff) + owner email/notification; stat renamed "Review Link Clicks"; /r/enroll cut (§4/§6).
+- AI Chat Widget — opt-in gate, FAQ answering from business data, pricing→request-form guardrail, Request path = lead-form drip with "New Website AI Chat Lead" label; own /chat-widget skill; depends on onboarding form for AI knowledge (§7e).
 - Email drip — SCRAPPED, SMS-only (§7c).
 - Re-enrollment guard (§4/§6). opt-in-forms map (§6 — now FINITE). Two-window model + two caps (§2/§3). admin-view tabs (§2).
 - Naming convention: `{first_name}` customer-facing, `{full_name}` internal notifications.
@@ -486,8 +536,9 @@ Mobile-first PWA, scoped to the logged-in client's `client_id`.
 ### >>> NEXT UP <<<
 - Pick from "FEATURES STILL TO DEFINE" below, or write `/scratch-foundation`, or make an architecture decision.
 
-### FEATURES STILL TO DEFINE (not yet scoped — full definition needed)
-- **Chat-Widget Lead Opt-In — NEEDS FULL BUILD DIRECTION.** Separate chat-widget feature for leads who opt in via an on-site widget. Needs whole layout/build direction: widget look, lead capture, what it collects, which drip it feeds, how it differs from the website lead form.
+### FEATURES — all defined ✓
+- All platform features are now scoped. (AI Chat Widget §7e scoped; its AI knowledge inputs finalize once the onboarding form is defined — see Architecture Decisions.)
+- Reactivation still needs a confirmation/full pass (copy + how its link reaches /r/rate) — §9.
 
 ### LATER / PARKED (non-blocking)
 - **PWA web-push notifications** — superseded by owner email notifications (§7d); revisit if real-time phone push wanted.
