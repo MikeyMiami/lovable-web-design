@@ -664,11 +664,21 @@ This resolves the copy-strategy decision: copy is AI-GENERATED, steered by the s
 ### DONE
 - ~~SMS automation formatting pass~~ ✓ COMPLETE — all customer-facing SMS finalized with intended line breaks (proofread/approved); all internal notifications + emails reformatted to stacked form (§4/§5/§7/§7b + `/automation-config` + `/mobile-app`); owner-email copy added to `/automation-config`. `/features` is mechanics-only (no inline copy). Customer SMS remain editable on-site.
 
-### >>> NEXT UP <<<
-- Write the remaining skills (all features locked, zero open decisions). Suggested order: `/scratch-foundation` → `/chat-widget` → `/onboard-from-form` → `/website-structure` → `/launch-check` → `/new-client-site`. Then Phase 2 (build & prove the golden master).
+### >>> NEXT UP — PHASE 2: BUILD & PROVE THE GOLDEN MASTER <<<
+Phase 1 (author the skills) is COMPLETE ✓ — spec + all 11 skills, mutually consistent, foundation reconciled against the live DB, zero open decisions.
+
+Phase 2 (the build):
+1. Run `/scratch-foundation` — apply the [ADD] migrations + enum `ALTER TYPE`s (review_completed/negative_review/reactivation; chat_widget/mobile_enroll), the enrollments UNIQUE constraint (dedup first), the index set, the two storage buckets, runtime secrets (CRON_SECRET + parent Twilio token).
+2. Build the feature + automation layer (features → automation-config → opt-in-forms → mobile-app → admin-view → chat-widget) on the shared backend.
+3. Wire telephony (Twilio Option 1) + the pg_cron drip runner.
+4. Run `/launch-check` sections A–D until all green → declare the golden master frozen.
+5. Then per-client launches use `/new-client-site` (provision + Remix + design + launch-check §E).
 
 ### FEATURES — all defined & locked ✓
 - All platform features are scoped AND locked, including AI Chat Widget (§7e) and Customer Review Reactivation (§9). No undefined features remain.
+
+### SKILLS — all 11 authored ✓
+scratch-foundation, features, automation-config, opt-in-forms, chat-widget, mobile-app, admin-view, onboard-from-form, website-structure, launch-check, new-client-site. Mutually consistent; foundation reconciled against the live DB.
 
 ### LATER / PARKED (non-blocking)
 - **PWA web-push notifications** — superseded by owner email notifications (§7d); revisit if real-time phone push wanted.
@@ -679,7 +689,5 @@ This resolves the copy-strategy decision: copy is AI-GENERATED, steered by the s
 - ~~Onboarding form vs SQL~~ RESOLVED (§9b): real owner form + agency config. `/onboard-from-form` unblocked.
 - ~~Build-from-scratch vs clone~~ RESOLVED (§0): golden-master model — skills build/prove ONE shared multi-tenant backend once; per-client launch adds a client to the shared backend + Remixes a frontend-only marketing site (no backend clone, no regenerate); design is the per-client creative layer.
 
-### REMAINING WORK = skill-writing only (no open decisions, all features locked)
-- Write skills: `/scratch-foundation`, `/chat-widget`, `/onboard-from-form`, `/website-structure`, `/launch-check`, `/new-client-site`.
-- Then: Phase 2 — build & prove the golden master.
-- System note: failed SMS sends retry up to 2× at the send layer before marking failed (the GHL "max retries" equivalent) — [BUILD] in the send/cron logic, not per-drip.
+### SYSTEM NOTES (carry into the build)
+- Failed SMS sends retry up to 2× at the send layer before marking failed (the GHL "max retries" equivalent) — [BUILD] in the send/cron logic, not per-drip.
