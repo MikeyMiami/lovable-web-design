@@ -36,7 +36,7 @@ This skill VERIFIES; it does not build. If a check fails, fix it in the owning s
 - [ ] Review Request drip (§4): mobile-app enrollment → 4 SMS (day 0/+4/+7/+7) → click-checks → final owner notification at +48h; re-enrollment guard.
 - [ ] Review Funnel (§4): tracked link → /r/rate → ≥threshold → review_completed + Google + One-Year handoff; <threshold → /r/feedback → negative_review + owner email/notif, NO handoff.
 - [ ] One-Year drip (§5): 5 SMS, exit on reply/opt-out/discount-submit, never on click.
-- [ ] Lead-Form drip (§7): business-hours branching, intentional-typo "touchr" + correction, day-10 reminder + Auto-Enroll.
+- [ ] Lead-Form drip (§7): business-hours branching, single SMS#1 (correctly spelled), day-10 reminder + Auto-Enroll.
 - [ ] Discount form & drip (§7b): submit exits One-Year drip.
 - [ ] Missed-Call Textback (§9): 24/7, Twilio busy/no-answer/canceled/failed, 1-min/2-min, 7-day re-eligibility.
 - [ ] Owner Email Notifications (§7d): all subjects incl. New Website AI Chat Lead.
