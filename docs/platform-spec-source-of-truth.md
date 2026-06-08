@@ -84,12 +84,12 @@ Current tabs: **Dashboard, Contacts, Conversations, Feedback, Automations, Uploa
 ### Link tracking + Review Funnel [BUILD — does not exist yet, skill must construct]
 - The review link in every SMS is a **per-contact tracked redirect**, NOT the raw Google URL.
 - At enrollment, generate a unique token → maps to (contact_id, client_id, sequence).
-- SMS contains `https://<client-domain>/r/<token>`.
+- SMS contains `https://<shared-backend-domain>/r/<token>` (e.g. `links.myagency.com/r/<token>` or `app.myagency.com/r/<token>`). **NOT the client marketing domain** — these routes WRITE to the DB, and the per-client marketing site is frontend-only (no service-role/DB writes). All tracked-link + funnel routes (`/r/<token>`, `/r/rate`, `/r/feedback`) are served by the SHARED BACKEND.
 - On tap: public route looks up token → writes `review_clicked` event → **lands the contact on the Review Funnel rate page (`/r/rate`)**.
 - **Landing on `/r/rate` EXITS the contact from the review drip immediately** (they clicked through — this is the click the drip was watching for). Status + one-year handoff are then determined by their star selection (below).
 
 ### Review Funnel pages [LOCKED]
-The same funnel is the destination for BOTH the review-drip tracked link and the reactivation link.
+The same funnel is the destination for BOTH the review-drip tracked link and the reactivation link. **All funnel pages are served by the SHARED BACKEND domain** (they read/write the DB), NOT the per-client frontend-only marketing site.
 
 **`/r/rate`** — text "How would you rate us?" + a 1–5 star multiple-choice. Threshold = per-client `star_threshold` in `/admin-view` (default 4, **inclusive ≥**).
 - **Selection ≥ threshold** → status **`Review Completed`** → redirect to the client's Google review page (deep-links the leave-a-review screen on their GBP) → **enroll into the One-Year Follow-Up drip** (normal handoff).
@@ -629,6 +629,24 @@ This resolves the copy-strategy decision: copy is AI-GENERATED, steered by the s
 - **Mode 1 — Generate (now):** AI builds the style from reference screenshots + style choice + onboarding assets/data. Used to discover good styles.
 - **Mode 2 — Apply a template (as the library grows):** once a generated style is a winner, capture its CODE as a named, reusable design template; new sites are built by selecting a template and injecting the client's data/assets — no re-derivation. Faster + deterministic + reliably good.
 - **Bridge:** codify winning generated styles into the template library. Primary plug-and-play mechanism = **Lovable cross-project referencing** (a proven style lives as a reference project; new builds pull its design patterns via @mention). The codification process gets fully defined once the first winners exist. [BUILD — template library grows over time]
+
+---
+
+## 9d. External Dependencies & Wiring [LOCKED — Phase 2 setup]
+Every external service/connection the build needs, with what to set up and when (golden-master = once, per-client = each launch).
+
+- **Email (owner notifications)** — ONE platform-level agency sender (verify `myagency.com` SPF/DKIM/DMARC; one from-address + display name). NOT per-client (all emails go to owners, not their customers). `sending_subdomain`/`dkim_status` = deferred-v1. ❓ Confirm in Lovable: default from-domain, custom-from support, ESP + rate limits. Golden-master, once.
+- **Twilio (SMS + voice)** — Option 1: one parent account via the connector gateway; parent auth token = runtime secret; register the two parent-level webhook URLs (`/api/public/twilio/inbound`, `/api/public/twilio/voice-status`) once the backend has a stable domain. Numbers/forwarding/placement = per-client.
+- **Bot protection** — Cloudflare Turnstile (free, fits Workers/fetch). One widget, site key (public, in marketing forms) + secret (runtime secret, verified in lead-intake server fns). Add each client domain as a hostname. Verify step = golden-master; client hostname = per-client.
+- **AI chat widget** — Lovable native AI (no third-party). ❓ Confirm in Lovable: server-fn invocation, per-request context payload + max size, cost/rate at scale, whether a key/toggle exists. Trim the knowledge bundle + per-conversation message cap to bound cost. Widget/server-fn = golden-master; knowledge bundle = per-client.
+- **Google (review links)** — NO integration/OAuth/API. Just two stored strings per client (`review_link`, `review_place_id`); the leave-a-review URL is constructed. Per-client (onboarding).
+- **Storage** — native Supabase: `public-assets` (public-read), `client-assets` (private, client_id-scoped RLS). Buckets/policies = golden-master; uploads = per-client.
+- **Scheduling** — native pg_cron + pg_net → `/api/public/cron/sequences` with `x-cron-secret`. Needs stable backend URL + `CRON_SECRET`. Golden-master.
+- **Domains/DNS** — shared backend needs a stable custom domain (gates Twilio webhooks, cron, tracked links) = golden-master. Per-client: marketing domain (→ deploy + `allowed_origins` + Turnstile hostname), `app.theirdomain.com` for the mobile app.
+- **Rate-limiter store** — in-memory won't work across Worker isolates; use Cloudflare Durable Objects / Workers KV / DB-based. Golden-master decision (no new account).
+
+### Architecture note — shared-backend vs frontend-only split [LOCKED]
+The per-client **Remixed marketing site is frontend-only** (anon reads + CORS-guarded POSTs; no service-role, no DB writes). The **admin view AND the mobile app are part of the SHARED BACKEND** (authed, DB-touching), served on per-client subdomains (`app.theirdomain.com`), NOT frontend-only Remixes. The **tracked-link + funnel routes (`/r/<token>`, `/r/rate`, `/r/feedback`) are served by the SHARED BACKEND domain** (they write to the DB), not the client marketing domain.
 
 ---
 
