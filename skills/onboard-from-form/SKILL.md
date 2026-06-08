@@ -46,7 +46,7 @@ Takes the §9b onboarding inputs (owner-filled + agency-set) and writes them int
 | Marketing domain(s) | `clients.allowed_origins` (text[]) — powers CORS allowlist (§6) |
 | Twilio number + Messaging Service SID | `clients.twilio_number`, `clients.twilio_messaging_service_sid` (non-secret, under the one parent account) |
 | Call-forwarding number | `clients.call_forwarding_number` (may match the owner's Business Phone) |
-| Sending subdomain / DKIM | `clients.sending_subdomain`, `clients.dkim_status` |
+| Sending subdomain / DKIM | `clients.sending_subdomain`, `clients.dkim_status` — **[DEFERRED — not v1]** (owner emails use ONE platform-level agency sender, not per-client domains) |
 
 ## template_vars — the single source for merge values [LOCKED]
 All per-client merge values live in `clients.template_vars` (jsonb), NOT as dedicated columns. Required keys to populate at onboarding: `company_owner_first_name`, `company_name`, `company_website_link`, `review_request_link`, `discount__on_referral`, `discount_amount`, `quote_form_link`, `website_terms_page_link`. (review_request_link is the client's own direct Google review link, distinct from the per-contact tracked `review_link`.) Validate ALL required keys are present before the client goes live — missing keys render blank silently in messages.
