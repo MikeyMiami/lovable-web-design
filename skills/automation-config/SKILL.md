@@ -11,7 +11,7 @@ Merge keys:
 - Built-in: `first_name`, `phone`, `review_link` (per-contact tracked redirect, review drip only).
 - Per-client template_vars: `company_owner_first_name`, `company_name`, `review_request_link`, `discount__on_referral`, `company_website_link`, `discount_amount`, `website_terms_page_link`.
 - Per-client template_vars also include `quote_form_link` (defaults to the site lander `{company_website_link}`; overridable in /admin-view Settings — the page hosting the quote form).
-- Dynamic (not template_vars): `message.body`, `request_time` (client tz, human-readable), `full_name`, `your_message`, `caller_phone`, `call_time` (client tz).
+- Dynamic (not template_vars): `message.body`, `request_time` (client tz), `full_name`, `your_message`, `caller_phone`, `call_time` (client tz), `feedback_message`, `email`.
 - Naming: `{first_name}` customer-facing; `{full_name}` internal notifications.
 - Formatting standard: internal notifications + emails stack details (Name / Phone / Message) on separate lines — never inline.
 
@@ -262,6 +262,18 @@ Sent in ADDITION to the in-app notification when a lead-form or discount-form su
 > Message: {your_message}
 >
 > We've told them you'll be reaching out soon. Open your app to see the details.
+
+**Subject: We Saved You From a Negative Review** (fires when a contact submits `/r/feedback` below threshold):
+> Hey {company_owner_first_name},
+>
+> We just saved you from getting a bad Google review. You can read about this customer's experience here:
+>
+> Name: {full_name}
+> Email: {email}
+> Phone: {phone}
+> Message: {feedback_message}
+
+(Same content also fires as a mobile-app notification. The contact is marked `Negative Review` — NOT enrolled in the One-Year drip.)
 
 ---
 
