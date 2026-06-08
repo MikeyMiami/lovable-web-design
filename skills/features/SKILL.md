@@ -74,8 +74,14 @@ Per-contact token = know exactly who landed (required to set the right contact's
 **Contact handling:** create/match the contact by `phone_e164`, log the missed call (event); replies flow into the normal inbox. A brand-new caller has no name yet — the internal notification keys off `{caller_phone}` + `{call_time}`, with an "Open conversation" button.
 **SMS #2 reply-skip** uses the same inbound-webhook reply detection as the lead-form drip.
 
-## Feature: Customer Reactivation (built — scope)
-Admin uploads CSV/paste at `/admin/reactivation` → normalize phones → upsert contacts deduped by (client_id, phone) then (client_id, email), source `reactivation` → enroll in `reactivation_drip`. Uses the conservative throttle profile. Copy/timing in automation-config.
+## Feature: Customer Review Reactivation [LOCKED]
+Admin uploads CSV/paste at `/admin/reactivation` → normalize phones (E.164) → upsert contacts deduped by (client_id, phone) then (client_id, email), source `reactivation` → enroll in `reactivation_drip`.
+- **Dedup guard:** skip contacts already run through reactivation OR already `Review Completed`.
+- **Per-drip safety caps (independent):** max 50 new enrollments/day; max 2 dripped every 20 min. The 50/day cap is the Google-protection lever (limits new review asks/day; a 5k upload trickles over ~100 days).
+- **Cadence:** SMS 1 immediately → +24h → +24h → +24h, within the send window. Same 4 message texts as the Review Request drip (§4).
+- **Click → `/r/rate`:** exit drip + funnel + fire the reactivation click notification to the owner's mobile app.
+- **One-Year handoff:** only on `Review Completed` (left a review). No review / Negative Review / opt-out → no handoff.
+- **No final owner notification** after no response (ends silently after SMS 4). Copy/timing in automation-config.
 
 ## Feature: Inbound SMS → CRM (built — scope)
 `/api/public/twilio/inbound`: verify Twilio signature when configured; resolve client by destination number, contact by sender; compliance keywords (STOP/STOPALL/UNSUBSCRIBE/CANCEL/END/QUIT + **`pass`** → opt out [BUILD: add `pass` as whole-word match]; HELP/INFO → info; START/YES/UNSTOP → opt back in); else upsert conversation, insert inbound message, write `inbound_sms` event. This webhook also detects drip exits-on-reply (one-year, lead-form SMS#2 skip).
