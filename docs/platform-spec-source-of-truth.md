@@ -285,7 +285,7 @@ New keys (set per-client in `/admin-view` Settings, added to template_vars contr
 1. Single after-hours SMS to the lead.
 2. After-hours owner notification (so they see it when back).
 3. Day 10 → owner reminder (same as Branch A — fires on BOTH paths).
-(After-hours customer-facing drip ends after the single SMS; the normal two-text sequence does NOT fire later.)
+(After-hours customer-facing drip ends after the single SMS.)
 
 ### Exact copy [LOCKED]
 Naming convention (consistent across all skills): `{first_name}` in customer-facing texts; `{full_name}` in internal notifications. `{request_time}` = submission time rendered in the CLIENT's timezone, human-readable; dynamic, not a template_var.

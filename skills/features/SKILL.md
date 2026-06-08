@@ -50,7 +50,7 @@ Per-contact token = know exactly who landed (required to set the right contact's
 
 **Two-window branching [LOCKED]:** branches at submission time on **Business Hours** (a SEPARATE per-client setting from the marketing SMS Send Window — see admin-view). Lead-form SMS is transactional: it does NOT defer to the marketing window; it branches on Business Hours.
 - **During Business Hours:** wait 30s → internal client notification → SMS #1 to lead (single text, correctly spelled) → day-10 owner reminder.
-- **Outside Business Hours:** single after-hours SMS to the lead (no typo, no second text) → after-hours owner notification → day-10 owner reminder. The after-hours message is the end of the customer-facing drip; the normal two-text sequence does NOT fire later.
+- **Outside Business Hours:** single after-hours SMS to the lead → after-hours owner notification → day-10 owner reminder. The after-hours message is the end of the customer-facing drip.
 
 **Day-10 owner reminder (BOTH branches):** suppress if the lead's phone is now enrolled in the review automation; otherwise send. Includes an **Auto-Enroll button** [BUILD] in the Notifications tab that enrolls the contact into the Review Request drip directly (runs the re-enrollment guard; shows "contact already enrolled" if applicable).
 
