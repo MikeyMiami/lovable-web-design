@@ -126,16 +126,26 @@ Notification copy (sources: review drip §4, one-year §5, lead-form §7, discou
 
 The Open-conversation button deep-links to that contact's thread in the Conversations tab. {caller_phone}/{call_time} are dynamic (client tz); a brand-new caller has no name yet.
 
+**Negative review feedback — fires when a contact submits `/r/feedback` (below threshold):**
+> We just saved you from getting a bad Google review. You can read about this customer's experience here:
+>
+> Name: {full_name}
+> Email: {email}
+> Phone: {phone}
+> Message: {feedback_message}
+
+(This contact is marked `Negative Review` and is NOT enrolled in the One-Year drip. Same content also sent as an owner email, subject "We Saved You From a Negative Review.")
+
 ## Tab 4 — Dashboard
 Weekly + monthly stat counters, computed from `events` scoped to this client. Four counters:
 
 > New Website Leads this week: {count}
 > New Website Leads this month: {count}
-> New Google Reviews this week: {count}
-> New Google Reviews this month: {count}
+> Review Link Clicks this week: {count}
+> Review Link Clicks this month: {count}
 
 - **New Website Leads** = count of contacts created with source `web_form` (lead form + discount form) in the period.
-- **New Google Reviews** = count of `review_clicked` events in the period. (Label is "Google Reviews"; mechanically it counts review-link click-throughs, since posted reviews can't be confirmed without the GMB API. This labeling choice is intentional.)
+- **Review Link Clicks** = count of `review_clicked` events in the period (each = a contact landing on `/r/rate` via their tracked link). Renamed from "New Google Reviews" for accuracy, since landing ≠ a confirmed posted review.
 - "This week" / "this month" computed in the client's timezone.
 
 ---
