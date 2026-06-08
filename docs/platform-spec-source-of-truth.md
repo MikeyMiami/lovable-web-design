@@ -605,7 +605,7 @@ The agency hosts each client's terms/privacy page. Needs a documented process to
 
 ## 9c. Website Structure & Design Layer [LOCKED — skill `/website-structure`]
 
-The per-client DESIGN layer, applied on top of the cloned golden-master backend (§0). Defines the page set, the copy/visual direction, and how design is generated and (eventually) templated. Absorbs the old `/theme-to-brand`.
+The per-client DESIGN layer, applied on top of the shared golden-master backend (§0). Defines the page set, the copy/visual direction, and how design is generated and (eventually) templated. Absorbs the old `/theme-to-brand`.
 
 ### Page set [LOCKED]
 Pages are generated FROM the onboarding data, up to the max below. Only build pages the onboarding form supports (e.g. 5 services + 8 areas → 5 service pages + 8 area pages, not the max).
@@ -677,7 +677,7 @@ This resolves the copy-strategy decision: copy is AI-GENERATED, steered by the s
 ### ARCHITECTURE DECISIONS — ALL RESOLVED ✓
 - ~~Copy-strategy~~ RESOLVED (§9c): AI-generated copy steered by 4 style choices; templatized structure. `/website-structure` unblocked (absorbs `/theme-to-brand`).
 - ~~Onboarding form vs SQL~~ RESOLVED (§9b): real owner form + agency config. `/onboard-from-form` unblocked.
-- ~~Build-from-scratch vs clone~~ RESOLVED (§0): golden-master model — skills build/prove the backend once; per-client launch clones the proven code; design is the per-client creative layer.
+- ~~Build-from-scratch vs clone~~ RESOLVED (§0): golden-master model — skills build/prove ONE shared multi-tenant backend once; per-client launch adds a client to the shared backend + Remixes a frontend-only marketing site (no backend clone, no regenerate); design is the per-client creative layer.
 
 ### REMAINING WORK = skill-writing only (no open decisions, all features locked)
 - Write skills: `/scratch-foundation`, `/chat-widget`, `/onboard-from-form`, `/website-structure`, `/launch-check`, `/new-client-site`.
