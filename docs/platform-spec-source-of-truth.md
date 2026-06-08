@@ -6,11 +6,24 @@
 
 ---
 
-## 0. Build philosophy [LOCKED]
-- **Build from scratch, in ordered layers** — do NOT clone-and-patch. Every site is constructed identically from nothing, so every site is identical by construction (determinism = reliability).
-- Layer order (also the skill order): **foundation → features → automation-config → launch-check**, then per-client **onboard-from-form → theme-to-brand**.
-- One skill, one job (per Lovable docs). No monolithic "build everything" skill.
-- The spec doc is the source of truth; skills are derived from it; version-controlled in the repo.
+## 0. Build philosophy & deployment model [LOCKED]
+
+**The skills build a tested "golden master" backend ONCE; per-client launch clones that proven code.** This resolves the build-from-scratch-vs-clone tension: the skills get us to a known-perfect state, and after that, cloning that state is SAFER than regenerating it (regeneration reintroduces AI-sway/drift risk).
+
+**Three phases:**
+1. **Author the skills** (where we are) — the skills are the complete canonical spec of how the backend is built, derived from this doc.
+2. **Build & prove the reference backend, once** — run the skills against a fresh site, build the entire backend, test every feature until flawless. This produces the **golden master** (tested, working code).
+3. **Clone the golden master per client, forever after** — new clients launch from a COPY of the proven backend code, NOT by re-running the skills. The backend is now finite, deterministic code.
+
+**The clean split:**
+- **Backend = cloned golden master** — frozen, proven, deterministic; no AI generation per client. (This is the part that must be reliable.)
+- **Design = the per-client creative layer** (`/website-structure`) — AI-driven styling + a growing library of codified style templates, applied on top of the frozen backend. (This is the part that should be varied/creative.)
+
+**Role of the skills:** they are the blueprint that builds (and, if ever needed, rebuilds) the golden master, AND the canonical documentation of how the system works. They remain the source of truth forever — they are just not the per-client *runtime* path once the master exists.
+
+**Determinism within the build:** when the skills DO build (Phase 2, or a rebuild), they build from scratch in ordered layers — every construction identical by construction. One skill, one job. No monolithic "build everything" skill. The spec doc is the source of truth; skills are derived from it; version-controlled in the repo.
+
+**Layer order (also the skill order):** foundation → features → automation-config → launch-check; per-client launch = `/new-client-site` (clone master backend + invoke the design layer) → `/onboard-from-form` → `/website-structure` (design).
 
 ## 0a. Stack (unchanged, see workspace knowledge) [LOCKED]
 TanStack Start v1 (React 19 + Vite 7), SSR, Cloudflare Workers (pure JS + fetch, no native deps). Lovable Cloud / Supabase. Server logic in TanStack Start (`createServerFn` + `src/routes/api/public/*`). RLS on every table; roles in `user_roles`; SECURITY DEFINER helpers. Three Supabase clients (browser / authed-server-fn / admin).
@@ -25,9 +38,11 @@ TanStack Start v1 (React 19 + Vite 7), SSR, Cloudflare Workers (pure JS + fetch,
 5. `/chat-widget` — the AI chat widget (§7e): opt-in gate, FAQ retrieval, pricing guardrail, request→lead-form handoff.
 6. `/mobile-app` — the client app (`app.theirdomain.com`): Conversations, Review Request, Notifications tabs.
 7. `/admin-view` — the admin tabs/settings on the client website (what's editable where).
-8. `/launch-check` — pre-go-live verification gate.
-9. `/new-client-site` — orchestrates the from-scratch build for a new client.
-(`/onboard-from-form`, `/theme-to-brand` follow once their decisions land.)
+8. `/launch-check` — pre-go-live verification gate (for building/proving the golden master).
+9. `/new-client-site` — per-client launch orchestrator: **clone the golden-master backend + invoke the design layer** (NOT regenerate from scratch).
+10. `/website-structure` — the per-client DESIGN layer: page set (generated from onboarding, up to max), the 4 style choices, AI-driven copy + visual generation from onboarding data + assets + reference screenshots, and the codified style-template library (plug-and-play via Lovable cross-project referencing). Absorbs the old `/theme-to-brand` (brand colors/logo are part of this).
+11. `/onboard-from-form` — captures the §9b onboarding data into the system (config + AI knowledge + design inputs).
+(`/website-structure` and `/onboard-from-form` are the per-client design + data-capture skills; both now unblocked. `/theme-to-brand` is absorbed into `/website-structure`.)
 
 ---
 
@@ -530,6 +545,7 @@ Verbatim from the live client form (light edits for our system):
 - **Return/referral discounts** (e.g. "$500 off your next roof / 15% off your next driveway wash") → `{discount__on_referral}` and `{discount_amount}`.
 - **Logo** (upload; or request one) + "do you need a logo?" flag → branding.
 - **Timezone** (NEW field — pick one: EST / CST / MST / PST / Honolulu) → drives all send windows; also editable in admin.
+- **Site style choice** (NEW field — pick one of 4): **Corporate** (polished, professional, formal, sleek/minimal), **Standard Business** (straightforward, service-focused, balanced), **Local Family-Owned** (warm, community-rooted, personal), **Owner-Operated Local** (owner is the brand, first-person, most personal). Drives the AI's copy voice AND the site's styling direction (§9c).
 - **Photos** — 25–60 best photos + a team/owner photo (sent to the agency email) → site.
 - **Consent** — terms & conditions + SMS opt-in language.
 
@@ -555,8 +571,37 @@ The agency hosts each client's terms/privacy page. Needs a documented process to
 
 ---
 
+## 9c. Website Structure & Design Layer [LOCKED — skill `/website-structure`]
+
+The per-client DESIGN layer, applied on top of the cloned golden-master backend (§0). Defines the page set, the copy/visual direction, and how design is generated and (eventually) templated. Absorbs the old `/theme-to-brand`.
+
+### Page set [LOCKED]
+Pages are generated FROM the onboarding data, up to the max below. Only build pages the onboarding form supports (e.g. 5 services + 8 areas → 5 service pages + 8 area pages, not the max).
+
+**Always present:** Home/Lander, Contact Us, Gallery, Thank You, Review + Referral Follow-up Form, Discount Funnel, Review Us, Terms & Conditions, Privacy Policy.
+**Data-driven (one each, up to max):** Service page per service (**max 12**); Service Area page per area (**max 14**).
+
+- **Service Area pages** = essentially the Home/Lander, re-focused on serving that specific area (local-SEO: ranks for "[service] in [city]").
+- **Service pages** = AI determines a good, relevant layout describing that service.
+
+### Design generation inputs [LOCKED]
+The visual design, fonts, colors, copy, and layout are AI-driven, determined by combining:
+1. **Site style choice** (§9b — 4 options: Corporate / Standard Business / Local Family-Owned / Owner-Operated Local) → copy voice + styling direction.
+2. **Onboarding form data** → content + the AI's copy source (About Us, services, areas, differentiators).
+3. **Visual assets from onboarding** → logo (uploaded or agency-made) + photos of previous work.
+4. **Reference style screenshots** (AGENCY-uploaded at build time, not an onboarding field) → Lovable mimics the reference layout/styling, populated with the client's real data + assets.
+
+This resolves the copy-strategy decision: copy is AI-GENERATED, steered by the style choice — templatized structure, generated (not hardcoded, not manually rewritten) copy.
+
+### Two-mode design system [LOCKED]
+- **Mode 1 — Generate (now):** AI builds the style from reference screenshots + style choice + onboarding assets/data. Used to discover good styles.
+- **Mode 2 — Apply a template (as the library grows):** once a generated style is a winner, capture its CODE as a named, reusable design template; new sites are built by selecting a template and injecting the client's data/assets — no re-derivation. Faster + deterministic + reliably good.
+- **Bridge:** codify winning generated styles into the template library. Primary plug-and-play mechanism = **Lovable cross-project referencing** (a proven style lives as a reference project; new builds pull its design patterns via @mention). The codification process gets fully defined once the first winners exist. [BUILD — template library grows over time]
+
+---
+
 ## 10. Open items blocking skill authoring
-- [TBD] Copy-strategy decision (templatize hardcoded marketing copy vs rewrite per vertical) — blocks `/theme-to-brand`.
+- [RESOLVED] Copy-strategy (§9c) — copy is AI-generated, steered by the 4 style choices; templatized structure. `/website-structure` (absorbing `/theme-to-brand`) can now be written.
 - [RESOLVED] Onboarding form (§9b) — it's a real owner-filled content form + agency-set config. `/onboard-from-form` can now be written. (Remaining build: extend `createClient`/settings to capture all §9b fields.)
 - [BUILD] Tracked-redirect link system for review drip (§4); daily enrollment cap (§3); Notifications subsystem (§8); mobile Review Request tab + Auto-Enroll button (§7/§8); "pass" keyword → opt-out (§4); on-reply handler capturing `message.body` (§5) and lead reply-detection (§7); Business Hours setting + lead-form branching (§2/§7); re-enrollment guard (§4/§6); discount-form-submit exits one-year drip (§7b); per-contact `last_missed_call_textback_at` timestamp + 7-day re-eligibility check (§9); constrained RLS (no wide-open anon inserts) baked into `/scratch-foundation`; call-forwarding-number admin field (§9b); A2P-compliant terms-page generation (§9b); onboarding form capturing all §9b owner fields incl. timezone picker.
 
@@ -571,6 +616,8 @@ The agency hosts each client's terms/privacy page. Needs a documented process to
 - Review Funnel — `/r/rate` (1–5, inclusive threshold), landing exits drip, ≥thr → Google + Review Completed + One-Year handoff, <thr → /r/feedback + Negative Review (no handoff) + owner email/notification; stat renamed "Review Link Clicks"; /r/enroll cut (§4/§6).
 - AI Chat Widget — opt-in gate, FAQ answering from business data, pricing→request-form guardrail, Request path = lead-form drip with "New Website AI Chat Lead" label; own /chat-widget skill; depends on onboarding form for AI knowledge (§7e).
 - Business Onboarding Form & Client Setup — owner content form + agency config, A2P terms-page generation, per-client Twilio-forwarding telephony pattern; resolves onboarding architecture decision; feeds AI knowledge + site copy (§9b).
+- Website Structure & Design Layer — page set (always-present + data-driven service/area pages, max 12/14), AI copy+visual generation from style choice + onboarding + assets + reference screenshots, two-mode design system (generate → codify into template library via Lovable cross-project referencing); absorbs /theme-to-brand (§9c).
+- Golden-master deployment model — skills build/prove backend once; per-client launch clones proven code; design is the per-client creative layer (§0).
 - Email drip — SCRAPPED, SMS-only (§7c).
 - Re-enrollment guard (§4/§6). opt-in-forms map (§6 — now FINITE). Two-window model + two caps (§2/§3). admin-view tabs (§2).
 - Naming convention: `{first_name}` customer-facing, `{full_name}` internal notifications.
@@ -591,6 +638,12 @@ The agency hosts each client's terms/privacy page. Needs a documented process to
 - **PWA web-push notifications** — superseded by owner email notifications (§7d); revisit if real-time phone push wanted.
 - **Stats label** — DONE: dashboard renamed to "Review Link Clicks" (counts `review_clicked` landings).
 
-### ARCHITECTURE DECISIONS PENDING (block 2 skills)
-- Copy-strategy: templatize hardcoded marketing copy vs rewrite per vertical → blocks `/theme-to-brand`.
+### ARCHITECTURE DECISIONS — ALL RESOLVED ✓
+- ~~Copy-strategy~~ RESOLVED (§9c): AI-generated copy steered by 4 style choices; templatized structure. `/website-structure` unblocked (absorbs `/theme-to-brand`).
 - ~~Onboarding form vs SQL~~ RESOLVED (§9b): real owner form + agency config. `/onboard-from-form` unblocked.
+- ~~Build-from-scratch vs clone~~ RESOLVED (§0): golden-master model — skills build/prove the backend once; per-client launch clones the proven code; design is the per-client creative layer.
+
+### REMAINING WORK = skill-writing + reactivation pass (no open decisions)
+- Write skills: `/website-structure`, `/onboard-from-form`, `/chat-widget`, `/scratch-foundation`, `/launch-check`, `/new-client-site`.
+- Reactivation confirmation/full pass (copy + how its link reaches /r/rate).
+- Then: Phase 2 — build & prove the golden master.
