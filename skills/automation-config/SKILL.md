@@ -142,9 +142,8 @@ Branches on Business Hours (separate setting). `{full_name}` internal, `{first_n
 **SMS #1 to lead — DURING business hours only (single text, correctly spelled):**
 > Hey {first_name}! Just got your form! I'll be in touch shortly!
 > -{company_owner_first_name} with {company_name}
-> Talk soon!
 
-**After-hours SMS to lead — OUTSIDE business hours (replaces #1 and #2):**
+**After-hours SMS to lead — OUTSIDE business hours (replaces #1):**
 > Hey {first_name}, just got your form. We'll be in touch as soon as possible!
 > -{company_owner_first_name} with {company_name}
 
