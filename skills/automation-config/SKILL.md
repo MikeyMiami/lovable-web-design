@@ -276,6 +276,17 @@ Sent in ADDITION to the in-app notification when a lead-form or discount-form su
 >
 > We've told them you'll be reaching out soon. Open your app to see the details.
 
+**Subject: New Website AI Chat Lead** (chat-widget variant of New Website Lead — §7e; same business-hours/after-hours branching as the website lead form, since it feeds the same lead-form drip):
+> Hey {company_owner_first_name},
+>
+> You've got a new lead from your website AI chat!
+>
+> Name: {full_name}
+> Phone: {phone}
+> Message: {your_message}
+>
+> We've already replied to them in the chat. Open your app to see the conversation.
+
 **Subject: We Saved You From a Negative Review** (fires when a contact submits `/r/feedback` below threshold):
 > Hey {company_owner_first_name},
 >
