@@ -30,5 +30,5 @@ The admin dashboard lives at `/admin` on the client website, gated to `admin` / 
 
 ## Notes
 - `createClient` currently accepts only slug, business_name, phone_display, email; everything else is set here via `updateClientSettings` (or, for fields without a UI editor yet, via direct SQL until editors are added). Adding editors for those is the natural extension of this skill.
-- `brand_color` is stored as hex but is NOT yet wired into the oklch theme tokens — per-client theming requires injecting a converted oklch value into the shell head (see theme-to-brand, TBD).
+- `brand_color` is stored as hex but is NOT yet wired into the oklch theme tokens — per-client theming requires injecting a converted oklch value into the shell head (handled by the design layer, `/website-structure` §9c, which absorbed the retired `/theme-to-brand`).
 - Caps and windows are the ban-protection surface: a cap or window that is only a UI field does nothing — confirm the cron runner (send cap + SMS window) and the enrollment/lead-form paths (enrollment cap + Business Hours) actually enforce these values.
