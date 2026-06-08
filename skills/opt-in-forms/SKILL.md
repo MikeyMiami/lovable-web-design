@@ -32,11 +32,13 @@ Every form, its fields, and exactly what it triggers. Phones normalized to E.164
 - **Enrolls into:** the Discount-Claim Drip (immediate internal notification → 2-min wait → one SMS to lead → end).
 - **Side effect [LOCKED]:** if the submitter is currently in the One-Year drip, the submission EXITS them from it (re-engagement). A form submit is distinct from a raw link click (which does not exit the one-year drip).
 
-## 4. Existing public review-funnel pages
-- `/r/rate` — star rating gate. ≥ star_threshold (or toggle `all`) → redirect to Google review link; below → `/r/feedback`.
-- `/r/feedback` — private low-star feedback form → `review_feedback` + internal low-star email to client.
-- `/r/enroll` — public self-enroll into the review reminder sequence (consent captured).
-- The review drip's per-contact tracked link `/r/<token>` is the redirect that logs the click and sets `Review Completed` (built per the features skill).
+## 4. Public review-funnel pages [LOCKED]
+Destination of BOTH the review-drip tracked link and the reactivation link. Landing on `/r/rate` (via `/r/<token>`) writes a `review_clicked` event and EXITS the contact from the review drip; status + one-year handoff are set by the star selection.
+- `/r/rate` — "How would you rate us?" + 1–5 star choice. Threshold = `star_threshold` (default 4, inclusive ≥).
+  - ≥ threshold → status `Review Completed` → redirect to the client's Google review page → enroll into One-Year drip.
+  - < threshold → status `Negative Review` → `/r/feedback`. Does NOT enroll into One-Year.
+- `/r/feedback` — below-threshold private feedback. Collects **Name, Email, Feedback**; **phone auto-fills** from the mapped contact. Stores in `review_feedback` → fires owner email ("We Saved You From a Negative Review") + mobile notification → shows the "sorry we missed the mark" confirmation screen. No SMS consent needed (not a texting opt-in).
+- `/r/enroll` — REMOVED. Review enrollment happens via the mobile-app Review Request form (#1), not public self-enroll.
 
 ---
 
