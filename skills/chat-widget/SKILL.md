@@ -19,7 +19,7 @@ A corner chat widget on the client's marketing site. A Lovable-native AI answers
 ## Behavior [LOCKED]
 - **Question (FAQ) path:** AI answers general questions about the business and its services from the knowledge bundle (e.g. "do you offer drain cleaning?", "what are your hours?").
 - **Pricing/quote guardrail:** the AI must NOT quote prices or give official pricing. Any price/quote question → redirect to a request: *"Let me get you an accurate quote — fill in your request and the team will reach out."* General service INFO is answered; PRICING/QUOTES are redirected. System-prompt guardrail (firm).
-- **Request path:** works EXACTLY like the main website lead form (§7) — creates the contact, enrolls into the SAME lead-form drip + automations (business-hours branching, the intentional-typo "touchr" + correction texts, day-10 reminder, owner email). After submit, the AI confirms it sent the request to the team and they'll hear back shortly.
+- **Request path:** works EXACTLY like the main website lead form (§7) — creates the contact, enrolls into the SAME lead-form drip + automations (business-hours branching, single SMS#1, day-10 reminder, owner email). After submit, the AI confirms it sent the request to the team and they'll hear back shortly.
 - **The ONLY difference from the website lead form:** the owner notification (in-app + email) reads **"New Website AI Chat Lead"** instead of "New Website Lead." All downstream automation/enrollment is IDENTICAL — do not duplicate the lead-form logic; reuse it, just pass the different notification label.
 
 ## AI hard rules (system-prompt guardrails) [LOCKED]
