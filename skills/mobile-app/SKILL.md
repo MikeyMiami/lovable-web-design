@@ -136,6 +136,14 @@ The Open-conversation button deep-links to that contact's thread in the Conversa
 
 (This contact is marked `Negative Review` and is NOT enrolled in the One-Year drip. Same content also sent as an owner email, subject "We Saved You From a Negative Review.")
 
+**Review reactivation click — fires when a reactivation contact clicks the review link (show only fields present):**
+> {company_owner_first_name}, you just got a review link click from your Customer Review Reactivation campaign!
+>
+> Customer Info:
+> Name: {full_name}
+> Phone: {phone}
+> Email: {email}
+
 ## Tab 4 — Dashboard
 Weekly + monthly stat counters, computed from `events` scoped to this client. Four counters:
 
