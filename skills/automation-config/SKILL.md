@@ -21,26 +21,24 @@ Merge keys:
 Opt-out keyword **`pass`** (whole-word; + standard STOP/etc.). Exit on click at ANY check stage → status `Review Completed`, exit, hand off to One-Year drip (unless opted out).
 
 **SMS 1 — day 0:**
-> Hey {first_name}, this is {company_owner_first_name}! I hope you had a great experience with {company_name}!
+> Hi {first_name}! This is {company_owner_first_name}. If you loved working with {company_name}, would you mind leaving us a review? We really appreciate it! Here's the link:
 >
-> We donate a meal to charity for every customer who takes 10 seconds to leave a review. Here's the link: {review_link}
+> {review_link}
 
 **Wait 4 days → check. Clicked → `Review Completed`, exit. Else SMS 2:**
-> Hey {first_name}! I wanted to follow-up because I saw you haven't left a review yet. We donate a meal to charity for every customer that leaves a review!
+> Hi {first_name}! I see you haven't left a review yet. If you loved {company_name}, could you leave one? It's a HUGE help for us!
 >
-> If you have 10 seconds to help someone you don't know, you're our kind of people. Click here: {review_link}
->
-> P.S. Just say 'pass' if you want me to stop texting you
+> {review_link}
 
 **Wait 7 days → check. Else SMS 3:**
-> Little review reminder incase you got extra busy this week (we give a free meal to someone in need for each new review).
+> Hi {first_name}! I see you haven't left a review for {company_name} yet. It takes 20 seconds, and that review helps us for YEARS to come! This link makes it easy:
 >
-> Here's the link again: {review_link}
+> {review_link}
 
 **Wait 7 days → check. Else SMS 4:**
-> Hey {first_name}! This is the last time I'll request a review from you I promise...
+> Hi {first_name}! Don't forget to leave us a review for {company_name}. It helps us serve our community better when more people find us! Here's the link:
 >
-> if you have a sec to leave one we'll donate a meal to a person in need. Here's the link and thanks for helping those in need! {review_link}
+> {review_link}
 
 **Wait 48 hours → check. Clicked → `Review Completed`, exit. Else internal notification (terminal, not a customer text):**
 > Hey {company_owner_first_name}!
@@ -224,6 +222,21 @@ Fires 24/7 (live call; not gated by send window or Business Hours). Trigger: Twi
 > View the conversation here: [Open conversation button]
 
 `{quote_form_link}` defaults to the site lander, overridable in Settings. Dynamic keys: `{caller_phone}`, `{call_time}` (client tz). A brand-new caller has no name — notification keys off phone + time. If the caller submits the quote form, they also enter the Lead-Form drip (intentional, independent).
+
+---
+
+## Drip 6 — Customer Review Reactivation
+Bulk-upload past customers → drip-fed slowly to win reviews organically (don't flag Google). Source `reactivation`. Per-drip safety caps: max 50 new enrollments/day, max 2 dripped every 20 min. Cadence: SMS 1 immediately → +24h → +24h → +24h, all within the send window. Dedup guard: skip contacts already through reactivation or already `Review Completed`. Click → exit + funnel + reactivation click notification. One-Year handoff only on `Review Completed`.
+
+**Uses the SAME 4 message texts as Drip 1 (Review Request §4)** — no separate copy. (No "pass" P.S. line; opt-out still functions via webhook.)
+
+**Reactivation click notification (owner mobile app; fires on click/landing; show only fields present):**
+> {company_owner_first_name}, you just got a review link click from your Customer Review Reactivation campaign!
+>
+> Customer Info:
+> Name: {full_name}
+> Phone: {phone}
+> Email: {email}
 
 ---
 
