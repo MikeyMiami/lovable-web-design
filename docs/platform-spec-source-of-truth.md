@@ -24,9 +24,9 @@ TanStack Start v1 (React 19 + Vite 7), SSR, Cloudflare Workers (pure JS + fetch,
 4. `/opt-in-forms` — which forms feed which automations.
 5. `/chat-widget` — the AI chat widget (§7e): opt-in gate, FAQ retrieval, pricing guardrail, request→lead-form handoff.
 6. `/mobile-app` — the client app (`app.theirdomain.com`): Conversations, Review Request, Notifications tabs.
-7. `/admin-view` — the admin tabs/settings on the client website (what's editable where).
-8. `/launch-check` — pre-go-live verification gate.
-9. `/new-client-site` — orchestrates the from-scratch build for a new client.
+6. `/admin-view` — the admin tabs/settings on the client website (what's editable where).
+7. `/launch-check` — pre-go-live verification gate.
+8. `/new-client-site` — orchestrates the from-scratch build for a new client.
 (`/onboard-from-form`, `/theme-to-brand` follow once their decisions land.)
 
 ---
@@ -421,7 +421,7 @@ A corner chat widget on the client's website. An AI assistant answers FAQs from 
 
 ### AI model & knowledge source
 - **Model:** Lovable's native/built-in AI capability (no third-party API setup — Lovable can build this self-contained). NOT per-client fine-tuning — uses retrieval: the client's business info is provided to the model as context at chat time.
-- **Knowledge source [DEPENDENCY]:** the AI answers from (a) the client's website content and (b) the **business onboarding form data** (services, hours, business details — the same data that builds the site copy). This is a HARD dependency on the onboarding form (TBD architecture decision) — the AI's answer quality = the onboarding data captured. Until the onboarding form is defined, the exact fields the AI receives are pending; the widget's flow/behavior below is locked regardless.
+- **Knowledge source [DEPENDENCY]:** the AI answers from (a) the client's website content and (b) the **business onboarding form data** (services, hours, business details — the same data that builds the site copy). The AI's knowledge inputs are now defined by the onboarding form (§9b): About Us, services (detailed), service areas, hours, special/differentiators, social/site content. Answer quality = onboarding data captured.
 
 ### Opt-in gate [LOCKED]
 - The widget opens with: **"What do you need help with?"** → two options: **Question** and **Request Services / Contact Us**.
@@ -459,7 +459,7 @@ A corner chat widget on the client's website. An AI assistant answers FAQs from 
 - Opt-in gate before chat; consent capture; `chat_widget` contact source.
 - Retrieval context assembled from onboarding data + site content.
 - Request path reuses the §7 lead-form enrollment exactly; only the owner-notification label differs.
-- DEPENDENCY: onboarding form must be defined to finalize the AI's knowledge inputs.
+- AI knowledge inputs = §9b onboarding fields (About Us, services, areas, hours, differentiators) + site content.
 
 ---
 
@@ -509,10 +509,56 @@ Mobile-first PWA, scoped to the logged-in client's `client_id`.
 
 ---
 
+## 9b. Business Onboarding Form & Client Setup [LOCKED]
+
+Two layers: **owner-filled** content/brand fields (a real form the business owner completes), and **agency-set** automation/config (you configure during setup). The onboarding data also feeds the AI Chat Widget's knowledge (§7e) and builds the site copy. Resolves the onboarding-form architecture decision: it's a real owner-facing form for content + agency-side config for plumbing.
+
+### A. Owner-filled fields (the onboarding form)
+Verbatim from the live client form (light edits for our system):
+- **Full Name** (required) → derive `{company_owner_first_name}`.
+- **Business Phone** (where they want lead notifications) → this is their real phone / call-forwarding target.
+- **Official Business Name** (required) → `{company_name}`.
+- **Tax ID / EIN** → business record (also useful for A2P).
+- **Current website link** (if any) → `{company_website_link}` + AI knowledge source.
+- **"About Us"** (3–5 sentences, personal-brand angle) (required) → site copy + AI knowledge.
+- **Top location + service areas** (be specific; MAX 14) → site copy + AI knowledge.
+- **All services offered** (specific) (required) → site copy + **AI chat widget knowledge**.
+- **Special things about the business** (differentiators to show off) → site copy + AI knowledge.
+- **Hours of operation** (required) → site + feeds the **Business Hours** setting (lead-form branching).
+- **Social links** — Instagram, Facebook, BBB, TikTok, Yelp (each if applicable) → site.
+- **Full shipping address** (required, no PO boxes) → for business cards (agency ops).
+- **Return/referral discounts** (e.g. "$500 off your next roof / 15% off your next driveway wash") → `{discount__on_referral}` and `{discount_amount}`.
+- **Logo** (upload; or request one) + "do you need a logo?" flag → branding.
+- **Timezone** (NEW field — pick one: EST / CST / MST / PST / Honolulu) → drives all send windows; also editable in admin.
+- **Photos** — 25–60 best photos + a team/owner photo (sent to the agency email) → site.
+- **Consent** — terms & conditions + SMS opt-in language.
+
+### B. Agency-set config (during onboarding, in `/admin-view` — NOT owner-filled)
+- **Google review link + Place ID** — agency grabs from the client's GBP (they may not have one yet → setup task; the whole review engine depends on it).
+- **Star threshold** (default 4) — agency-decided in admin settings.
+- **Terms page** — agency-hosted; generated A2P-compliant from onboarding data (see C).
+- **Quote form link** — defaults to the site lander (not collected).
+- **Twilio number** — agency-provisioned (local area code); editable in admin.
+- **Call-forwarding number** — the client's real phone the Twilio number rings through to; editable in admin per client over time. [BUILD — new admin field]
+- **Sending subdomain / DKIM** — agency setup.
+- **Timezone** — editable in admin (default from the owner's pick).
+
+### C. A2P-compliant terms page [BUILD]
+The agency hosts each client's terms/privacy page. Needs a documented process to generate an **A2P 10DLC-compliant terms & conditions + privacy page** from the onboarding data (business name, contact, SMS consent language, opt-out instructions, data handling). This page is what `{website_terms_page_link}` points to. Required for compliant SMS consent on all forms.
+
+### D. Per-client telephony setup [LOCKED pattern]
+- Provision a **new local Twilio number** per client (area code matching their market).
+- **Forward** the Twilio number's calls to the client's real phone (the call-forwarding number) — so they answer calls normally.
+- Put the **Twilio number on the website + Google Business Profile** (+ business cards). All SMS automations and missed-call textback operate on the Twilio number. The client keeps their existing number everywhere else.
+- Register the new number under the agency's existing **A2P 10DLC** brand/campaign (ISV/reseller) — no re-vetting, fast to live.
+- Rationale: SMS automation + missed-call detection require a Twilio-controlled number; forwarding preserves the client's normal call experience.
+
+---
+
 ## 10. Open items blocking skill authoring
 - [TBD] Copy-strategy decision (templatize hardcoded marketing copy vs rewrite per vertical) — blocks `/theme-to-brand`.
-- [TBD] Onboarding form vs SQL/settings (`createClient` only takes 4 fields today) — blocks `/onboard-from-form`.
-- [BUILD] Tracked-redirect link system for review drip (§4); daily enrollment cap (§3); Notifications subsystem (§8); mobile Review Request tab + Auto-Enroll button (§7/§8); "pass" keyword → opt-out (§4); on-reply handler capturing `message.body` (§5) and lead reply-detection (§7); Business Hours setting + lead-form branching (§2/§7); re-enrollment guard (§4/§6); discount-form-submit exits one-year drip (§7b); per-contact `last_missed_call_textback_at` timestamp + 7-day re-eligibility check (§9); constrained RLS (no wide-open anon inserts) baked into `/scratch-foundation`.
+- [RESOLVED] Onboarding form (§9b) — it's a real owner-filled content form + agency-set config. `/onboard-from-form` can now be written. (Remaining build: extend `createClient`/settings to capture all §9b fields.)
+- [BUILD] Tracked-redirect link system for review drip (§4); daily enrollment cap (§3); Notifications subsystem (§8); mobile Review Request tab + Auto-Enroll button (§7/§8); "pass" keyword → opt-out (§4); on-reply handler capturing `message.body` (§5) and lead reply-detection (§7); Business Hours setting + lead-form branching (§2/§7); re-enrollment guard (§4/§6); discount-form-submit exits one-year drip (§7b); per-contact `last_missed_call_textback_at` timestamp + 7-day re-eligibility check (§9); constrained RLS (no wide-open anon inserts) baked into `/scratch-foundation`; call-forwarding-number admin field (§9b); A2P-compliant terms-page generation (§9b); onboarding form capturing all §9b owner fields incl. timezone picker.
 
 ## 11. Locked & done (captured above)
 - Review Request SMS drip — full copy, tokenized tracking, exit-on-click, SMS-only (§4).
@@ -524,6 +570,7 @@ Mobile-first PWA, scoped to the logged-in client's `client_id`.
 - Missed-Call Textback — full scope + copy: 24/7, 4 triggers, 1-min/2-min drip, reply-skip, 7-day re-eligibility per contact, internal notification (§9).
 - Review Funnel — `/r/rate` (1–5, inclusive threshold), landing exits drip, ≥thr → Google + Review Completed + One-Year handoff, <thr → /r/feedback + Negative Review (no handoff) + owner email/notification; stat renamed "Review Link Clicks"; /r/enroll cut (§4/§6).
 - AI Chat Widget — opt-in gate, FAQ answering from business data, pricing→request-form guardrail, Request path = lead-form drip with "New Website AI Chat Lead" label; own /chat-widget skill; depends on onboarding form for AI knowledge (§7e).
+- Business Onboarding Form & Client Setup — owner content form + agency config, A2P terms-page generation, per-client Twilio-forwarding telephony pattern; resolves onboarding architecture decision; feeds AI knowledge + site copy (§9b).
 - Email drip — SCRAPPED, SMS-only (§7c).
 - Re-enrollment guard (§4/§6). opt-in-forms map (§6 — now FINITE). Two-window model + two caps (§2/§3). admin-view tabs (§2).
 - Naming convention: `{first_name}` customer-facing, `{full_name}` internal notifications.
@@ -546,4 +593,4 @@ Mobile-first PWA, scoped to the logged-in client's `client_id`.
 
 ### ARCHITECTURE DECISIONS PENDING (block 2 skills)
 - Copy-strategy: templatize hardcoded marketing copy vs rewrite per vertical → blocks `/theme-to-brand`.
-- Onboarding form vs SQL/settings (`createClient` takes 4 fields today) → blocks `/onboard-from-form`.
+- ~~Onboarding form vs SQL~~ RESOLVED (§9b): real owner form + agency config. `/onboard-from-form` unblocked.
