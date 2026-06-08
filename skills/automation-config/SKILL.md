@@ -139,12 +139,9 @@ Branches on Business Hours (separate setting). `{full_name}` internal, `{first_n
 >
 > (Do NOT reply to this message; it's not the client!)
 
-**SMS #1 to lead — DURING business hours only — [INTENTIONAL TYPO "touchr" — DO NOT CORRECT]:**
-> Hey {first_name}! Just got your form! I'll be in touchr shortly!
+**SMS #1 to lead — DURING business hours only (single text, correctly spelled):**
+> Hey {first_name}! Just got your form! I'll be in touch shortly!
 > -{company_owner_first_name} with {company_name}
-
-**SMS #2 to lead — DURING business hours, the correction (skip if lead already replied):**
-> I'll be in *touch* shortly! Sorry I haven't had enough coffee today haha!
 > Talk soon!
 
 **After-hours SMS to lead — OUTSIDE business hours (replaces #1 and #2):**
@@ -302,5 +299,5 @@ Sent in ADDITION to the in-app notification when a lead-form or discount-form su
 ---
 
 ## Seeding rules
-- Seed all of the above as `templates` rows + `sequences` steps_json, verbatim — including line breaks and the intentional "touchr" typo in lead-form SMS #1 (mark do-not-correct).
+- Seed all of the above as `templates` rows + `sequences` steps_json, verbatim — including line breaks.
 - Verify required `template_vars` exist before activating: `company_owner_first_name`, `company_name`, `review_request_link`, `discount__on_referral`, `company_website_link`, `discount_amount`, `website_terms_page_link`, `quote_form_link`. Missing keys render blank silently — don't let a client go live with these unset.
