@@ -50,6 +50,8 @@ TanStack Start v1 (React 19 + Vite 7), SSR, Cloudflare Workers (pure JS + fetch,
 
 ## 2. `/admin-view` — admin tabs on the client website [LOCKED]
 Current tabs: **Dashboard, Contacts, Conversations, Feedback, Automations, Upload Customers, Settings**.
+- **Automations** tab shows a **live active-enrollment count per drip** (from `enrollments WHERE status='active'` grouped by `sequence_key`). [BUILD — new]
+- **Upload Customers** tab feeds the **Reactivation drip** (normalize → dedupe → enroll, reactivation caps).
 
 **Settings tab must hold these per-client configurable values:**
 - Timezone (drives all SMS windows).
@@ -57,7 +59,10 @@ Current tabs: **Dashboard, Contacts, Conversations, Feedback, Automations, Uploa
 - **Business Hours** (separate per-client window) — applies to the LEAD-FORM drip only (§7). Purpose: decide whether a fresh web lead gets the live in-hours response or the after-hours message. Independent from the SMS Send window. [BUILD — new field]
 - **Daily SMS send cap** (customizable per client) — max messages dispatched/day.
 - **Daily enrollment cap** (customizable per client, **default 50**) — max NEW contacts entering the review drip/day; overflow waits to next day. *(Distinct from send cap.)*
-- Existing: business identity, review config (place ID, link, gate mode, threshold), template_vars, Twilio config, sending subdomain.
+- **Twilio config** (twilio_number, messaging_service_sid, call_forwarding_number) — **single-source rule:** the number is stored ONCE and read everywhere on-site + in automations; changing it in admin propagates automatically. External placements (GBP, cards) are manual.
+- **Notification recipient email** — where owner notifications go; defaults to onboarding `clients.email`, editable. [BUILD]
+- Existing: business identity, review config (place ID, link, gate mode, threshold), template_vars, sending subdomain, marketing domains/allowed_origins.
+- **All onboarding-captured values are surfaced + editable here** — nothing prefilled from onboarding should be invisible/uneditable.
 
 ---
 
@@ -273,9 +278,8 @@ New keys (set per-client in `/admin-view` Settings, added to template_vars contr
 
 ### Branch A — submitted DURING Business Hours
 1. Wait 30s → internal notification to client.
-2. SMS #1 to the lead — **[INTENTIONAL TYPO — DO NOT CORRECT: "touchr"]**.
-3. Wait 30s → SMS #2 to the lead (the correction) — **skip if the lead already replied**.
-4. Day 10 → owner reminder (see below).
+2. SMS #1 to the lead (single text, correctly spelled).
+3. Day 10 → owner reminder (see below).
 
 ### Branch B — submitted OUTSIDE Business Hours
 1. Single after-hours SMS to the lead (no typo, no second text).
@@ -297,15 +301,11 @@ Naming convention (consistent across all skills): `{first_name}` in customer-fac
 >
 > (Do NOT reply to this message; it's not the client!)
 
-**SMS #1 to lead — Branch A only — [INTENTIONAL TYPO, DO NOT CORRECT]:**
-> Hey {first_name}! Just got your form! I'll be in touchr shortly!
+**SMS #1 to lead — Branch A only (single text, correctly spelled):**
+> Hey {first_name}! Just got your form! I'll be in touch shortly!
 > -{company_owner_first_name} with {company_name}
 
-**SMS #2 to lead — Branch A only, the correction (skip if lead already replied):**
-> I'll be in *touch* shortly! Sorry I haven't had enough coffee today haha!
-> Talk soon!
-
-**After-hours SMS to lead — Branch B only (replaces #1 and #2):**
+**After-hours SMS to lead — Branch B only (replaces Branch A's SMS):**
 > Hey {first_name}, just got your form. We'll be in touch as soon as possible!
 > -{company_owner_first_name} with {company_name}
 
@@ -337,7 +337,7 @@ Naming convention (consistent across all skills): `{first_name}` in customer-fac
 **Auto-Enroll button [BUILD]:** in the mobile-app Notifications tab, the button enrolls this contact into the Review Request drip directly (no manual form entry). It runs the same re-enrollment guard — if already enrolled, it displays "contact already enrolled" instead of enrolling.
 
 ### Exit / build notes
-- If the lead replies before SMS #2 (Branch A) → skip SMS #2. [BUILD: reply detection on the inbound webhook tied to this drip]
+- Branch A is now a single SMS (the "touchr" typo + correction SMS#2 were removed). [No reply-skip logic needed for a second text.]
 - Branch selection happens at submission time based on Business Hours in the client's timezone.
 - [BUILD] Business Hours is a NEW per-client Settings field, separate from the SMS Send Window (§2).
 
@@ -642,7 +642,7 @@ This resolves the copy-strategy decision: copy is AI-GENERATED, steered by the s
 - Review Request SMS drip — full copy, tokenized tracking, exit-on-click, SMS-only (§4).
 - Review→1-Year handoff rule — enroll unless opted out (§4).
 - One-Year Follow-Up SMS drip — full copy, exit-on-reply-or-opt-out, no form (§5).
-- Website Lead-Form drip — full copy, two-window branching, intentional-typo guard, day-10 reminder + auto-enroll button (§7).
+- Website Lead-Form drip — full copy, two-window branching, single correctly-spelled SMS (Branch A), day-10 reminder + auto-enroll button (§7).
 - Discount-Claim Form & drip — form structure, copy, exits one-year drip on submit (§7b).
 - Owner Email Notifications — Lovable native transactional, one per lead, formatted with line breaks (§7d).
 - Missed-Call Textback — full scope + copy: 24/7, 4 triggers, 1-min/2-min drip, reply-skip, 7-day re-eligibility per contact, internal notification (§9).
