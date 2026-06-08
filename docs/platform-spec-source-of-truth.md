@@ -117,29 +117,27 @@ The same funnel is the destination for BOTH the review-drip tracked link and the
 New dynamic key: `{feedback_message}` (the feedback text). `{email}` from the feedback form.
 
 ### Sequence & exact copy [LOCKED]
-Placeholders use the project's merge system. Charity-meal angle throughout. Opt-out keyword is **"pass"** (added to global opt-out set — whole-word match).
+Placeholders use the project's merge system. Opt-out keyword is **"pass"** (added to global opt-out set — whole-word match). Same 4 message texts are used by the Reactivation drip (§9).
 
 **SMS 1 — day 0 (on enrollment, respecting send window):**
-> Hey {first_name}, this is {company_owner_first_name}! I hope you had a great experience with {company_name}!
+> Hi {first_name}! This is {company_owner_first_name}. If you loved working with {company_name}, would you mind leaving us a review? We really appreciate it! Here's the link:
 >
-> We donate a meal to charity for every customer who takes 10 seconds to leave a review. Here's the link: {review_link}
+> {review_link}
 
 **Wait 4 days → check click status. Clicked → mark `Review Completed`, exit. Not clicked → SMS 2:**
-> Hey {first_name}! I wanted to follow-up because I saw you haven't left a review yet. We donate a meal to charity for every customer that leaves a review!
+> Hi {first_name}! I see you haven't left a review yet. If you loved {company_name}, could you leave one? It's a HUGE help for us!
 >
-> If you have 10 seconds to help someone you don't know, you're our kind of people. Click here: {review_link}
->
-> P.S. Just say 'pass' if you want me to stop texting you
+> {review_link}
 
 **Wait 7 days → check. Clicked → exit. Not clicked → SMS 3:**
-> Little review reminder incase you got extra busy this week (we give a free meal to someone in need for each new review).
+> Hi {first_name}! I see you haven't left a review for {company_name} yet. It takes 20 seconds, and that review helps us for YEARS to come! This link makes it easy:
 >
-> Here's the link again: {review_link}
+> {review_link}
 
 **Wait 7 days → check. Clicked → exit. Not clicked → SMS 4:**
-> Hey {first_name}! This is the last time I'll request a review from you I promise...
+> Hi {first_name}! Don't forget to leave us a review for {company_name}. It helps us serve our community better when more people find us! Here's the link:
 >
-> if you have a sec to leave one we'll donate a meal to a person in need. Here's the link and thanks for helping those in need! {review_link}
+> {review_link}
 
 **Wait 48 hours → check. Clicked → mark `Review Completed`, exit. Not clicked → fire internal notification to client's mobile app Notifications tab:**
 > Hey {company_owner_first_name}!
@@ -519,7 +517,34 @@ Mobile-first PWA, scoped to the logged-in client's `client_id`.
 **Note:** the SMS link goes to the client's quote-form page; if the caller submits that form, they also enter the Lead-Form drip (§7) — intentional (the form submission gets its own acknowledgment). The two drips run independently.
 
 ### Other features
-- **Customer reactivation** [scope to confirm] — CSV/paste upload → dedupe → enroll in `reactivation_drip` (day 0/3/7, exits on `reviewed`), conservative throttle profile. Copy not yet reviewed/finalized.
+### FEATURE — Customer Review Reactivation Drip [LOCKED]
+**Purpose:** win reviews from PAST customers (bulk-uploaded), drip-fed slowly so reviews arrive organically and don't flag Google.
+
+**Enrollment:** CSV/paste upload in `/admin-view` → normalize phones (E.164) → dedupe → enroll in `reactivation_drip`. Source `reactivation`.
+- **Dedup guard:** do NOT enroll a contact already run through reactivation OR already marked `Review Completed`. (So re-uploading a list won't re-message past reviewers.)
+
+**Per-drip safety caps (independent from other drips' caps):**
+- Max **50 new enrollments per day** into reactivation (controls how many new review asks go out daily — the Google-protection lever; a 5k upload trickles in over ~100 days).
+- Max **2 enrollments dripped every 20 minutes** (paces enrollment so it doesn't burst).
+- Follow-up sends flow on top within the **send window (9am–7pm client tz)**.
+
+**Cadence:** SMS 1 immediately on enrollment → SMS 2 at +24h → SMS 3 at +24h → SMS 4 at +24h. All a day apart, all respecting the send window. Click-check before each step; clicked → exit.
+
+**Copy:** SAME 4 message texts as the Review Request drip (§4) — no separate copy. (No "pass" P.S. line; opt-out still works via the inbound webhook.)
+
+**On click → land on `/r/rate`:** marks the contact, exits the drip, fires the reactivation click notification (below), runs the normal funnel (≥threshold → Google + `Review Completed`; <threshold → `/r/feedback` + `Negative Review`).
+
+**One-Year handoff:** ONLY if they leave a review (`Review Completed`, ≥threshold → Google). If they don't review, hit the negative path (`Negative Review`), or opt out → NOT enrolled in One-Year. (Identical rule to §4.)
+
+**No final owner notification** after no response — the drip just ends silently after SMS 4 if they never click.
+
+**Reactivation click notification (to owner's mobile app, fires on the click/landing) — show whichever of name/phone/email are present:**
+> {company_owner_first_name}, you just got a review link click from your Customer Review Reactivation campaign!
+>
+> Customer Info:
+> Name: {full_name}
+> Phone: {phone}
+> Email: {email}
 - **Inbound SMS → CRM** [built] — every inbound creates/updates conversation + message; STOP/HELP/START + `pass` handled at webhook.
 
 ---
@@ -615,9 +640,8 @@ This resolves the copy-strategy decision: copy is AI-GENERATED, steered by the s
 - Missed-Call Textback — full scope + copy: 24/7, 4 triggers, 1-min/2-min drip, reply-skip, 7-day re-eligibility per contact, internal notification (§9).
 - Review Funnel — `/r/rate` (1–5, inclusive threshold), landing exits drip, ≥thr → Google + Review Completed + One-Year handoff, <thr → /r/feedback + Negative Review (no handoff) + owner email/notification; stat renamed "Review Link Clicks"; /r/enroll cut (§4/§6).
 - AI Chat Widget — opt-in gate, FAQ answering from business data, pricing→request-form guardrail, Request path = lead-form drip with "New Website AI Chat Lead" label; own /chat-widget skill; depends on onboarding form for AI knowledge (§7e).
-- Business Onboarding Form & Client Setup — owner content form + agency config, A2P terms-page generation, per-client Twilio-forwarding telephony pattern; resolves onboarding architecture decision; feeds AI knowledge + site copy (§9b).
-- Website Structure & Design Layer — page set (always-present + data-driven service/area pages, max 12/14), AI copy+visual generation from style choice + onboarding + assets + reference screenshots, two-mode design system (generate → codify into template library via Lovable cross-project referencing); absorbs /theme-to-brand (§9c).
-- Golden-master deployment model — skills build/prove backend once; per-client launch clones proven code; design is the per-client creative layer (§0).
+- Customer Review Reactivation — CSV upload, same 4 texts as §4, immediate+24h×3, caps (50/day + 2/20min), dedup guard, click notification, One-Year only on Review Completed, no end notification (§9).
+- SMS copy de-meal'd — §4 + reactivation now use the meal-free review-request copy; "pass" P.S. line removed (opt-out still functional).
 - Email drip — SCRAPPED, SMS-only (§7c).
 - Re-enrollment guard (§4/§6). opt-in-forms map (§6 — now FINITE). Two-window model + two caps (§2/§3). admin-view tabs (§2).
 - Naming convention: `{first_name}` customer-facing, `{full_name}` internal notifications.
@@ -643,7 +667,7 @@ This resolves the copy-strategy decision: copy is AI-GENERATED, steered by the s
 - ~~Onboarding form vs SQL~~ RESOLVED (§9b): real owner form + agency config. `/onboard-from-form` unblocked.
 - ~~Build-from-scratch vs clone~~ RESOLVED (§0): golden-master model — skills build/prove the backend once; per-client launch clones the proven code; design is the per-client creative layer.
 
-### REMAINING WORK = skill-writing + reactivation pass (no open decisions)
-- Write skills: `/website-structure`, `/onboard-from-form`, `/chat-widget`, `/scratch-foundation`, `/launch-check`, `/new-client-site`.
-- Reactivation confirmation/full pass (copy + how its link reaches /r/rate).
+### REMAINING WORK = skill-writing only (no open decisions, all features locked)
+- Write skills: `/scratch-foundation`, `/chat-widget`, `/onboard-from-form`, `/website-structure`, `/launch-check`, `/new-client-site`.
 - Then: Phase 2 — build & prove the golden master.
+- System note: failed SMS sends retry up to 2× at the send layer before marking failed (the GHL "max retries" equivalent) — [BUILD] in the send/cron logic, not per-drip.
