@@ -49,12 +49,12 @@ Per-contact token = know exactly who landed (required to set the right contact's
 **Enrollment:** public website lead form (first_name, last_name, phone, email, your_message), source `web_form`.
 
 **Two-window branching [LOCKED]:** branches at submission time on **Business Hours** (a SEPARATE per-client setting from the marketing SMS Send Window — see admin-view). Lead-form SMS is transactional: it does NOT defer to the marketing window; it branches on Business Hours.
-- **During Business Hours:** wait 30s → internal client notification → SMS #1 to lead (contains an INTENTIONAL TYPO — must not be corrected) → wait 30s → SMS #2 (the correction), SKIP if the lead already replied → day-10 owner reminder.
+- **During Business Hours:** wait 30s → internal client notification → SMS #1 to lead (single text, correctly spelled) → day-10 owner reminder.
 - **Outside Business Hours:** single after-hours SMS to the lead (no typo, no second text) → after-hours owner notification → day-10 owner reminder. The after-hours message is the end of the customer-facing drip; the normal two-text sequence does NOT fire later.
 
 **Day-10 owner reminder (BOTH branches):** suppress if the lead's phone is now enrolled in the review automation; otherwise send. Includes an **Auto-Enroll button** [BUILD] in the Notifications tab that enrolls the contact into the Review Request drip directly (runs the re-enrollment guard; shows "contact already enrolled" if applicable).
 
-**Build notes [BUILD]:** lead reply-detection (to skip SMS #2) on the inbound webhook; Business Hours setting + branch logic; the intentional typo is flagged in copy and must never be "fixed."
+**Build notes [BUILD]:** Business Hours setting + branch logic. (Branch A is a single SMS now — the former "touchr" typo + correction SMS#2 were removed, so no lead-form reply-skip logic is needed.)
 
 ---
 
@@ -84,7 +84,7 @@ Admin uploads CSV/paste at `/admin/reactivation` → normalize phones (E.164) �
 - **No final owner notification** after no response (ends silently after SMS 4). Copy/timing in automation-config.
 
 ## Feature: Inbound SMS → CRM (built — scope)
-`/api/public/twilio/inbound`: verify Twilio signature when configured; resolve client by destination number, contact by sender; compliance keywords (STOP/STOPALL/UNSUBSCRIBE/CANCEL/END/QUIT + **`pass`** → opt out [BUILD: add `pass` as whole-word match]; HELP/INFO → info; START/YES/UNSTOP → opt back in); else upsert conversation, insert inbound message, write `inbound_sms` event. This webhook also detects drip exits-on-reply (one-year, lead-form SMS#2 skip).
+`/api/public/twilio/inbound`: verify Twilio signature when configured; resolve client by destination number, contact by sender; compliance keywords (STOP/STOPALL/UNSUBSCRIBE/CANCEL/END/QUIT + **`pass`** → opt out [BUILD: add `pass` as whole-word match]; HELP/INFO → info; START/YES/UNSTOP → opt back in); else upsert conversation, insert inbound message, write `inbound_sms` event. This webhook also detects drip exits-on-reply (one-year drip; missed-call SMS#2 skip).
 
 ---
 
