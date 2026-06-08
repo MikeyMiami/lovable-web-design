@@ -32,6 +32,13 @@ Every form, its fields, and exactly what it triggers. Phones normalized to E.164
 - **Enrolls into:** the Discount-Claim Drip (immediate internal notification → 2-min wait → one SMS to lead → end).
 - **Side effect [LOCKED]:** if the submitter is currently in the One-Year drip, the submission EXITS them from it (re-engagement). A form submit is distinct from a raw link click (which does not exit the one-year drip).
 
+## 3b. AI Chat Widget opt-in (customer-facing) [LOCKED — see /chat-widget skill]
+- **Location:** corner AI chat widget on the client's main website.
+- **Opt-in gate:** before chatting, collects First Name, Last Name, Email, Phone, message/question — with SMS opt-in + terms consent (phone collected for texting).
+- **Source:** `chat_widget` (distinct from `web_form`, so chat leads are attributable).
+- **Request path → same as the website lead form:** enrolls into the Lead-Form drip (§7) with identical automations; the ONLY difference is the owner notification reads "New Website AI Chat Lead."
+- **FAQ path:** AI answers business/service questions from onboarding + site data; pricing/quote questions are redirected to submit a request. (AI behavior detailed in the /chat-widget skill; knowledge inputs depend on the onboarding form.)
+
 ## 4. Public review-funnel pages [LOCKED]
 Destination of BOTH the review-drip tracked link and the reactivation link. Landing on `/r/rate` (via `/r/<token>`) writes a `review_clicked` event and EXITS the contact from the review drip; status + one-year handoff are set by the star selection.
 - `/r/rate` — "How would you rate us?" + 1–5 star choice. Threshold = `star_threshold` (default 4, inclusive ≥).
