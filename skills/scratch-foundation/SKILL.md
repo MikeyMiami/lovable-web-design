@@ -16,20 +16,32 @@ TanStack Start v1 (React 19, Vite 7), SSR on Cloudflare Workers — **pure JS + 
 ---
 
 ## 1. Schema (core tables)
-All tenant tables carry `client_id uuid not null references clients(id)`. Use `uuid` PKs (`gen_random_uuid()`), `created_at timestamptz default now()`.
+> RECONCILED against the live DB. Existing tables/columns confirmed; net-new additions marked **[ADD]** (need a migration). Enums are real Postgres enums — new values need `ALTER TYPE … ADD VALUE`.
 
-- **clients** — id, slug (unique, public-safe), business identity (business_name, owner_first_name, phone_display, email, address, hours, license_number, tagline), branding (logo_url, brand_color), review config (review_place_id, review_link, review_request_link, google_review_toggle [gated|all|off], star_threshold default 4), timezone, site_style (corporate|standard|family_owned|owner_operated), **twilio_number, twilio_messaging_service_sid** (NON-secret, under the one parent account), call_forwarding_number, sending_subdomain, dkim_status, **allowed_origins text[]** (marketing domains, powers CORS allowlist), template_vars jsonb, status (active|paused|setup), `deleted_at timestamptz` (soft-delete).
-- **user_roles** — id, user_id (→ auth.users), client_id (nullable for agency-wide), role (agency_owner|admin|client_owner|client_staff). Roles live HERE, never on a profiles table.
-- **contacts** — id, client_id, first_name, last_name, phone_e164, email, status (enum: New|Review Completed|Negative Review|Lead|Reactivation|...), source (enum: web_form|review_enroll|reactivation|chat_widget|mobile_enroll|missed_call), consent (bool), opted_out_at, last_missed_call_textback_at (for the §9 7-day re-eligibility), `deleted_at`.
-- **conversations** — id, client_id, contact_id, last_message_at, status.
-- **messages** — id, client_id, conversation_id, direction (inbound|outbound), body, twilio_sid, status, created_at.
-- **templates** — id, client_id (NULL = global default), key, body. (Drip copy seeded by automation-config.)
-- **sequences** — id, client_id (NULL = global), sequence_key, steps_json (ordered steps with offsets/waits).
-- **enrollments** — id, client_id, contact_id, sequence_key, current_step, status (active|completed|exited|failed), next_run_at, created_at. **UNIQUE (client_id, contact_id, sequence_key)** — DB-level re-enrollment/dedup guard (§4/§6/§9); makes double-enrollment impossible even under a race.
-- **review_feedback** — id, client_id, contact_id, name, email, phone, rating, comment, created_at. (Negative-path funnel submissions.)
-- **send_settings** — per-client send config: sms_send_window (default 09:00–19:00), business_hours (separate window for lead-form branching), daily_send_cap, daily_enrollment_cap (default 50), plus per-sequence overrides (e.g. reactivation: 50/day enroll + 2/20min pacing).
-- **events** — id, client_id, type (sms_sent|review_clicked|inbound_sms|lead_submitted|cron_decision|...), contact_id, payload jsonb, **created_by uuid (nullable, audit)**, created_at. Append-only log; ALL cap/dedupe/throttle logic reads `events`, never a Twilio round-trip.
-- **notifications** — id, client_id, type, body, related_contact_id, action jsonb (nullable: {type, payload} for actionable ones), created_at. No read/unread state (§8).
+All tenant tables carry `client_id uuid not null references clients(id)`. uuid PKs (`gen_random_uuid()`), `created_at timestamptz default now()`.
+
+- **clients** (existing) — id, slug (unique), business_name, address, phone_display, email, license_number, hours (jsonb), logo_url, brand_color (default `#bd703e`), service_area (text[]), tagline, review_place_id, review_link, google_review_toggle (enum `review_gate_mode`, default `gated`), star_threshold (smallint, default 4), twilio_number, twilio_messaging_service_sid, sending_subdomain, dkim_status, status (default `active`), template_vars (jsonb), created_at, updated_at.
+  - **[ADD]** `allowed_origins text[]` (marketing domains → CORS allowlist), `call_forwarding_number text`, `site_style text` (corporate|standard|family_owned|owner_operated), `deleted_at timestamptz` (soft-delete). Note: `review_request_link` — confirm if it's a column or lives in `template_vars` (pick one source of truth).
+- **send_settings** (existing, per-client) — holds **`timezone`** (NOT on clients), sms_send_window, **[ADD]** business_hours (separate window for lead-form branching), daily_send_cap, **[ADD]** daily_enrollment_cap (default 50), per-sequence overrides (reactivation: 50/day enroll + 2/20min pacing).
+- **user_roles** (existing) — id, user_id (→ auth.users), role (enum `app_role`: admin|client|agency_owner|client_owner|client_staff), client_id (nullable), created_at. UNIQUE (user_id, role, client_id). Roles live HERE.
+- **contacts** (existing) — id, client_id, first_name, last_name, phone_e164, email, status (enum `contact_status`), source (enum `contact_source`), consent_basis, consent_at, opted_out_at, notes, created_at, updated_at.
+  - `contact_status` enum (existing values): `new, contacted, replied, customer, review_requested, review_clicked, opted_out`. **[ADD VALUES]** needed for our funnel: `review_completed`, `negative_review`, `reactivation` (or map — see Enum reconciliation below).
+  - `contact_source` enum (existing values): `web_form, review_enroll, missed_call, import, manual`. **[ADD VALUES]**: `chat_widget`, `mobile_enroll`.
+  - **[ADD]** `last_missed_call_textback_at timestamptz` (§9 7-day re-eligibility), `deleted_at timestamptz`.
+- **conversations** (existing) — id, client_id, contact_id, last_message_at, status.
+- **messages** (existing) — id, client_id, conversation_id, direction, body, twilio_sid, status, created_at.
+- **templates** (existing) — id, client_id (NULL = global), key, body.
+- **sequences** (existing) — id (uuid PK), client_id (nullable, NULL = global), **key (text, NOT NULL)** — this is what `enrollments.sequence_key` matches BY VALUE (not a FK), name, steps_json (jsonb default `[]`), updated_at. No unique on `key` today (globals have client_id NULL). **[ADD]** a unique index that respects the global/tenant split, e.g. `UNIQUE (client_id, key)` (with a partial unique on `key WHERE client_id IS NULL` for globals).
+- **enrollments** (existing) — id, client_id, contact_id, **sequence_key (text)** — matches `sequences.key` by value, current_step (int, default 0), next_run_at, status (text, default `active`), created_at. **[ADD]** UNIQUE (client_id, contact_id, sequence_key) — the DB-level re-enrollment/dedup guard (§4/§6/§9); **dedup existing rows first** before adding. No FK to sequences (value-match by design — keep).
+- **review_feedback** (existing) — client_id, contact_id, name, email, phone, rating, comment, created_at.
+- **events** (existing) — id, client_id, type, contact_id, payload jsonb, created_at. **[ADD]** `created_by uuid` (nullable, audit); new `type` values as needed (sms_sent, review_clicked, inbound_sms, lead_submitted, cron_decision, …). Append-only; ALL cap/dedupe/throttle logic reads `events`.
+- **notifications** **[ADD — net-new table]** — id, client_id, type, body, related_contact_id, action jsonb (nullable {type, payload}), created_at. No read/unread state (§8).
+
+### Enum reconciliation [DECISION FLAGGED]
+Our funnel (§4) marks contacts `Review Completed` and `Negative Review`; the live `contact_status` enum has neither (it has `review_clicked`, `review_requested`, etc.). Two options:
+- **(A) Add values:** `ALTER TYPE contact_status ADD VALUE 'review_completed'; … 'negative_review';` and use them explicitly. Cleanest mapping to the spec.
+- **(B) Map onto existing:** treat `review_clicked` as the Review-Completed signal and add only `negative_review`. Less new surface, but `review_clicked` semantically = "clicked," which under our funnel = landed = completed, so it nearly fits.
+Recommend (A) for clarity (the spec speaks in Review Completed / Negative Review). Confirm before building. Either way: enum value names should be lowercase_snake to match the existing enum convention (so the spec's "Review Completed" → DB value `review_completed`).
 
 ## 2. SECURITY DEFINER helpers
 Create as `SECURITY DEFINER`, `STABLE`, `set search_path = public`:
@@ -105,3 +117,6 @@ Enrollment caps (e.g. reactivation 50/day) are enforced at the **enrollment-crea
 - [ ] Two storage buckets (public-assets / client-assets).
 - [ ] soft-delete `deleted_at` on contacts/clients; `events.created_by`.
 - [ ] All caps/dedupe/throttle read `events`; sends write `events` in live AND stub mode.
+- [ ] Enum reconciliation done: `contact_status` has `review_completed` + `negative_review` (+ `reactivation` if used); `contact_source` has `chat_widget` + `mobile_enroll` (via `ALTER TYPE … ADD VALUE`). All enum values lowercase_snake.
+- [ ] `timezone` read from `send_settings` (NOT clients). `service_area` is text[] on clients. `brand_color` default `#bd703e`.
+- [ ] Net-new migrations applied: clients (allowed_origins, call_forwarding_number, site_style, deleted_at); contacts (last_missed_call_textback_at, deleted_at); send_settings (business_hours, daily_enrollment_cap, overrides); events.created_by; notifications table; enrollments dedup→UNIQUE; sequences (client_id, key) unique.
