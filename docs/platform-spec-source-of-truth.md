@@ -282,7 +282,7 @@ New keys (set per-client in `/admin-view` Settings, added to template_vars contr
 3. Day 10 → owner reminder (see below).
 
 ### Branch B — submitted OUTSIDE Business Hours
-1. Single after-hours SMS to the lead (no typo, no second text).
+1. Single after-hours SMS to the lead.
 2. After-hours owner notification (so they see it when back).
 3. Day 10 → owner reminder (same as Branch A — fires on BOTH paths).
 (After-hours customer-facing drip ends after the single SMS; the normal two-text sequence does NOT fire later.)
@@ -446,7 +446,7 @@ A corner chat widget on the client's website. An AI assistant answers FAQs from 
 ### Behavior [LOCKED]
 - **Question (FAQ) path:** the AI answers general questions about the business and its services from the business data (e.g. "do you offer drain cleaning?", "what are your hours?").
 - **Pricing/quote guardrail:** the AI must NOT quote prices or give official pricing. Any question asking a price or a quote → the AI directs them to submit a request ("Let me get you an accurate quote — fill in your request and the team will reach out"). General service *info* is answered; *pricing/quotes* are redirected. This is a system-prompt guardrail (strong but soft — instruct firmly).
-- **Request path:** works exactly like the main website lead form (§7) — creates the contact, enrolls into the SAME lead-form drip + automations (business-hours branching, the typo/correction texts, day-10 reminder, owner email). After a request is submitted, the AI confirms: it sent the request to the team and they'll hear back shortly.
+- **Request path:** works exactly like the main website lead form (§7) — creates the contact, enrolls into the SAME lead-form drip + automations (business-hours branching, single SMS#1, day-10 reminder, owner email). After a request is submitted, the AI confirms: it sent the request to the team and they'll hear back shortly.
 - **The ONLY difference from the website lead form:** the owner notification (in-app + email) reads **"New Website AI Chat Lead"** instead of "New Website Lead." All downstream automation/enrollment is identical.
 
 ### AI hard rules (system prompt guardrails) [LOCKED]
@@ -642,7 +642,7 @@ This resolves the copy-strategy decision: copy is AI-GENERATED, steered by the s
 - Review Request SMS drip — full copy, tokenized tracking, exit-on-click, SMS-only (§4).
 - Review→1-Year handoff rule — enroll unless opted out (§4).
 - One-Year Follow-Up SMS drip — full copy, exit-on-reply-or-opt-out, no form (§5).
-- Website Lead-Form drip — full copy, two-window branching, single correctly-spelled SMS (Branch A), day-10 reminder + auto-enroll button (§7).
+- Website Lead-Form drip — full copy, two-window branching, single in-hours SMS, day-10 reminder + auto-enroll button (§7).
 - Discount-Claim Form & drip — form structure, copy, exits one-year drip on submit (§7b).
 - Owner Email Notifications — Lovable native transactional, one per lead, formatted with line breaks (§7d).
 - Missed-Call Textback — full scope + copy: 24/7, 4 triggers, 1-min/2-min drip, reply-skip, 7-day re-eligibility per contact, internal notification (§9).
