@@ -50,7 +50,7 @@ Destination of BOTH the review-drip tracked link and the reactivation link. Land
 ---
 
 ## Build rules
-- Public forms (2, 3, 4) use anon INSERT constrained to `source IN ('web_form','review_enroll')` — do not use wide-open `WITH CHECK (true)`.
+- Public forms (2, 3, 4) POST to server functions (`supabaseAdmin` + Zod; `client_id` from the public slug; `source` set server-side). Routes return CORS headers (per-client domain allowlist + OPTIONS) and apply rate-limiting + Turnstile/hCaptcha. NO anon INSERT policies; anon is SELECT-only on `clients` public columns. (CORS/allowlist/bot-protection mechanism lives in `/scratch-foundation`.)
 - Consent: every form that collects a phone for texting must carry the SMS opt-in + terms language (discount form + website lead form). `/r/feedback` needs no SMS consent (feedback only, not a texting opt-in). `/r/enroll` is removed.
 - Each form writes the contact scoped to the correct `client_id` and enrolls into the named sequence; nothing enrolls into a sequence the form isn't mapped to here.
 - The mobile Review Request enrollment and the lead-form day-10 Auto-Enroll button share the same re-enrollment guard.
