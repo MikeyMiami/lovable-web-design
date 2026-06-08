@@ -19,15 +19,15 @@ Takes the §9b onboarding inputs (owner-filled + agency-set) and writes them int
 | Full Name (req) | derive `template_vars.company_owner_first_name` (first token of full name) |
 | Business Phone | `clients.call_forwarding_number` (their real phone / lead-notify target) |
 | Official Business Name (req) | `clients.business_name` + `template_vars.company_name` |
-| Tax ID / EIN | business record (A2P use) |
+| Tax ID / EIN | AGENCY-OPS ONLY — captured on the form, used by the agency for A2P registration (a manual Twilio process); NOT stored in the app DB (no feature reads it; no column). |
 | Current website link | `template_vars.company_website_link` + AI-knowledge source |
 | About Us (3–5 sentences, req) | site copy + AI-knowledge |
 | Top location + service areas (MAX 14) | `clients.service_area` (text[]) + site copy + AI-knowledge |
 | All services offered (req) | site copy + **AI chat-widget knowledge** |
 | Special things / differentiators | site copy + AI-knowledge |
 | Hours of operation (req) | site + `send_settings.business_hours` (lead-form branching, §7) |
-| Social links (IG/FB/BBB/TikTok/Yelp, if applicable) | `clients` social fields / site |
-| Full shipping address (req, no PO box) | business record (cards, agency ops) |
+| Social links (IG/FB/BBB/TikTok/Yelp, if applicable) | `clients.social_links` jsonb **[ADD column]** ({instagram, facebook, bbb, tiktok, yelp}; missing keys simply absent) → site footer/contact |
+| Full shipping address (req, no PO box) | AGENCY-OPS ONLY — used to mail business cards; NOT stored in the app DB (distinct from `clients.address`, which is the display address; no feature reads shipping). |
 | Return/referral discounts | `template_vars.discount__on_referral` + `template_vars.discount_amount` |
 | Logo (upload or request) + "need a logo?" flag | `public-assets` bucket → `clients.logo_url`; flag noted for agency |
 | Timezone (EST/CST/MST/PST/Honolulu) | `send_settings.timezone` (NOT on clients) |
@@ -56,6 +56,7 @@ The chat widget answers FAQs from the onboarding data. Assemble a retrieval bund
 
 ## Build notes
 - All writes via the admin (service-role) client in a server function — never owner-direct-to-DB. Zod-validate inputs.
+- `call_forwarding_number` precedence: the owner's **Business Phone seeds it as the default**; the **agency value wins if both set** (agency configures the actual forwarding target in admin, editable over time).
 - Creating the client today: `createClient` accepts only slug/business_name/phone_display/email; everything else here is set via an extended onboarding capture / `updateClientSettings` (extend it to cover all §9b fields — [BUILD]).
 - Assets: logo + public hero images → `public-assets` (public read); private uploads → `client-assets` (client_id-scoped).
 - A2P terms page (§9b.C) is generated as part of onboarding and its URL stored in `template_vars.website_terms_page_link`.
