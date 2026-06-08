@@ -655,11 +655,10 @@ This resolves the copy-strategy decision: copy is AI-GENERATED, steered by the s
 - ~~SMS automation formatting pass~~ ✓ COMPLETE — all customer-facing SMS finalized with intended line breaks (proofread/approved); all internal notifications + emails reformatted to stacked form (§4/§5/§7/§7b + `/automation-config` + `/mobile-app`); owner-email copy added to `/automation-config`. `/features` is mechanics-only (no inline copy). Customer SMS remain editable on-site.
 
 ### >>> NEXT UP <<<
-- Pick from "FEATURES STILL TO DEFINE" below, or write `/scratch-foundation`, or make an architecture decision.
+- Write the remaining skills (all features locked, zero open decisions). Suggested order: `/scratch-foundation` → `/chat-widget` → `/onboard-from-form` → `/website-structure` → `/launch-check` → `/new-client-site`. Then Phase 2 (build & prove the golden master).
 
-### FEATURES — all defined ✓
-- All platform features are now scoped. (AI Chat Widget §7e scoped; its AI knowledge inputs finalize once the onboarding form is defined — see Architecture Decisions.)
-- Reactivation still needs a confirmation/full pass (copy + how its link reaches /r/rate) — §9.
+### FEATURES — all defined & locked ✓
+- All platform features are scoped AND locked, including AI Chat Widget (§7e) and Customer Review Reactivation (§9). No undefined features remain.
 
 ### LATER / PARKED (non-blocking)
 - **PWA web-push notifications** — superseded by owner email notifications (§7d); revisit if real-time phone push wanted.
