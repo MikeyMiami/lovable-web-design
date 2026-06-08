@@ -21,7 +21,7 @@ TanStack Start v1 (React 19, Vite 7), SSR on Cloudflare Workers — **pure JS + 
 All tenant tables carry `client_id uuid not null references clients(id)`. uuid PKs (`gen_random_uuid()`), `created_at timestamptz default now()`.
 
 - **clients** (existing) — id, slug (unique), business_name, address, phone_display, email, license_number, hours (jsonb), logo_url, brand_color (default `#bd703e`), service_area (text[]), tagline, review_place_id, review_link, google_review_toggle (enum `review_gate_mode`, default `gated`), star_threshold (smallint, default 4), twilio_number, twilio_messaging_service_sid, sending_subdomain, dkim_status, status (default `active`), template_vars (jsonb), created_at, updated_at.
-  - **[ADD]** `allowed_origins text[]` (marketing domains → CORS allowlist), `call_forwarding_number text`, `site_style text` (corporate|standard|family_owned|owner_operated), `deleted_at timestamptz` (soft-delete). Note: `review_request_link` — confirm if it's a column or lives in `template_vars` (pick one source of truth).
+  - **[ADD]** `allowed_origins text[]` (marketing domains → CORS allowlist), `call_forwarding_number text`, `site_style text` (corporate|standard|family_owned|owner_operated), `deleted_at timestamptz` (soft-delete). Note: `review_request_link` lives in `template_vars` (LOCKED — not a column; keeps all merge values in one source, consistent with company_owner_first_name/company_name/quote_form_link/etc.).
 - **send_settings** (existing, per-client) — holds **`timezone`** (NOT on clients), sms_send_window, **[ADD]** business_hours (separate window for lead-form branching), daily_send_cap, **[ADD]** daily_enrollment_cap (default 50), per-sequence overrides (reactivation: 50/day enroll + 2/20min pacing).
 - **user_roles** (existing) — id, user_id (→ auth.users), role (enum `app_role`: admin|client|agency_owner|client_owner|client_staff), client_id (nullable), created_at. UNIQUE (user_id, role, client_id). Roles live HERE.
 - **contacts** (existing) — id, client_id, first_name, last_name, phone_e164, email, status (enum `contact_status`), source (enum `contact_source`), consent_basis, consent_at, opted_out_at, notes, created_at, updated_at.
@@ -37,11 +37,8 @@ All tenant tables carry `client_id uuid not null references clients(id)`. uuid P
 - **events** (existing) — id, client_id, type, contact_id, payload jsonb, created_at. **[ADD]** `created_by uuid` (nullable, audit); new `type` values as needed (sms_sent, review_clicked, inbound_sms, lead_submitted, cron_decision, …). Append-only; ALL cap/dedupe/throttle logic reads `events`.
 - **notifications** **[ADD — net-new table]** — id, client_id, type, body, related_contact_id, action jsonb (nullable {type, payload}), created_at. No read/unread state (§8).
 
-### Enum reconciliation [DECISION FLAGGED]
-Our funnel (§4) marks contacts `Review Completed` and `Negative Review`; the live `contact_status` enum has neither (it has `review_clicked`, `review_requested`, etc.). Two options:
-- **(A) Add values:** `ALTER TYPE contact_status ADD VALUE 'review_completed'; … 'negative_review';` and use them explicitly. Cleanest mapping to the spec.
-- **(B) Map onto existing:** treat `review_clicked` as the Review-Completed signal and add only `negative_review`. Less new surface, but `review_clicked` semantically = "clicked," which under our funnel = landed = completed, so it nearly fits.
-Recommend (A) for clarity (the spec speaks in Review Completed / Negative Review). Confirm before building. Either way: enum value names should be lowercase_snake to match the existing enum convention (so the spec's "Review Completed" → DB value `review_completed`).
+### Enum reconciliation [DECISION LOCKED — Option A]
+Our funnel (§4) marks contacts `Review Completed` and `Negative Review`; the live `contact_status` enum has neither. **LOCKED: Option A — add explicit values.** Migration: `ALTER TYPE contact_status ADD VALUE 'review_completed'; ADD VALUE 'negative_review'; ADD VALUE 'reactivation';` and `ALTER TYPE contact_source ADD VALUE 'chat_widget'; ADD VALUE 'mobile_enroll';`. All values lowercase_snake (the spec's "Review Completed" → DB value `review_completed`). Rationale: the spec speaks in these statuses throughout (§4/§5/§9, funnel handoff, One-Year rules); explicit values keep DB vocabulary == spec vocabulary and avoid a translation layer. (Option B — reuse `review_clicked` — rejected to prevent drift.)
 
 ## 2. SECURITY DEFINER helpers
 Create as `SECURITY DEFINER`, `STABLE`, `set search_path = public`:
