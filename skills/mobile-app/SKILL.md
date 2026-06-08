@@ -92,6 +92,17 @@ Notification copy (sources: review drip §4, one-year §5, lead-form §7, discou
 >
 > (Do NOT reply to this message; it's not the client!)
 
+**AI chat widget — new lead (§7e; chat-widget Request path, same lead-form drip; only this label differs):**
+> New Lead from your Website AI chat!
+>
+> Name: {full_name}
+> Phone: {phone}
+> Message: {your_message}
+>
+> We've already replied to them in the chat.
+>
+> (Do NOT reply to this message; it's not the client!)
+
 **Lead-form — day-10 reminder (BOTH branches; suppress if already in review automation; has Auto-Enroll button):**
 > Hey {company_owner_first_name},
 >
@@ -196,6 +207,17 @@ When a lead-form or discount-form submission fires its in-app notification, ALSO
 > Message: {your_message}
 >
 > We've told them you'll be reaching out soon. Open your app to see the details.
+
+**Subject: New Website AI Chat Lead** (§7e chat-widget variant; same business-hours/after-hours branching as the website lead):
+> Hey {company_owner_first_name},
+>
+> You've got a new lead from your website AI chat!
+>
+> Name: {full_name}
+> Phone: {phone}
+> Message: {your_message}
+>
+> We've already replied to them in the chat. Open your app to see the conversation.
 
 ---
 
