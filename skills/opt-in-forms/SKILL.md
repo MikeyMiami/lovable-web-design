@@ -40,7 +40,7 @@ Every form, its fields, and exactly what it triggers. Phones normalized to E.164
 - **FAQ path:** AI answers business/service questions from onboarding + site data; pricing/quote questions are redirected to submit a request. (AI behavior detailed in the /chat-widget skill; knowledge inputs depend on the onboarding form.)
 
 ## 4. Public review-funnel pages [LOCKED]
-Destination of BOTH the review-drip tracked link and the reactivation link. Landing on `/r/rate` (via `/r/<token>`) writes a `review_clicked` event and EXITS the contact from the review drip; status + one-year handoff are set by the star selection.
+Destination of BOTH the review-drip tracked link and the reactivation link. Landing on `/r/rate` (via `/r/<token>`) writes a `review_clicked` event and EXITS the contact from the review drip; status + one-year handoff are set by the star selection. **These routes (`/r/<token>`, `/r/rate`, `/r/feedback`) are served by the SHARED BACKEND domain** (they write to the DB) — NOT the frontend-only client marketing site.
 - `/r/rate` — "How would you rate us?" + 1–5 star choice. Threshold = `star_threshold` (default 4, inclusive ≥).
   - ≥ threshold → status `Review Completed` → redirect to the client's Google review page → enroll into One-Year drip.
   - < threshold → status `Negative Review` → `/r/feedback`. Does NOT enroll into One-Year.
