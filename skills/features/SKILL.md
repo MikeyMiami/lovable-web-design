@@ -18,11 +18,14 @@ Stack invariants: TanStack Start v1, Cloudflare Workers (pure JS + fetch, no nat
 
 **Re-enrollment guard [LOCKED]:** a contact already enrolled in the review automation (by client_id + phone) cannot be re-enrolled — block and show "contact already enrolled." Applies to the form AND the lead-form drip's day-10 Auto-Enroll button.
 
-**Tracked review link [BUILD — construct this]:** the link in every SMS is a per-contact tracked redirect, NOT the raw Google URL. At enrollment generate a unique token mapped to (contact_id, client_id, sequence); embed `https://<client-domain>/r/<token>`. Build a public route that looks up the token → writes a `review_clicked` event → sets contact `status='Review Completed'` → 302-redirects to the client's `review_link`. Per-contact token = know exactly who clicked.
+**Tracked review link + Review Funnel [BUILD — construct this]:** the link in every SMS is a per-contact tracked redirect, NOT the raw Google URL. At enrollment generate a unique token mapped to (contact_id, client_id, sequence); embed `https://<client-domain>/r/<token>`. Build a public route that looks up the token → writes a `review_clicked` event → **lands the contact on the Review Funnel rate page `/r/rate`** (NOT straight to Google). **Landing exits the contact from the review drip immediately.** Status + one-year handoff are decided by the star selection on `/r/rate`:
+- **≥ `star_threshold`** (inclusive, default 4) → status `Review Completed` → redirect to the client's Google review page (`review_link`) → enroll into One-Year drip.
+- **< threshold** → status `Negative Review` → `/r/feedback` (collects Name, Email, Feedback; phone auto-fills from the contact; stores in `review_feedback`) → fire the "We Saved You From a Negative Review" owner email + mobile notification (using `{feedback_message}`, `{email}`) → show the "sorry we missed the mark" confirmation. Does NOT enroll into One-Year.
+Per-contact token = know exactly who landed (required to set the right contact's status). The drip's per-step click-checks read the exit/status set on landing. `/r/enroll` is not built (no public self-enroll).
 
 **Sequence behavior:** 4 SMS. After SMS 1, check click-status at each step before the next send; clicked at ANY stage → exit. After SMS 4, a final wait, then if still not clicked → fire an internal notification to the mobile-app Notifications tab (terminal, not a customer text). Opt-out keyword `pass` (+ standard STOP/etc.) stops all sends.
 
-**Handoff to One-Year Follow-Up [LOCKED]:** on review-drip completion, enroll into the One-Year drip UNLESS opted out. Both a click-exit (`Review Completed`) AND running all 4 with no click and no opt-out → enroll. Only opt-out blocks the handoff.
+**Handoff to One-Year Follow-Up [LOCKED]:** on review-drip completion, enroll into the One-Year drip UNLESS opted out OR marked `Negative Review`. A `Review Completed` exit (≥threshold) AND running all 4 with no landing and no opt-out → enroll. Opt-out OR `Negative Review` blocks the handoff.
 
 ---
 
