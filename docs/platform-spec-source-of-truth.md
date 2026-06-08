@@ -642,6 +642,9 @@ This resolves the copy-strategy decision: copy is AI-GENERATED, steered by the s
 - AI Chat Widget — opt-in gate, FAQ answering from business data, pricing→request-form guardrail, Request path = lead-form drip with "New Website AI Chat Lead" label; own /chat-widget skill; depends on onboarding form for AI knowledge (§7e).
 - Customer Review Reactivation — CSV upload, same 4 texts as §4, immediate+24h×3, caps (50/day + 2/20min), dedup guard, click notification, One-Year only on Review Completed, no end notification (§9).
 - SMS copy de-meal'd — §4 + reactivation now use the meal-free review-request copy; "pass" P.S. line removed (opt-out still functional).
+- Business Onboarding Form & Client Setup — owner-filled content form (+ timezone + style picker) + agency-set config + A2P terms-page generation + per-client Twilio/forwarding telephony setup (§9b).
+- Website Structure & Design Layer — page set (always-present + data-driven service/area pages, max 12/14), 4 style choices, AI copy+visual generation from style/onboarding/assets/reference screenshots, two-mode design-template system; absorbs /theme-to-brand (§9c).
+- Golden-master deployment model — skills build/prove the backend once; per-client launch clones the proven code (not regenerated); design is the per-client creative layer (§0).
 - Email drip — SCRAPPED, SMS-only (§7c).
 - Re-enrollment guard (§4/§6). opt-in-forms map (§6 — now FINITE). Two-window model + two caps (§2/§3). admin-view tabs (§2).
 - Naming convention: `{first_name}` customer-facing, `{full_name}` internal notifications.
