@@ -20,7 +20,7 @@ Every form, its fields, and exactly what it triggers. Phones normalized to E.164
 - **Location:** the main client website (quote/contact request).
 - **Fields:** First Name, Last Name, Phone, Email, Your Message.
 - **Source:** `web_form`.
-- **Enrolls into:** the Website Lead-Form Drip. Branches on **Business Hours** (separate setting from the SMS Send Window): in-hours → typo + correction texts; after-hours → single after-hours text. Plus the day-10 owner reminder (with Auto-Enroll button) on both branches.
+- **Enrolls into:** the Website Lead-Form Drip. Branches on **Business Hours** (separate setting from the SMS Send Window): in-hours → single SMS#1 (correctly spelled); after-hours → single after-hours text. Plus the day-10 owner reminder (with Auto-Enroll button) on both branches.
 
 ## 3. Public Discount-Claim form (customer-facing)
 - **Location:** `{company_website_link}/get-your-discount` (destination of One-Year drip links).
