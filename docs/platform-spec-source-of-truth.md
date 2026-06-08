@@ -24,9 +24,9 @@ TanStack Start v1 (React 19 + Vite 7), SSR, Cloudflare Workers (pure JS + fetch,
 4. `/opt-in-forms` — which forms feed which automations.
 5. `/chat-widget` — the AI chat widget (§7e): opt-in gate, FAQ retrieval, pricing guardrail, request→lead-form handoff.
 6. `/mobile-app` — the client app (`app.theirdomain.com`): Conversations, Review Request, Notifications tabs.
-6. `/admin-view` — the admin tabs/settings on the client website (what's editable where).
-7. `/launch-check` — pre-go-live verification gate.
-8. `/new-client-site` — orchestrates the from-scratch build for a new client.
+7. `/admin-view` — the admin tabs/settings on the client website (what's editable where).
+8. `/launch-check` — pre-go-live verification gate.
+9. `/new-client-site` — orchestrates the from-scratch build for a new client.
 (`/onboard-from-form`, `/theme-to-brand` follow once their decisions land.)
 
 ---
