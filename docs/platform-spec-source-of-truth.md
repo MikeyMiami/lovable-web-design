@@ -8,30 +8,32 @@
 
 ## 0. Build philosophy & deployment model [LOCKED]
 
-**The skills build a tested "golden master" backend ONCE; per-client launch clones that proven code.** This resolves the build-from-scratch-vs-clone tension: the skills get us to a known-perfect state, and after that, cloning that state is SAFER than regenerating it (regeneration reintroduces AI-sway/drift risk).
+**The skills build a tested "golden master" backend ONCE; it is ONE shared multi-tenant backend that serves all clients. Per-client launch does NOT clone the backend — it adds a client to the shared backend and Remixes only that client's marketing site (frontend).** This resolves the build-from-scratch-vs-clone tension: the skills get us to a known-perfect shared backend, and after that we never AI-regenerate it per client (regeneration reintroduces AI-sway/drift risk).
 
 **Three phases:**
 1. **Author the skills** (where we are) — the skills are the complete canonical spec of how the backend is built, derived from this doc.
-2. **Build & prove the reference backend, once** — run the skills against a fresh site, build the entire backend, test every feature until flawless. This produces the **golden master** (tested, working code).
-3. **Clone the golden master per client, forever after** — new clients launch from a COPY of the proven backend code, NOT by re-running the skills. The backend is now finite, deterministic code.
+2. **Build & prove the reference backend, once** — run the skills, build the entire shared multi-tenant backend, test every feature until flawless. This produces the **golden master** (tested, working code) — built one time, not per client.
+3. **Launch each client on the shared backend** — create a client record + config (the §9b onboarding data); Remix ONLY the marketing site (frontend) for the client's domain, pointed at the shared backend via its Supabase env (`VITE_SUPABASE_URL` + anon key + `project_id`). No per-client backend, DB, Cloud, or service-role key.
 
 **The clean split:**
-- **Backend = cloned golden master** — frozen, proven, deterministic; no AI generation per client. (This is the part that must be reliable.)
-- **Design = the per-client creative layer** (`/website-structure`) — AI-driven styling + a growing library of codified style templates, applied on top of the frozen backend. (This is the part that should be varied/creative.)
+- **Backend = the ONE shared multi-tenant backend** (golden master, built/proven once, frozen, never regenerated per client). The part that must be reliable.
+- **Design = per-client Remixed marketing site (frontend-only)** + the AI design layer (`/website-structure`). The part that should be varied/creative.
+
+**The Remixed marketing site is frontend-only:** it reads public client data via anon SELECT (same-origin to supabase.co) and submits leads to the shared backend's public write routes, which enforce CORS + per-client domain allowlist + Zod + bot protection. No service-role key, no DB-hitting server fns on the Remixed project.
 
 **Role of the skills:** they are the blueprint that builds (and, if ever needed, rebuilds) the golden master, AND the canonical documentation of how the system works. They remain the source of truth forever — they are just not the per-client *runtime* path once the master exists.
 
 **Determinism within the build:** when the skills DO build (Phase 2, or a rebuild), they build from scratch in ordered layers — every construction identical by construction. One skill, one job. No monolithic "build everything" skill. The spec doc is the source of truth; skills are derived from it; version-controlled in the repo.
 
-**Layer order (also the skill order):** foundation → features → automation-config → launch-check; per-client launch = `/new-client-site` (clone master backend + invoke the design layer) → `/onboard-from-form` → `/website-structure` (design).
+**Layer order (also the skill order):** foundation → features → automation-config → launch-check; per-client launch = `/new-client-site` (provision client on the shared backend + Remix marketing site + invoke the design layer) → `/onboard-from-form` → `/website-structure` (design).
 
-## 0a. Stack (unchanged, see workspace knowledge) [LOCKED]
-TanStack Start v1 (React 19 + Vite 7), SSR, Cloudflare Workers (pure JS + fetch, no native deps). Lovable Cloud / Supabase. Server logic in TanStack Start (`createServerFn` + `src/routes/api/public/*`). RLS on every table; roles in `user_roles`; SECURITY DEFINER helpers. Three Supabase clients (browser / authed-server-fn / admin).
+## 0a. Stack [LOCKED]
+TanStack Start v1 (React 19 + Vite 7), SSR, Cloudflare Workers (pure JS + fetch, no native deps). Lovable Cloud / Supabase. Server logic in TanStack Start (`createServerFn` + `src/routes/api/public/*`). RLS on every table; roles in `user_roles`; SECURITY DEFINER helpers. Three Supabase clients (browser / authed-server-fn / admin). One shared multi-tenant backend serves all clients; each client's marketing site is a separate Remixed frontend sharing the same Supabase env, frontend-only (no Cloud / no service-role).
 
 ---
 
 ## 1. The skill set [LOCKED list]
-1. `/scratch-foundation` — builds the deterministic core (schema, RLS, helpers, server-fn/route skeleton, auth/roles) from nothing.
+1. `/scratch-foundation` — builds the deterministic core (schema, RLS, helpers, server-fn/route skeleton, auth/roles) from nothing; builds the single shared multi-tenant core (the golden master) once.
 2. `/features` — reference + build instructions for each feature's mechanics & scope.
 3. `/automation-config` — exact message copy + timing (the "snapshot").
 4. `/opt-in-forms` — which forms feed which automations.
@@ -39,7 +41,7 @@ TanStack Start v1 (React 19 + Vite 7), SSR, Cloudflare Workers (pure JS + fetch,
 6. `/mobile-app` — the client app (`app.theirdomain.com`): Conversations, Review Request, Notifications tabs.
 7. `/admin-view` — the admin tabs/settings on the client website (what's editable where).
 8. `/launch-check` — pre-go-live verification gate (for building/proving the golden master).
-9. `/new-client-site` — per-client launch orchestrator: **clone the golden-master backend + invoke the design layer** (NOT regenerate from scratch).
+9. `/new-client-site` — per-client launch orchestrator: **provision a new client on the shared backend (client row + settings + Twilio subaccount/number + onboarding capture) + Remix the marketing site for the client's domain (frontend-only) + invoke the design layer. NOT a backend clone, NOT a regenerate.**
 10. `/website-structure` — the per-client DESIGN layer: page set (generated from onboarding, up to max), the 4 style choices, AI-driven copy + visual generation from onboarding data + assets + reference screenshots, and the codified style-template library (plug-and-play via Lovable cross-project referencing). Absorbs the old `/theme-to-brand` (brand colors/logo are part of this).
 11. `/onboard-from-form` — captures the §9b onboarding data into the system (config + AI knowledge + design inputs).
 (`/website-structure` and `/onboard-from-form` are the per-client design + data-capture skills; both now unblocked. `/theme-to-brand` is absorbed into `/website-structure`.)
@@ -255,7 +257,7 @@ New keys (set per-client in `/admin-view` Settings, added to template_vars contr
 ## 6. `/opt-in-forms` — forms → automations map [LOCKED]
 - **Mobile app "Review Request" tab form** (first_name, last_name, phone, email) → enrolls into Review Request SMS Drip (§4) ONLY. Subject to the daily enrollment cap. This is the entry point for the review/1-year chain (review enrollment happens here, by the client — there is no public self-enroll page). **Re-enrollment guard:** a contact already enrolled in the review automation (by client_id + phone) cannot be re-enrolled — block and show "contact already enrolled" so owners can safely re-attempt without double-texting.
 - **One-Year Follow-Up drip has NO form** — automatic handoff from review-drip completion (§4/§5).
-- **Public website lead form** (first_name, last_name, phone, email, your_message) → enrolls into the Lead-Form drip (§7). Public route, anon insert constrained to `source IN ('web_form','review_enroll')`.
+- **Public website lead form** (first_name, last_name, phone, email, your_message) → enrolls into the Lead-Form drip (§7). Submitted to a public server function (`supabaseAdmin` + Zod; `client_id` resolved from the public slug; CORS + per-client domain allowlist + bot protection). NO anon INSERT. `source` set server-side (CHECK-constrained column).
 - Public funnel pages: `/r/rate`, `/r/feedback`. (`/r/enroll` removed.)
 - Discount-claim form (§7b) — TBD.
 
@@ -395,7 +397,7 @@ The page at `{company_website_link}/get-your-discount` (destination of the one-y
 **Consent checkbox:** "I agree to [terms & conditions]({website_terms_page_link}) provided by the company. By providing my phone number, I agree to receive text messages from the business."
 **Button:** "Get My Discount!"
 
-- Public form → inserts a contact with source constrained to `web_form` (per tightened RLS). Phone normalized to E.164.
+- Public form → POSTs to the server function that inserts the contact (`source='web_form'`, server-set; `supabaseAdmin` + Zod; CORS / per-client domain allowlist / bot-protection). Not an anon RLS insert. Phone normalized to E.164.
 - Terms link points to the CLIENT's own terms page (`{website_terms_page_link}` template_var, or the site `/terms` route) — NOT any external/leadconnector URL.
 
 ### One-year drip interaction [LOCKED]
@@ -579,7 +581,8 @@ Verbatim from the live client form (light edits for our system):
 - **Star threshold** (default 4) — agency-decided in admin settings.
 - **Terms page** — agency-hosted; generated A2P-compliant from onboarding data (see C).
 - **Quote form link** — defaults to the site lander (not collected).
-- **Twilio number** — agency-provisioned (local area code); editable in admin.
+- **Marketing domain(s) / allowed origins** — the client's site domain(s); powers the public-write CORS allowlist (§6). [BUILD — new field]
+- **Twilio number + Messaging Service SID** — per-client, NON-secret (a number under the ONE parent Twilio account); editable in admin. (No per-client auth token — see D.)
 - **Call-forwarding number** — the client's real phone the Twilio number rings through to; editable in admin per client over time. [BUILD — new admin field]
 - **Sending subdomain / DKIM** — agency setup.
 - **Timezone** — editable in admin (default from the owner's pick).
@@ -587,11 +590,15 @@ Verbatim from the live client form (light edits for our system):
 ### C. A2P-compliant terms page [BUILD]
 The agency hosts each client's terms/privacy page. Needs a documented process to generate an **A2P 10DLC-compliant terms & conditions + privacy page** from the onboarding data (business name, contact, SMS consent language, opt-out instructions, data handling). This page is what `{website_terms_page_link}` points to. Required for compliant SMS consent on all forms.
 
-### D. Per-client telephony setup [LOCKED pattern]
-- Provision a **new local Twilio number** per client (area code matching their market).
-- **Forward** the Twilio number's calls to the client's real phone (the call-forwarding number) — so they answer calls normally.
-- Put the **Twilio number on the website + Google Business Profile** (+ business cards). All SMS automations and missed-call textback operate on the Twilio number. The client keeps their existing number everywhere else.
-- Register the new number under the agency's existing **A2P 10DLC** brand/campaign (ISV/reseller) — no re-vetting, fast to live.
+### D. Per-client telephony setup [LOCKED pattern — Twilio Option 1: one parent account]
+- **One parent Twilio account** (the agency's, wired via Lovable's connector gateway). Per client, provision a **number under the parent account** (a subaccount/number, local area code matching their market). Store only the per-client **From number (`clients.twilio_number`)** + optional **Messaging Service SID (`clients.twilio_messaging_service_sid`)** — both NON-secret.
+- **No per-client Twilio auth token.** The ONLY Twilio secret is the single parent account auth token, held as a platform runtime secret (never on a row).
+- **Outbound:** gateway POST with the per-client `From` / `MessagingServiceSid`.
+- **Inbound + voice-status webhooks:** configured ONCE at the parent level; route to the correct client by the `To` number → `clients` row; verify with the single parent auth token.
+- **Forward** the client's number's calls to the client's real phone (the call-forwarding number) — so they answer calls normally.
+- Put the **number on the website + Google Business Profile** (+ business cards). All SMS automations and missed-call textback operate on it. The client keeps their existing number everywhere else.
+- **A2P:** numbers/subaccounts under the parent are covered by the agency's ONE A2P 10DLC brand/campaign (ISV/reseller) — no per-client re-vetting, fast to live.
+- **Option 2 (BYO-Twilio, future — NOT v1):** for clients who insist on owning their Twilio, store per-client `accountSid`/`authToken` in a server-only secret store (`client_secrets` table), bypassing the gateway. Reserved.
 - Rationale: SMS automation + missed-call detection require a Twilio-controlled number; forwarding preserves the client's normal call experience.
 
 ---
@@ -628,7 +635,8 @@ This resolves the copy-strategy decision: copy is AI-GENERATED, steered by the s
 ## 10. Open items blocking skill authoring
 - [RESOLVED] Copy-strategy (§9c) — copy is AI-generated, steered by the 4 style choices; templatized structure. `/website-structure` (absorbing `/theme-to-brand`) can now be written.
 - [RESOLVED] Onboarding form (§9b) — it's a real owner-filled content form + agency-set config. `/onboard-from-form` can now be written. (Remaining build: extend `createClient`/settings to capture all §9b fields.)
-- [BUILD] Tracked-redirect link system for review drip (§4); daily enrollment cap (§3); Notifications subsystem (§8); mobile Review Request tab + Auto-Enroll button (§7/§8); "pass" keyword → opt-out (§4); on-reply handler capturing `message.body` (§5) and lead reply-detection (§7); Business Hours setting + lead-form branching (§2/§7); re-enrollment guard (§4/§6); discount-form-submit exits one-year drip (§7b); per-contact `last_missed_call_textback_at` timestamp + 7-day re-eligibility check (§9); constrained RLS (no wide-open anon inserts) baked into `/scratch-foundation`; call-forwarding-number admin field (§9b); A2P-compliant terms-page generation (§9b); onboarding form capturing all §9b owner fields incl. timezone picker.
+- [BUILD] Tracked-redirect link system for review drip (§4); daily enrollment cap (§3); Notifications subsystem (§8); mobile Review Request tab + Auto-Enroll button (§7/§8); "pass" keyword → opt-out (§4); on-reply handler capturing `message.body` (§5) and lead reply-detection (§7); Business Hours setting + lead-form branching (§2/§7); re-enrollment guard (§4/§6); discount-form-submit exits one-year drip (§7b); per-contact `last_missed_call_textback_at` timestamp + 7-day re-eligibility check (§9); call-forwarding-number + marketing-domain admin fields (§9b); A2P-compliant terms-page generation (§9b); onboarding form capturing all §9b owner fields incl. timezone + style picker.
+- [BUILD — foundation, in `/scratch-foundation`] Public writes via server fns (`supabaseAdmin` + Zod, slug→`client_id`); NO anon INSERT; anon SELECT only on `clients` public columns; CORS + per-client domain allowlist + OPTIONS + rate-limit + Turnstile/hCaptcha on public lead-intake. Foundation invariants: `enrollments` UNIQUE (client_id, contact_id, sequence_key) (DB-level re-enrollment/dedup guard); `events.created_by` + cron-decision logging; soft-delete `deleted_at` on contacts/clients; RLS perf (`(SELECT auth.uid())`, STABLE helpers, `client_id` indexes incl. partial `enrollments(next_run_at) WHERE status='active'`); two storage buckets (`public-assets` public-read for logos/hero, `client-assets` private client_id-scoped); `CRON_SECRET`-protected `/api/public/cron/sequences` (`x-cron-secret` header); parent Twilio auth token + `CRON_SECRET` as runtime secrets; no `client_secrets` table in v1 (Option-2/BYO-Twilio only).
 
 ## 11. Locked & done (captured above)
 - Review Request SMS drip — full copy, tokenized tracking, exit-on-click, SMS-only (§4).
@@ -644,7 +652,9 @@ This resolves the copy-strategy decision: copy is AI-GENERATED, steered by the s
 - SMS copy de-meal'd — §4 + reactivation now use the meal-free review-request copy; "pass" P.S. line removed (opt-out still functional).
 - Business Onboarding Form & Client Setup — owner-filled content form (+ timezone + style picker) + agency-set config + A2P terms-page generation + per-client Twilio/forwarding telephony setup (§9b).
 - Website Structure & Design Layer — page set (always-present + data-driven service/area pages, max 12/14), 4 style choices, AI copy+visual generation from style/onboarding/assets/reference screenshots, two-mode design-template system; absorbs /theme-to-brand (§9c).
-- Golden-master deployment model — skills build/prove the backend once; per-client launch clones the proven code (not regenerated); design is the per-client creative layer (§0).
+- Foundation architecture — one shared multi-tenant backend (golden master, built/proven once); per-client launch = client row + config + Remixed frontend-only marketing site sharing the backend's anon env; backend never regenerated per client (§0).
+- Public writes via server fns + CORS/allowlist/bot-protection; no anon insert (§6).
+- Twilio Option 1 — one parent account, per-client subaccount/number (From/SID on clients, non-secret), inbound/voice routed by To, single parent auth token runtime secret; BYO-Twilio = Option 2, not v1 (§9b.D).
 - Email drip — SCRAPPED, SMS-only (§7c).
 - Re-enrollment guard (§4/§6). opt-in-forms map (§6 — now FINITE). Two-window model + two caps (§2/§3). admin-view tabs (§2).
 - Naming convention: `{first_name}` customer-facing, `{full_name}` internal notifications.
