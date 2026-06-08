@@ -58,13 +58,47 @@ Current tabs: **Dashboard, Contacts, Conversations, Feedback, Automations, Uploa
 - Subject to the **daily enrollment cap** (default 50/day, overflow queues to next day).
 - **Re-enrollment guard [LOCKED]:** a contact already enrolled in the review automation (by client_id + phone) cannot be re-enrolled — block with "contact already enrolled." Applies to both the form and the §7 auto-enroll button.
 
-### Link tracking [BUILD — does not exist yet, skill must construct]
+### Link tracking + Review Funnel [BUILD — does not exist yet, skill must construct]
 - The review link in every SMS is a **per-contact tracked redirect**, NOT the raw Google URL.
 - At enrollment, generate a unique token → maps to (contact_id, client_id, sequence).
 - SMS contains `https://<client-domain>/r/<token>`.
-- On tap: public route looks up token → writes `review_clicked` event for that contact → sets contact status to **`Review Completed`** → 302-redirects to the client's `review_link` (Google).
-- The drip's click-checks read this status; exit the moment it's set.
-- Per-contact token = know exactly WHO clicked (required to remove the right contact).
+- On tap: public route looks up token → writes `review_clicked` event → **lands the contact on the Review Funnel rate page (`/r/rate`)**.
+- **Landing on `/r/rate` EXITS the contact from the review drip immediately** (they clicked through — this is the click the drip was watching for). Status + one-year handoff are then determined by their star selection (below).
+
+### Review Funnel pages [LOCKED]
+The same funnel is the destination for BOTH the review-drip tracked link and the reactivation link.
+
+**`/r/rate`** — text "How would you rate us?" + a 1–5 star multiple-choice. Threshold = per-client `star_threshold` in `/admin-view` (default 4, **inclusive ≥**).
+- **Selection ≥ threshold** → status **`Review Completed`** → redirect to the client's Google review page (deep-links the leave-a-review screen on their GBP) → **enroll into the One-Year Follow-Up drip** (normal handoff).
+- **Selection < threshold** → status **`Negative Review`** → go to `/r/feedback`. **Does NOT enroll into the One-Year drip.**
+
+**`/r/feedback`** (below-threshold path) — collects **Name, Email, Feedback**; **phone auto-fills** from the mapped contact (they arrived via their token). Stores in `review_feedback`. On submit → fires the owner email + mobile-app notification (below) → shows the customer confirmation screen.
+
+**Customer confirmation screen** (after feedback submit):
+> I'm sorry we missed the mark... 😔
+>
+> Thank you for letting us know. We value your review regardless and appreciate you letting us know where we can improve.
+
+**Owner email — Subject: We Saved You From a Negative Review** (Lovable native transactional):
+> Hey {company_owner_first_name},
+>
+> We just saved you from getting a bad Google review. You can read about this customer's experience here:
+>
+> Name: {full_name}
+> Email: {email}
+> Phone: {phone}
+> Message: {feedback_message}
+
+**Mobile-app notification (same content, fires with the email):**
+> We just saved you from getting a bad Google review. You can read about this customer's experience here:
+>
+> Name: {full_name}
+> Email: {email}
+> Phone: {phone}
+> Message: {feedback_message}
+
+**Status semantics:** `Review Completed` (≥ threshold, went to Google) vs `Negative Review` (< threshold, left private feedback). Both exit the review drip; only `Review Completed` hands off to One-Year. `/r/enroll` is REMOVED (enrollment happens via the mobile-app Review Request form).
+New dynamic key: `{feedback_message}` (the feedback text). `{email}` from the feedback form.
 
 ### Sequence & exact copy [LOCKED]
 Placeholders use the project's merge system. Charity-meal angle throughout. Opt-out keyword is **"pass"** (added to global opt-out set — whole-word match).
@@ -109,7 +143,7 @@ Placeholders use the project's merge system. Charity-meal angle throughout. Opt-
 - Notification step counts as the drip's terminal action (NOT a customer text).
 
 ### Handoff to 1-Year Follow-Up [LOCKED]
-- On review-drip **completion, enroll the contact into the 1-Year Follow-Up drip (§5) — UNLESS they opted out.**
+- On review-drip **completion, enroll the contact into the 1-Year Follow-Up drip (§5) — UNLESS they opted out OR are marked `Negative Review`.**
 - Both outcomes chain forward: (a) clicked → `Review Completed` → enroll; (b) ran through all 4 messages with no click and no opt-out → still enroll.
 - ONLY an opt-out (pass/STOP/etc.) blocks the handoff. Opted-out contacts are never enrolled in the 1-Year drip.
 
@@ -205,10 +239,10 @@ Note: the "they replied" interest notification (copy above) fires on a reply aft
 New keys (set per-client in `/admin-view` Settings, added to template_vars contract): `discount__on_referral`, `company_website_link`. Plus existing `company_owner_first_name`, `company_name`. Dynamic (not template_vars): `message.body`.
 
 ## 6. `/opt-in-forms` — forms → automations map [LOCKED]
-- **Mobile app "Review Request" tab form** (first_name, last_name, phone, email) → enrolls into Review Request SMS Drip (§4) ONLY. Subject to the daily enrollment cap. This is the only CLIENT-INITIATED entry point for the review/1-year chain. (Customers can also self-enroll via the public `/r/enroll` funnel page — that's a customer-initiated entry, not a contradiction.) **Re-enrollment guard:** a contact already enrolled in the review automation (by client_id + phone) cannot be re-enrolled — block and show "contact already enrolled" so owners can safely re-attempt without double-texting.
+- **Mobile app "Review Request" tab form** (first_name, last_name, phone, email) → enrolls into Review Request SMS Drip (§4) ONLY. Subject to the daily enrollment cap. This is the entry point for the review/1-year chain (review enrollment happens here, by the client — there is no public self-enroll page). **Re-enrollment guard:** a contact already enrolled in the review automation (by client_id + phone) cannot be re-enrolled — block and show "contact already enrolled" so owners can safely re-attempt without double-texting.
 - **One-Year Follow-Up drip has NO form** — automatic handoff from review-drip completion (§4/§5).
 - **Public website lead form** (first_name, last_name, phone, email, your_message) → enrolls into the Lead-Form drip (§7). Public route, anon insert constrained to `source IN ('web_form','review_enroll')`.
-- Existing public funnel pages: `/r/rate`, `/r/feedback`, `/r/enroll`.
+- Public funnel pages: `/r/rate`, `/r/feedback`. (`/r/enroll` removed.)
 - Discount-claim form (§7b) — TBD.
 
 ## 7. FEATURE — Website Lead-Form Drip [LOCKED copy]
@@ -439,6 +473,7 @@ Mobile-first PWA, scoped to the logged-in client's `client_id`.
 - Discount-Claim Form & drip — form structure, copy, exits one-year drip on submit (§7b).
 - Owner Email Notifications — Lovable native transactional, one per lead, formatted with line breaks (§7d).
 - Missed-Call Textback — full scope + copy: 24/7, 4 triggers, 1-min/2-min drip, reply-skip, 7-day re-eligibility per contact, internal notification (§9).
+- Review Funnel — `/r/rate` (1–5, inclusive threshold), landing exits drip, ≥thr → Google + Review Completed + One-Year handoff, <thr → /r/feedback + Negative Review (no handoff) + owner email/notification; stat renamed "Review Link Clicks"; /r/enroll cut (§4/§6).
 - Email drip — SCRAPPED, SMS-only (§7c).
 - Re-enrollment guard (§4/§6). opt-in-forms map (§6 — now FINITE). Two-window model + two caps (§2/§3). admin-view tabs (§2).
 - Naming convention: `{first_name}` customer-facing, `{full_name}` internal notifications.
@@ -452,12 +487,11 @@ Mobile-first PWA, scoped to the logged-in client's `client_id`.
 - Pick from "FEATURES STILL TO DEFINE" below, or write `/scratch-foundation`, or make an architecture decision.
 
 ### FEATURES STILL TO DEFINE (not yet scoped — full definition needed)
-- **Review Automation Funnel form/page — NEEDS FULL SETUP.** The funnel direction (`/r/rate`, gating, `/r/enroll`) has NOT been detailed. Detailed setup: page look/flow, contact movement, gating config, ties to review drip + tracked link.
 - **Chat-Widget Lead Opt-In — NEEDS FULL BUILD DIRECTION.** Separate chat-widget feature for leads who opt in via an on-site widget. Needs whole layout/build direction: widget look, lead capture, what it collects, which drip it feeds, how it differs from the website lead form.
 
 ### LATER / PARKED (non-blocking)
 - **PWA web-push notifications** — superseded by owner email notifications (§7d); revisit if real-time phone push wanted.
-- **Stats label** — decided: dashboard uses "New Google Reviews" (counts review-link clicks).
+- **Stats label** — DONE: dashboard renamed to "Review Link Clicks" (counts `review_clicked` landings).
 
 ### ARCHITECTURE DECISIONS PENDING (block 2 skills)
 - Copy-strategy: templatize hardcoded marketing copy vs rewrite per vertical → blocks `/theme-to-brand`.
