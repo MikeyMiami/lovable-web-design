@@ -700,7 +700,7 @@ Phase 1 (author the skills) is COMPLETE ✓ — spec + all 11 skills, mutually c
 
 Phase 2 (the build):
 1. Run `/scratch-foundation` — apply the [ADD] migrations + enum `ALTER TYPE`s (review_completed/negative_review/reactivation; chat_widget/mobile_enroll), the enrollments UNIQUE constraint (dedup first), the index set, the two storage buckets, runtime secrets (CRON_SECRET + parent Twilio token).
-2. Build the feature + automation layer (features → automation-config → opt-in-forms → mobile-app → admin-view → chat-widget) on the shared backend.
+2. Build the feature + automation layer (features → automation-config → opt-in-forms → mobile-app → admin-view → chat-widget) on the shared backend. (LAUNCH.md splits this same set into Stage 2 — feature/automation logic: features → automation-config → opt-in-forms → chat-widget — and Stage 3 — client-facing surfaces: admin-view + mobile-app; same skills, more granular staging.)
 3. Wire telephony (Twilio Option 1) + the pg_cron drip runner.
 4. Run `/launch-check` sections A–D until all green → declare the golden master frozen.
 5. Then per-client launches use `/new-client-site` (provision + Remix + design + launch-check §E).
