@@ -52,6 +52,8 @@ RLS on EVERY table. Patterns:
 - **`clients` anon read:** anon may SELECT only PUBLIC columns of `clients WHERE status='active'` (slug, business identity, branding, template_vars, review_link, quote_form_link). Twilio fields are non-secret but need not be anon-exposed — scope the anon SELECT to the public columns the marketing site needs. NO secret columns exist on the row (parent Twilio token is a runtime secret).
 - **NO anon INSERT/UPDATE/DELETE anywhere.** All public writes go through server functions (§6).
 
+**Isolation guardrail 1 — RLS audit gate [LOCKED]:** ship a test/CI assertion that scans `information_schema` + `pg_policies` and **FAILS** if any tenant table (any table with a `client_id` column) has no RLS policy, OR has a policy whose `USING`/`WITH CHECK` lacks a `client_id` membership check (`client_id IN (SELECT user_client_ids(...))` or `is_admin(...)`). This turns cross-client leak risk from a runtime accident into a build-time gate — no tenant table can ship without tenant scoping. Run it as part of `/launch-check` section A.
+
 **Indexes (cheap now, painful later):**
 - `contacts (client_id, status)`, `contacts (client_id, phone_e164)` (inbound-SMS lookup).
 - `messages (conversation_id, created_at DESC)`, `messages (client_id, created_at DESC)`.
@@ -71,6 +73,7 @@ Supabase Auth. On signup/invite, write the user's role into `user_roles` (agency
 **All public writes** (lead form, discount form, review funnel, chat-widget opt-in) POST to server functions / `src/routes/api/public/*` routes:
 - Validate every field with **Zod** (min/max, regex, enum). Resolve `client_id` from the public **slug** (never trust a client_id from the caller). Insert via the **admin (service-role)** client. Set `source` server-side (CHECK-constrained column).
 - **CORS:** public lead-intake routes are called cross-origin from the Remixed marketing domains. Provide a shared `withCors()` helper: emit `Access-Control-Allow-Origin` (from the client's `allowed_origins` allowlist — NOT `*` in production), handle `OPTIONS` preflight, allow `Content-Type`. Apply **rate-limiting + Turnstile/hCaptcha** on these routes. The anon key is NOT a security boundary here — Zod + allowlist + bot-protection are.
+- **Isolation guardrail 4 — CORS/allowlist resolver [LOCKED]:** the `client_id` for a public write is resolved SERVER-SIDE from the request's Origin/Host → matched against `clients.allowed_origins` (or the public slug in the route) — **NEVER taken from the request body.** A caller cannot forge another tenant's `client_id`. The resolver returns the matched `client_id` (and rejects unknown origins); the server fn uses that, ignoring any client_id in the payload.
 - **Webhook + cron routes** (`/api/public/twilio/*`, `/api/public/cron/*`) are server-to-server → NO CORS. They get signature/secret checks instead (§7, Twilio).
 
 ## 7. Cron drip-runner skeleton
@@ -84,6 +87,8 @@ Runner shape (per tick):
   - **Allowed** → render template → send via Twilio (§ below) → insert `message` + `event('sms_sent')` → advance `current_step`, set `next_run_at = now() + nextStep.offset`. If no more steps → `status='completed'` (+ any terminal action, e.g. §4 final notification).
 - Twilio errors: 5xx → reschedule with jitter; 4xx (bad number) → `status='failed'`. Send-layer retries failed sends up to 2× before marking failed (the GHL "max retries" equivalent).
 - **Log every decision** into `events` (sent / blocked-window / blocked-cap / blocked-batch / rescheduled) for observability.
+
+**Isolation guardrail 2 — per-client fairness [LOCKED]:** the runner already orders by `client_id` and groups by client. Make fairness explicit so one large client can't starve others within a bounded tick: **round-robin across clients** (process one batch-slice per client per tick, cycling clients) rather than draining all of one client's due enrollments first. Combined with the existing "break this client's loop on cap" rule, this guarantees every active client gets serviced each tick regardless of how many enrollments a single big client has queued. (Consistent with the existing ORDER BY client_id + group-by-client + break-on-cap logic — fairness just makes the cross-client scheduling explicit.)
 
 Enrollment caps (e.g. reactivation 50/day) are enforced at the **enrollment-creation server fn** (count today's enrollments for that client+sequence before inserting), NOT at send time.
 
@@ -103,6 +108,11 @@ Enrollment caps (e.g. reactivation 50/day) are enforced at the **enrollment-crea
 - Parent Twilio auth token.
 - (NO `client_secrets` table in v1 — Option-2/BYO-Twilio only.)
 
+## 11. Tenant lifecycle (isolation guardrail 3)
+- **Export-client server fn [LOCKED]:** a service-role server fn that, given a `client_id`, runs `SELECT ... WHERE client_id = $1` across every tenant table (contacts, conversations, messages, enrollments, events, review_feedback, send_settings, notifications) and returns a JSON/CSV bundle. This is the offboarding/portability tool — write once, reuse forever. Makes "a client wants their data" or "hand a client off to their own backend" a one-call operation, which is what makes the shared-backend model safe to leave.
+- **Offboard:** `UPDATE clients SET status='archived', deleted_at=now() WHERE id=$1`. The cron runner already filters `status='active'`, so archiving stops all their automation cleanly; soft-delete preserves FK chains.
+- **A→B escape hatch:** export bundle → import into a fresh dedicated Supabase → repoint that client's marketing site `.env`. The export fn is the bridge (rare, for whale clients only).
+
 ## Done-right checklist (the validated invariants)
 - [ ] `(SELECT auth.uid())` wrap in every policy; helpers SECURITY DEFINER + STABLE; one permissive policy per action per table.
 - [ ] No anon INSERT/UPDATE/DELETE; all public writes via server fns (admin client + Zod + slug→client_id + server-set source).
@@ -117,3 +127,4 @@ Enrollment caps (e.g. reactivation 50/day) are enforced at the **enrollment-crea
 - [ ] Enum reconciliation done: `contact_status` has `review_completed` + `negative_review` (+ `reactivation` if used); `contact_source` has `chat_widget` + `mobile_enroll` (via `ALTER TYPE … ADD VALUE`). All enum values lowercase_snake.
 - [ ] `timezone` read from `send_settings` (NOT clients). `service_area` is text[] on clients. `brand_color` default `#bd703e`.
 - [ ] Net-new migrations applied: clients (allowed_origins, call_forwarding_number, site_style, deleted_at); contacts (last_missed_call_textback_at, deleted_at); send_settings (business_hours, daily_enrollment_cap, overrides); events.created_by; notifications table; enrollments dedup→UNIQUE; sequences (client_id, key) unique.
+- [ ] **Isolation guardrails (shared-backend safety):** (1) RLS-audit gate scans information_schema/pg_policies and fails if any tenant table lacks a client_id policy; (2) cron per-client round-robin fairness (no client starves others); (3) export-client server fn (offboarding/portability) + archive-via-status offboard; (4) CORS resolver derives client_id from server-resolved Origin/Host→allowed_origins, never the request body.
