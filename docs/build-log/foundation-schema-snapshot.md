@@ -26,7 +26,7 @@ REVOKE EXECUTE ON FUNCTION public.is_agency_owner(uuid)          FROM PUBLIC, an
 REVOKE EXECUTE ON FUNCTION public.user_client_ids(uuid)          FROM PUBLIC, anon, authenticated;
 ```
 
-> Migration 2 (foundation, 494 lines) raw SQL is **pending paste** to complete `foundation-migrations.sql`. This snapshot records its as-built result from the verified live dumps below.
+> Migration 2 (foundation, 494 lines) raw SQL is now **archived verbatim** in `foundation-migrations.sql` (migrations 1–4, secret-scanned). Cross-checked: migration 2 matches these live dumps. **One divergence flagged — see Open items #5** (`sending_subdomain`/`dkim_status` not built).
 
 ## Enums (live)
 - `app_role` : admin, agency_owner, client_owner, client_staff, client
@@ -105,3 +105,4 @@ All four security-definer helpers `search_path=public`.
 2. **anon `clients` SELECT is row-level only** — exposes all 27 columns to anon (incl. twilio_number/messaging_service_sid/sending_subdomain/call_forwarding_number). No secret values on the row, but deviates from "public columns only." Fix later via public view / column GRANTs.
 3. ~~**Helper EXECUTE revoked from `authenticated`**~~ — **RESOLVED (2026-06-09):** migration 4 applied (GRANT EXECUTE back + self-only guard + `service_role` exemption); verified green — authed SELECT works, service-role exemption returns real set, anon cross-user probe returns []. The 8 SECURITY DEFINER linter warnings are the expected boundary (do NOT re-REVOKE). Full record: `migration-4-helper-execute-fix.md`. *(Bookkeeping: migration 4 + migration 2 raw SQL still to be archived into `foundation-migrations.sql`.)*
 4. **RLS-audit gate (guardrail 1)** — TODO tracked in spec §12; recommended to build now against this schema.
+5. **`sending_subdomain` / `dkim_status` NOT built** — migration 2's `clients` table (27 cols) omits both, but `scratch-foundation` §1 / `admin-view` / `onboard-from-form` still describe them as "columns exist (deferred-v1)." Consistent with the decision (one platform sender; per-client email deferred) but the skill TEXT is now inaccurate. Fix: update those 3 skills to "not created in v1 (deferred; ADD COLUMN later if per-client email is built)." Append-only — no migration needed now. Not a 1e blocker. *(Decision pending: confirm skill edit.)*
