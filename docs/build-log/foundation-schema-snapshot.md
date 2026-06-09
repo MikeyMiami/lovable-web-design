@@ -32,7 +32,7 @@ REVOKE EXECUTE ON FUNCTION public.user_client_ids(uuid)          FROM PUBLIC, an
 - `app_role` : admin, agency_owner, client_owner, client_staff, client
 - `contact_source` : web_form, review_enroll, missed_call, import, manual, **chat_widget**, **mobile_enroll**
 - `contact_status` : new, contacted, replied, customer, review_requested, review_clicked, **review_completed**, **negative_review**, **reactivation**, opted_out
-- `review_gate_mode` : gated, direct  *(⚠ see Open items — `/admin-view` documents gated|all|off)*
+- `review_gate_mode` : gated, direct  *(RESOLVED: 2-mode locked; `/admin-view` updated to match — see Open items #1)*
 
 All values lowercase_snake. The 5 spec-required adds are present. ✅
 
@@ -101,7 +101,7 @@ WITH CHECK (is_admin((SELECT auth.uid())) OR client_id IN (SELECT user_client_id
 All four security-definer helpers `search_path=public`.
 
 ## Open items (tracked — NOT yet resolved)
-1. **`review_gate_mode` enum = {gated, direct}** but `/admin-view` documents `gated|all|off` → decide 2-mode (update skill) vs 3-mode (`ALTER TYPE ADD VALUE 'off'` + reconcile `direct`/`all` naming). Append-only, so settle before admin-UI/funnel code.
+1. ~~**`review_gate_mode` enum = {gated, direct}** vs `/admin-view`'s `gated|all|off`.~~ **RESOLVED (2026-06-09):** locked 2-mode `{gated, direct}`; `/admin-view` updated to match the DB (gated = funnel; direct = straight to Google; no "off" — suppress by not enrolling). No migration needed.
 2. **anon `clients` SELECT is row-level only** — exposes all 27 columns to anon (incl. twilio_number/messaging_service_sid/sending_subdomain/call_forwarding_number). No secret values on the row, but deviates from "public columns only." Fix later via public view / column GRANTs.
 3. **Helper EXECUTE revoked from `authenticated`** — verify with a live authed SELECT that policy evaluation still works (no "permission denied for function"); if it errors, follow-up migration `GRANT EXECUTE ... TO authenticated`.
 4. **RLS-audit gate (guardrail 1)** — TODO tracked in spec §12; recommended to build now against this schema.
