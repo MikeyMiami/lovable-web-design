@@ -44,6 +44,16 @@ Business-hours / after-hours branching applies the same as §7 (it feeds the sam
 
 ## Build notes [BUILD]
 - Real-time AI chat UI (corner widget) on the client marketing site; Lovable native AI for responses.
+
+### AI invocation (confirmed with Lovable) [LOCKED]
+- **Gateway:** all AI calls go through the **Lovable AI Gateway** (`https://ai.gateway.lovable.dev/v1`), authed server-side with the `LOVABLE_API_KEY` header (ambient on the server runtime — read `process.env.LOVABLE_API_KEY`; NEVER exposed to the browser). Default model: `google/gemini-3-flash-preview`.
+- **Streaming chat UI** → a server route `src/routes/api/chat.ts` using the AI SDK (`streamText` + `toUIMessageStreamResponse`); the client widget uses `useChat` / `DefaultChatTransport`.
+- **One-shot calls** (lead extraction / classification / quote parsing) → a `createServerFn` in `src/lib/*.functions.ts`.
+- **Knowledge bundle = per-request system-prompt injection** (retrieval, not fine-tuning): at chat time, load THIS client's bundle (from `/onboard-from-form`) and inject as the system prompt so the AI answers only from that client's data. Gemini's context window is large, but keep the bundle TIGHT (relevant business facts, not raw site dumps); chunk + retrieve if it grows.
+- **Cost/abuse:** per-request billing from workspace credits. The opt-in gate (below) is the primary natural rate-limiter. Handle gateway **429** (rate limit) and **402** (credits exhausted) gracefully in the UI. No built-in per-user rate-limit — add a per-IP/per-session throttle if hard caps are needed.
+- **Persistence:** the Request-path lead write needs Lovable Cloud (the DB); the AI gateway itself does not.
+
+
 - Opt-in gate before chat; consent capture; `chat_widget` contact source (write via foundation's server-fn path with CORS/allowlist/bot-protection — the widget lives on the cross-origin marketing domain).
 - Retrieval context = the `/onboard-from-form` knowledge bundle + site content, loaded per chat.
 - Request path reuses the §7 lead-form enrollment EXACTLY; only the owner-notification label differs ("New Website AI Chat Lead").
