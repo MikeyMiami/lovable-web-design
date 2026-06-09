@@ -103,5 +103,5 @@ All four security-definer helpers `search_path=public`.
 ## Open items (tracked — NOT yet resolved)
 1. ~~**`review_gate_mode` enum = {gated, direct}** vs `/admin-view`'s `gated|all|off`.~~ **RESOLVED (2026-06-09):** locked 2-mode `{gated, direct}`; `/admin-view` updated to match the DB (gated = funnel; direct = straight to Google; no "off" — suppress by not enrolling). No migration needed.
 2. **anon `clients` SELECT is row-level only** — exposes all 27 columns to anon (incl. twilio_number/messaging_service_sid/sending_subdomain/call_forwarding_number). No secret values on the row, but deviates from "public columns only." Fix later via public view / column GRANTs.
-3. **Helper EXECUTE revoked from `authenticated`** — verify with a live authed SELECT that policy evaluation still works (no "permission denied for function"); if it errors, follow-up migration `GRANT EXECUTE ... TO authenticated`.
+3. **Helper EXECUTE revoked from `authenticated`** — CONFIRMED BUG (migration 3 breaks all authed RLS evaluation). Fix decided → **migration 4** (GRANT EXECUTE back + self-only guard + `service_role` exemption); decision + gotchas recorded in `migration-4-helper-execute-fix.md`. **Pending apply + 2 verify outputs**, then flip to RESOLVED.
 4. **RLS-audit gate (guardrail 1)** — TODO tracked in spec §12; recommended to build now against this schema.
