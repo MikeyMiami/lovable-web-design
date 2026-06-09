@@ -23,7 +23,7 @@ This skill VERIFIES; it does not build. If a check fails, fix it in the owning s
 - [ ] Two storage buckets: public-assets (public read), client-assets (private, client_id-scoped RLS).
 - [ ] Runtime secrets set: CRON_SECRET, parent Twilio auth token (NOT on any row).
 - [ ] template_vars is the single source for merge values (review_request_link et al. there, not columns).
-- [ ] **Isolation guardrail 1 — RLS audit gate** passes: the information_schema/pg_policies scan finds NO tenant table without a client_id-scoped policy.
+- [ ] **Isolation guardrail 1 — RLS audit gate** passes: `SELECT * FROM public.audit_tenant_rls()` returns **0 rows** (scans every public base table with a client_id column for a `user_client_ids()`/`is_admin()` tenant check). Run after every migration — manual until a CI harness asserts `count = 0`.
 - [ ] **Isolation guardrail 4 — CORS resolver:** public-write client_id is resolved server-side from Origin/Host→allowed_origins, never from the request body (verify a forged body client_id is ignored).
 - [ ] **Isolation guardrail 3 — export-client server fn** exists and returns a full per-client bundle; archive-via-`status='archived'`+`deleted_at` offboard stops automation (cron filters active).
 
