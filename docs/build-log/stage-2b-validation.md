@@ -1,7 +1,7 @@
 # Build Log — Stage 2b Validation (tracked-link + Review Funnel system)
 
 > Validation of Stage 2b (tracked_links table + 3 funnel routes) against `skills/features` (Review Request — tracked link + Review Funnel block) + guardrail-1 audit. Source: Lovable 2b report (round-trip tested via service-role SQL, NOT public HTTP). Validated 2026-06-09 (Claude Code).
-> **Verdict: LOGIC VALIDATED — NOT CLOSED.** 1 blocker (public accessibility of `/r/` unproven + at-risk), 2 reconcile items (status-flip interpretation; reactivation key string). **Clear to start 2c** (notifications wiring — independent). No secret values.
+> **Verdict: PASS — CLOSED 2026-06-09.** Funnel logic validated; the public-reachability blocker was caught (top-level `/r/*` was auth-gated → dead funnel), fixed by relocating to `/api/public/r/*`, and **proven by direct unauthenticated curl**; reactivation key resolved (`reactivation`); status-flip decided (flip-on-feedback-submit) + skill reconciled. 2c clear. No secret values.
 
 ## ✅ Validated (logic + security)
 - **tracked_links** (additive migration): token PK + client_id, contact_id, sequence_key, created_at, clicked_at. Service-role writes; authenticated tenant-scoped SELECT (`is_admin()` OR `user_client_ids()`); no anon policy (public route uses supabaseAdmin). **`audit_tenant_rls()` = 0** → new tenant table passes guardrail 1. ✓
@@ -21,10 +21,15 @@ The round-trip was tested **via service-role SQL** because "the preview URL is a
 - **Status-flip timing — DECIDED: flip-on-SUBMIT (keep Lovable's impl).** Rating is re-selectable and commits only on submit; `≥threshold` → `review_completed` on rate-form submit; `<threshold` → /r/feedback, `negative_review` flips on **feedback-form submit** (abandoned feedback ≠ marked). Skill reconciled: spec §4 + `features` §4 updated to flip-on-submit wording (+ re-selection note). *(Note: user's sketch said flip on rate-submit; actual impl flips negative on feedback-submit — skill now matches the impl.)*
 - **Reactivation sequence_key — RESOLVED: `reactivation`.** Lovable patched + confirmed the exit query now uses `["review_request","reactivation"]` (all 7 seeded keys verified). Spec §9 + `features` prose fixed `reactivation_drip` → `reactivation`. ✅
 
-## 🟥→🟧 BLOCKER UPDATE — public accessibility: WAS broken, FIXED, awaiting curl proof
-Confirmed broken as flagged: top-level `/r/*` returned **302→auth-bridge for logged-out users** (funnel dead). **Fixed by relocating all 3 routes to `/api/public/r/*`** — the only auth-exempt prefix (the established public path from 1d). Correct fix. **Still awaiting a direct unauthenticated curl** on the promoted domain (`GET /api/public/r/<token>` → 302→`/api/public/r/rate`; `GET /api/public/r/rate` → 200; no login redirect) to close. All docs/skills route references renamed `/r/*` → `/api/public/r/*` (uniform; features §4 carries an anti-regression note: do NOT relocate to top-level). **Also confirm:** the inter-route 302s + form `action` URLs all use `/api/public/r/*` (not just the GET entry points) — the curl should exercise token→rate→feedback end-to-end.
+## ✅ BLOCKER — public accessibility: CAUGHT, FIXED, PROVEN
+Was broken as flagged: top-level `/r/*` returned **302→auth-bridge for logged-out users** (funnel dead). **Fixed by relocating all 3 routes to `/api/public/r/*`** (the auth-exempt public path from 1d). **Proven by direct unauthenticated curl** on the stable preview (no auth header):
+- `GET /api/public/r/<token>` → **HTTP 302** → `location: /api/public/r/rate?token=...` (NOT auth-bridge) ✅
+- `GET /api/public/r/rate` → **HTTP 200**, real star form (`<title>Rate your experience</title>`, `form action="/api/public/r/rate"`) (NOT a login wall) ✅
+- Inter-route redirects + form actions verified end-to-end: `$token.ts`→`/api/public/r/rate`; `rate.ts` form→`/api/public/r/rate`; `rate.ts` below-threshold→`/api/public/r/feedback`; `feedback.ts` form→`/api/public/r/feedback`. All `createFileRoute` paths registered. ✅
+
+All docs/skills route references renamed `/r/*` → `/api/public/r/*` (uniform; `features` §4 carries an anti-regression note: do NOT relocate to top-level).
 
 ## Status
-- **2b NOT closed** — only remaining gate: the **unauthenticated curl proof** of `/api/public/r/*` (fix applied, proof pending). Status-flip ✅ decided + reconciled; reactivation key ✅ resolved; route relocation ✅ applied + propagated.
-- **Clear to start 2c** (notifications wiring — independent).
-- 2e drip step-logic that consumes these tokens is deferred (2b scope = funnel-infra standalone).
+- **2b CLOSED — PASS.** Public reachability proven; reactivation key resolved; status-flip decided + reconciled; route relocation applied + propagated + mirrored into master copies.
+- **2c clear to start** (notifications wiring).
+- 2e drip step-logic that consumes these tokens is unblocked (steps_json contract proven at 2a; funnel infra proven here); generates tracked links at `/api/public/r/<token>`.
