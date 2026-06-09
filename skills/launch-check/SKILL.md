@@ -54,6 +54,7 @@ This skill VERIFIES; it does not build. If a check fails, fix it in the owning s
 - [ ] Per-client number provisioned, forwarded to call_forwarding_number, placed on site + GBP.
 
 ## E. Per-client go-live subset (lighter — backend already proven)
+- [ ] **GATE — Stage 1f shipped:** Turnstile + rate-limiting are LIVE on all public lead-intake routes before this client goes public. CORS is browser-only — without 1f, a direct/non-browser POST with this client's slug or allowed-origin can spam-insert. NO client launches pre-1f.
 - [ ] Client row + all §9b config present; template_vars required keys all populated (no blanks).
 - [ ] timezone (send_settings), business_hours, send window, caps set.
 - [ ] Google review link + Place ID + star_threshold set; review engine functional.
