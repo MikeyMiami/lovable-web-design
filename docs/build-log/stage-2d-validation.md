@@ -1,7 +1,7 @@
 # Build Log — Stage 2d Validation (enrollment paths + caps + guards)
 
 > Validation of Stage 2d (5 enrollment paths, caps, guards) against `opt-in-forms` + `features`. Source: Lovable 2d report. Validated 2026-06-09 (Claude Code).
-> **Verdict: VALIDATED EXCEPT FIRST-STEP TIMING — NOT CLOSED.** Everything validates except a **systematic `next_run_at` first-step bug** (every drip's first action delayed by its step0→step1 gap). Fix is enrollment-layer only (2a seed is correct). No secret values.
+> **Verdict: PASS — CLOSED 2026-06-09.** All paths/caps/guards validated; the systematic first-step `next_run_at` bug was fixed data-driven (new `sequences.start_delay_minutes` column; enrollment reads it instead of `step[0].offsetMinutes`). All 7 first-run times now match the skill; `audit_tenant_rls()=0` after the additive migration. **2d closed, 2e clear.** No secret values.
 
 ## ✅ Validated
 - **5 paths + sequence_keys match the 2a seed** (`SELECT key FROM sequences WHERE client_id IS NULL`): mobile Review Request → `review_request` (mobile_enroll); day-10 Auto-Enroll → `review_request`; website Lead Form → `lead_form_business_hours`/`lead_form_after_hours` (branched at submit on `send_settings.business_hours`, client tz) (web_form); Discount form → `discount_claim` (+ exits one_year) (web_form); Reactivation CSV → `reactivation` (import).
@@ -30,6 +30,22 @@ Lovable's report states it: *"next_run_at for first step: Computed from step 0 o
 - (b) constant map: documented `INITIAL_DELAY` keyed by sequence_key in the enrollment layer (no migration; second source of truth).
 Lean (a). Also confirm discount step0 (internal vs SMS) + the lead_form_business_hours value.
 
+## ✅ Fix — RESOLVED (2026-06-09): `sequences.start_delay_minutes` (data-driven)
+Added `sequences.start_delay_minutes int NOT NULL DEFAULT 0` (additive; column comment documents `offsetMinutes` = gap-to-next vs `start_delay` = pre-first-step). `enroll.server.ts` now reads `start_delay_minutes` (tenant-override wins) → `next_run_at = now + start_delay*60s`. `audit_tenant_rls()=0` after the migration (column add, no policy change). Logged to `events.payload.start_delay_min`. All 7 verified vs skill:
+
+| Drip | start_delay_minutes | first-run | skill |
+|---|---|---|---|
+| review_request | 0 | now | §4 SMS1 = day 0 |
+| reactivation | 0 | now | §9 immediate |
+| one_year_followup | 43200 | +30d | §5 SMS1 = day 30 post-handoff |
+| discount_claim | 0 | now | §7b step0 = immediate internal (SMS at its own +2 offset) |
+| lead_form_business_hours | 0 | now | §7 "wait 30s" → sub-cron-minute, rounds to 0 |
+| lead_form_after_hours | 0 | now | §7 immediate |
+| missed_call_textback | 1 | +1m | §9 "wait 1 min → SMS#1" |
+
+**Preventive:** `scratch-foundation` §7 (sequences table + runner) now documents the two delay concepts explicitly (`start_delay_minutes` = pre-step-0 vs `offsetMinutes` = gap-to-next; `0` ≠ absent for terminal) — both timing bugs (2a 0-offset truncation, 2d first-step) now have a single-source guard so a third build doesn't trip.
+
 ## Status
-- **2d NOT closed** until the first-step `next_run_at` is fixed + re-verified for ALL drips (esp. one_year=30d, discount, lead_form_business_hours). Cheap now; 2e walks drips on top of it.
-- 2e remains blocked on this (its first send fires off `next_run_at`).
+- **2d CLOSED — PASS.** Paths/caps/guards + first-step timing all validated.
+- **2e clear** (drip-walking on top of correct `next_run_at` + the proven steps_json contract).
+- Carry to 2e: wire the 2b feedback notification through the 2c dispatcher (single path); §7e AI-chat notification is 2f.
