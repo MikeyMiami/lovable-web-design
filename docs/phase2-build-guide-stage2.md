@@ -31,7 +31,7 @@ The data layer every drip reads. Build first so features have their copy/timing 
 
 ### 2b — Tracked-link + Review Funnel system (`/features` review-drip + funnel; shared by review AND reactivation)
 The shared redirect/funnel infrastructure. Built once; both review and reactivation drips consume it.
-- Token generation: at enrollment, unique token → maps to (contact_id, client_id, sequence). Stored where the skill specifies.
+- Token generation: at enrollment, unique token → maps to (contact_id, client_id, sequence). **NET-NEW storage:** the as-built foundation (12 tables) has no token/tracked-link table — 2b adds one via an **additive migration** (a `tracked_links`/token table with client_id + contact_id + sequence_key + token). Since it carries `client_id`, it's a tenant table → it MUST get a `user_client_ids()`/`is_admin()` RLS policy and pass the guardrail-1 audit (see discipline reminder below).
 - Public routes on the SHARED BACKEND domain (NOT client marketing domain — they write the DB): `/r/<token>` (logs `review_clicked`, exits drip, lands on rate page), `/r/rate` (1–5 stars, threshold-gated), `/r/feedback` (below-threshold capture → owner email + notification).
 - Funnel logic: ≥threshold → `Review Completed` → Google redirect + One-Year enroll; <threshold → `Negative Review` → feedback page (no One-Year).
 - Validate: token round-trip (generate → resolve → event written → correct landing); threshold branching; `/r/feedback` writes `review_feedback` + fires notification; all routes server-side (no anon write path).
@@ -39,6 +39,7 @@ The shared redirect/funnel infrastructure. Built once; both review and reactivat
 
 ### 2c — Notifications subsystem (`/mobile-app` §8 notifications table is built; this wires AUTOMATIONS writing to it)
 The `notifications` table exists (foundation). This sub-step wires the automation events that WRITE notifications (the in-app side; owner-email is 2a's templates + the send pipeline).
+- **Skill attribution:** the `/mobile-app` reference here is **table/spec only** (it owns the notifications-table shape + the UI that READS it — that UI is Stage 3). The notification-**writing** logic rides with `/features` + `/automation-config` (the drips that fire them) — so this is legitimately Stage 2 even though `/mobile-app` is a Stage-3 surface skill. Do NOT build mobile-app UI here.
 - Each drip's internal-notification points (review step-5, lead-form owner alert, missed-call alert, reactivation click, one-year reply/interest, discount-form) write `notifications` rows (service-role).
 - Formatting standard: stacked lines (never inline "Name: X Phone: Y").
 - Validate: each notification-writing path inserts a correctly-shaped `notifications` row with the right type + body + related_contact_id.
@@ -62,8 +63,9 @@ Now the drips RUN on the cron engine using 2a's sequences. Each drip's step logi
 - Missed-Call Textback: 24/7, 4 trigger statuses, 1-min/2-min drip, reply-skip, 7-day re-eligibility.
 - Reactivation: immediate + 24h×3, same 4 texts as review, click → funnel, One-Year only on Review Completed.
 - Discount-Claim: 2-min SMS, exits one-year.
-- Validate (all on STUB send — logs sms_sent events): each drip walks its steps, exits on the right conditions, handoffs fire, caps/windows respected. Use the cron tick to advance test enrollments.
-- **Gate:** each drip, driven by the cron runner with stub sends, produces the correct event trail end-to-end.
+- **1f dependency — reply-exits + missed-call trigger:** Missed-Call Textback's trigger (the Twilio voice-status webhook) and all reply-based exits (One-Year exit-on-reply, Missed-Call reply-skip — driven by the inbound-SMS webhook) depend on Twilio webhooks NOT built until 1f. In Stage 2 these are testable ONLY by **simulating the inbound event/webhook payload** (insert the inbound message/voice-status row directly); real webhook wiring lands at 1f. Build + unit-test the logic now against simulated inbound; don't assume end-to-end on stub.
+- Validate (all on STUB send — logs sms_sent events): each drip walks its steps, exits on the right conditions, handoffs fire, caps/windows respected. Use the cron tick to advance test enrollments. (Reply/missed-call paths validated via simulated inbound per the note above.)
+- **Gate:** each drip, driven by the cron runner with stub sends (+ simulated inbound for reply/missed-call), produces the correct event trail end-to-end.
 
 ### 2f — AI Chat Widget (`/chat-widget`)
 The largest single feature; built last (reuses the lead-form pipeline from 2d/2e).
@@ -85,4 +87,6 @@ Run `/launch-check` section C (per feature) across all drips + the chat widget. 
 - Seed copy VERBATIM (line breaks matter; customer SMS stay editable on-site later).
 - Skill wins over Lovable suggestions; if a skill is wrong, fix the skill (single-source) + re-import, don't patch around it.
 - Additive migrations only.
+- **Run `SELECT * FROM public.audit_tenant_rls()` = 0 after every Stage 2 migration that adds a tenant table** (e.g. the 2b token/tracked-link table). Guardrail 1 now exists — any new `client_id`-bearing table must carry a `user_client_ids()`/`is_admin()` RLS policy and pass the audit before the sub-step is approved.
+- **1f swap note:** when 1f replaces the stub `sendSms` with the real Twilio gateway, apply the 1e idempotency forward-note to 2e's drips (check no `sms_sent` event exists for (enrollment, current_step) before sending, or mark step-sent first) — the lease is at-least-once, so a crash mid-send could otherwise duplicate a real text.
 - Carry-forward foundation items (guardrail 3 export-client fn, audit_log, self-lockout guard) are before-go-live, NOT Stage 2 — don't lose them, don't block on them.

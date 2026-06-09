@@ -44,7 +44,7 @@ Detailed sub-steps for Stage 0–1 are in `docs/phase2-build-guide-stage0-1.md`.
 
 **Stage 1 — Foundation** (`/scratch-foundation`, in sub-steps 1a–1f): schema + enum ALTER TYPEs + migrations → helpers + RLS + indexes + the RLS-audit gate → three Supabase clients + auth/roles → server-fn + CORS skeleton (+ CORS resolver) → cron drip-runner (+ per-client fairness) → Twilio Option 1. Gate: `/launch-check` A + B + D green (covers all 4 isolation guardrails).
 
-**Stage 2 — Feature/automation layer** (in dependency order): `/features` → `/automation-config` (seed templates + sequences) → `/opt-in-forms` → `/chat-widget`. Gate: `/launch-check` C per feature.
+**Stage 2 — Feature/automation layer** (in dependency order): `/features` → `/automation-config` (seed templates + sequences) → `/opt-in-forms` → `/chat-widget`. Gate: `/launch-check` C per feature. (Operative build order is **infrastructure-first** — `/automation-config` *seeding* precedes `/features` *wiring*, since drips can't run until sequences/templates are seeded; see `docs/phase2-build-guide-stage2.md` for the sub-step sequence.)
 
 **Stage 3 — Client-facing surfaces:** `/admin-view` + `/mobile-app` (both shared-backend, authed).
 
