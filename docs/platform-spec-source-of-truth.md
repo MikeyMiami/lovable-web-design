@@ -484,6 +484,7 @@ A corner chat widget on the client's website. An AI assistant answers FAQs from 
 - Retrieval context assembled from onboarding data + site content.
 - Request path reuses the §7 lead-form enrollment exactly; only the owner-notification label differs.
 - AI knowledge inputs = §9b onboarding fields (About Us, services, areas, hours, differentiators) + site content.
+- AI invocation (confirmed): Lovable AI Gateway (`https://ai.gateway.lovable.dev/v1`) + `LOVABLE_API_KEY` (ambient server runtime, never browser) + model `google/gemini-3-flash-preview`; streaming chat via `src/routes/api/chat.ts` (AI SDK `streamText`/`toUIMessageStreamResponse`, client `useChat`), one-shot via `createServerFn`; knowledge bundle = per-request system-prompt injection; handle 429/402. Full detail in `/chat-widget` + §9d.
 
 ---
 
@@ -644,10 +645,10 @@ This resolves the copy-strategy decision: copy is AI-GENERATED, steered by the s
 ## 9d. External Dependencies & Wiring [LOCKED — Phase 2 setup]
 Every external service/connection the build needs, with what to set up and when (golden-master = once, per-client = each launch).
 
-- **Email (owner notifications)** — ONE platform-level agency sender (verify `myagency.com` SPF/DKIM/DMARC; one from-address + display name). NOT per-client (all emails go to owners, not their customers). `sending_subdomain`/`dkim_status` = deferred-v1. ❓ Confirm in Lovable: default from-domain, custom-from support, ESP + rate limits. Golden-master, once.
+- **Email (owner notifications)** — ONE platform-level agency sender. CONFIRMED with Lovable: set up an email domain in Lovable Cloud + verify via NS delegation (Lovable manages SPF/DKIM/DMARC in the delegated subdomain, e.g. `notify.myagency.com`); send as `MyAgency <notify@myagency.com>`. Managed pipeline (pgmq + cron), ~120 emails/min, transactional only (owner lead notifications qualify). NOT per-client (per-client senders = heavier white-label product, not v1). `sending_subdomain`/`dkim_status` columns = deferred-v1. Needs Lovable Cloud + an agency domain. Golden-master, once.
 - **Twilio (SMS + voice)** — Option 1: one parent account via the connector gateway; parent auth token = runtime secret; register the two parent-level webhook URLs (`/api/public/twilio/inbound`, `/api/public/twilio/voice-status`) once the backend has a stable domain. Numbers/forwarding/placement = per-client.
 - **Bot protection** — Cloudflare Turnstile (free, fits Workers/fetch). One widget, site key (public, in marketing forms) + secret (runtime secret, verified in lead-intake server fns). Add each client domain as a hostname. Verify step = golden-master; client hostname = per-client.
-- **AI chat widget** — Lovable native AI (no third-party). ❓ Confirm in Lovable: server-fn invocation, per-request context payload + max size, cost/rate at scale, whether a key/toggle exists. Trim the knowledge bundle + per-conversation message cap to bound cost. Widget/server-fn = golden-master; knowledge bundle = per-client.
+- **AI chat widget** — Lovable native AI. CONFIRMED with Lovable: calls go through the Lovable AI Gateway (`https://ai.gateway.lovable.dev/v1`) authed with `LOVABLE_API_KEY` (already provisioned, ambient on server runtime, never browser-exposed); default model `google/gemini-3-flash-preview`. Streaming chat → server route `src/routes/api/chat.ts` (AI SDK `streamText`/`toUIMessageStreamResponse`, client `useChat`); one-shot → `createServerFn`. Knowledge bundle = per-request system-prompt injection (keep tight). Per-request billing; opt-in gate is the natural rate-limiter; handle 429/402; add own throttle if hard caps needed. AI gateway works without Cloud; the lead-write persistence needs Cloud. Widget/server-fn = golden-master; knowledge bundle = per-client.
 - **Google (review links)** — NO integration/OAuth/API. Just two stored strings per client (`review_link`, `review_place_id`); the leave-a-review URL is constructed. Per-client (onboarding).
 - **Storage** — native Supabase: `public-assets` (public-read), `client-assets` (private, client_id-scoped RLS). Buckets/policies = golden-master; uploads = per-client.
 - **Scheduling** — native pg_cron + pg_net → `/api/public/cron/sequences` with `x-cron-secret`. Needs stable backend URL + `CRON_SECRET`. Golden-master.
@@ -675,10 +676,10 @@ The per-client **Remixed marketing site is frontend-only** (anon reads + CORS-gu
 - One-Year Follow-Up SMS drip — full copy, exit-on-reply-or-opt-out, no form (§5).
 - Website Lead-Form drip — full copy, two-window branching, single in-hours SMS, day-10 reminder + auto-enroll button (§7).
 - Discount-Claim Form & drip — form structure, copy, exits one-year drip on submit (§7b).
-- Owner Email Notifications — Lovable native transactional, one per lead, formatted with line breaks (§7d).
+- Owner Email Notifications — Lovable native transactional, one per lead, formatted with line breaks (§7d). Sender = ONE platform-level agency domain (NS-delegated, `notify@myagency.com`), not per-client (§9d).
 - Missed-Call Textback — full scope + copy: 24/7, 4 triggers, 1-min/2-min drip, reply-skip, 7-day re-eligibility per contact, internal notification (§9).
 - Review Funnel — `/r/rate` (1–5, inclusive threshold), landing exits drip, ≥thr → Google + Review Completed + One-Year handoff, <thr → /r/feedback + Negative Review (no handoff) + owner email/notification; stat renamed "Review Link Clicks"; /r/enroll cut (§4/§6).
-- AI Chat Widget — opt-in gate, FAQ answering from business data, pricing→request-form guardrail, Request path = lead-form drip with "New Website AI Chat Lead" label; own /chat-widget skill; depends on onboarding form for AI knowledge (§7e).
+- AI Chat Widget — opt-in gate, FAQ answering from business data, pricing→request-form guardrail, Request path = lead-form drip with "New Website AI Chat Lead" label; own /chat-widget skill; depends on onboarding form for AI knowledge (§7e). AI invocation CONFIRMED: Lovable AI Gateway + LOVABLE_API_KEY + gemini-3-flash-preview (§9d / `/chat-widget`).
 - Customer Review Reactivation — CSV upload, same 4 texts as §4, immediate+24h×3, caps (50/day + 2/20min), dedup guard, click notification, One-Year only on Review Completed, no end notification (§9).
 - SMS copy de-meal'd — §4 + reactivation now use the meal-free review-request copy; "pass" P.S. line removed (opt-out still functional).
 - Business Onboarding Form & Client Setup — owner-filled content form (+ timezone + style picker) + agency-set config + A2P terms-page generation + per-client Twilio/forwarding telephony setup (§9b).
@@ -689,6 +690,7 @@ The per-client **Remixed marketing site is frontend-only** (anon reads + CORS-gu
 - Email drip — SCRAPPED, SMS-only (§7c).
 - Re-enrollment guard (§4/§6). opt-in-forms map (§6 — now FINITE). Two-window model + two caps (§2/§3). admin-view tabs (§2).
 - Naming convention: `{first_name}` customer-facing, `{full_name}` internal notifications.
+- External dependencies — all confirmed (§9d): email (NS-delegated agency sender), Twilio Option 1, Turnstile, Lovable AI Gateway, Google (stored strings), storage, pg_cron, domains, rate-limiter store. Both prior ❓ items (email + AI) now RESOLVED.
 
 ## 12. Backlog / Work Queue (ordered)
 
@@ -700,7 +702,7 @@ Phase 1 (author the skills) is COMPLETE ✓ — spec + all 11 skills, mutually c
 
 Phase 2 (the build):
 1. Run `/scratch-foundation` — apply the [ADD] migrations + enum `ALTER TYPE`s (review_completed/negative_review/reactivation; chat_widget/mobile_enroll), the enrollments UNIQUE constraint (dedup first), the index set, the two storage buckets, runtime secrets (CRON_SECRET + parent Twilio token).
-2. Build the feature + automation layer (features → automation-config → opt-in-forms → mobile-app → admin-view → chat-widget) on the shared backend. (LAUNCH.md splits this same set into Stage 2 — feature/automation logic: features → automation-config → opt-in-forms → chat-widget — and Stage 3 — client-facing surfaces: admin-view + mobile-app; same skills, more granular staging.)
+2. Build the feature + automation layer (features → automation-config → opt-in-forms → mobile-app → admin-view → chat-widget) on the shared backend. *(LAUNCH.md splits this into Stage 2 — feature/automation logic: features → automation-config → opt-in-forms → chat-widget — and Stage 3 — client-facing surfaces: admin-view + mobile-app. Same set, more granular; build logic before UI surfaces.)*
 3. Wire telephony (Twilio Option 1) + the pg_cron drip runner.
 4. Run `/launch-check` sections A–D until all green → declare the golden master frozen.
 5. Then per-client launches use `/new-client-site` (provision + Remix + design + launch-check §E).
@@ -720,6 +722,7 @@ scratch-foundation, features, automation-config, opt-in-forms, chat-widget, mobi
 - ~~Onboarding form vs SQL~~ RESOLVED (§9b): real owner form + agency config. `/onboard-from-form` unblocked.
 - ~~Build-from-scratch vs clone~~ RESOLVED (§0): golden-master model — skills build/prove ONE shared multi-tenant backend once; per-client launch adds a client to the shared backend + Remixes a frontend-only marketing site (no backend clone, no regenerate); design is the per-client creative layer.
 - ~~Shared-backend vs backend-per-client~~ RESOLVED & LOCKED (§0): Option A (shared) — B reintroduces AI-drift; A keeps logic in one codebase; A→B peel-out easy, B→A merge brutal. Do not reopen without material change.
+- ~~Email sender + AI invocation~~ RESOLVED (§9d): email = NS-delegated one platform agency sender (~120/min transactional); AI = Lovable AI Gateway + LOVABLE_API_KEY + gemini-3-flash-preview. Both prior ❓ closed.
 
 ### SYSTEM NOTES (carry into the build)
 - Failed SMS sends retry up to 2× at the send layer before marking failed (the GHL "max retries" equivalent) — [BUILD] in the send/cron logic, not per-drip.
