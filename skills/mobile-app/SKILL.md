@@ -137,7 +137,7 @@ Notification copy (sources: review drip §4, one-year §5, lead-form §7, discou
 
 The Open-conversation button deep-links to that contact's thread in the Conversations tab. {caller_phone}/{call_time} are dynamic (client tz); a brand-new caller has no name yet.
 
-**Negative review feedback — fires when a contact submits `/r/feedback` (below threshold):**
+**Negative review feedback — fires when a contact submits `/api/public/r/feedback` (below threshold):**
 > We just saved you from getting a bad Google review. You can read about this customer's experience here:
 >
 > Name: {full_name}
@@ -164,7 +164,7 @@ Weekly + monthly stat counters, computed from `events` scoped to this client. Fo
 > Review Link Clicks this month: {count}
 
 - **New Website Leads** = count of contacts created with source `web_form` (lead form + discount form) in the period.
-- **Review Link Clicks** = count of `review_clicked` events in the period (each = a contact landing on `/r/rate` via their tracked link). Renamed from "New Google Reviews" for accuracy, since landing ≠ a confirmed posted review.
+- **Review Link Clicks** = count of `review_clicked` events in the period (each = a contact landing on `/api/public/r/rate` via their tracked link). Renamed from "New Google Reviews" for accuracy, since landing ≠ a confirmed posted review.
 - "This week" / "this month" computed in the client's timezone.
 
 ---

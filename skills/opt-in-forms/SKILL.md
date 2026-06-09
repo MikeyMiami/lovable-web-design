@@ -40,17 +40,17 @@ Every form, its fields, and exactly what it triggers. Phones normalized to E.164
 - **FAQ path:** AI answers business/service questions from onboarding + site data; pricing/quote questions are redirected to submit a request. (AI behavior detailed in the /chat-widget skill; knowledge inputs depend on the onboarding form.)
 
 ## 4. Public review-funnel pages [LOCKED]
-Destination of BOTH the review-drip tracked link and the reactivation link. Landing on `/r/rate` (via `/r/<token>`) writes a `review_clicked` event and EXITS the contact from the review drip; status + one-year handoff are set by the star selection. **These routes (`/r/<token>`, `/r/rate`, `/r/feedback`) are served by the SHARED BACKEND domain** (they write to the DB) — NOT the frontend-only client marketing site.
-- `/r/rate` — "How would you rate us?" + 1–5 star choice. Threshold = `star_threshold` (default 4, inclusive ≥).
+Destination of BOTH the review-drip tracked link and the reactivation link. Landing on `/api/public/r/rate` (via `/api/public/r/<token>`) writes a `review_clicked` event and EXITS the contact from the review drip; status + one-year handoff are set by the star selection. **These routes (`/api/public/r/<token>`, `/api/public/r/rate`, `/api/public/r/feedback`) are served by the SHARED BACKEND domain** (they write to the DB) — NOT the frontend-only client marketing site.
+- `/api/public/r/rate` — "How would you rate us?" + 1–5 star choice. Threshold = `star_threshold` (default 4, inclusive ≥).
   - ≥ threshold → status `Review Completed` → redirect to the client's Google review page → enroll into One-Year drip.
-  - < threshold → status `Negative Review` → `/r/feedback`. Does NOT enroll into One-Year.
-- `/r/feedback` — below-threshold private feedback. Collects **Name, Email, Feedback**; **phone auto-fills** from the mapped contact. Stores in `review_feedback` → fires owner email ("We Saved You From a Negative Review") + mobile notification → shows the "sorry we missed the mark" confirmation screen. No SMS consent needed (not a texting opt-in).
-- `/r/enroll` — REMOVED. Review enrollment happens via the mobile-app Review Request form (#1), not public self-enroll.
+  - < threshold → status `Negative Review` → `/api/public/r/feedback`. Does NOT enroll into One-Year.
+- `/api/public/r/feedback` — below-threshold private feedback. Collects **Name, Email, Feedback**; **phone auto-fills** from the mapped contact. Stores in `review_feedback` → fires owner email ("We Saved You From a Negative Review") + mobile notification → shows the "sorry we missed the mark" confirmation screen. No SMS consent needed (not a texting opt-in).
+- `/api/public/r/enroll` — REMOVED. Review enrollment happens via the mobile-app Review Request form (#1), not public self-enroll.
 
 ---
 
 ## Build rules
 - Public forms (2, 3, 4) POST to server functions (`supabaseAdmin` + Zod; `client_id` from the public slug; `source` set server-side). Routes return CORS headers (per-client domain allowlist + OPTIONS) and apply rate-limiting + Turnstile/hCaptcha. NO anon INSERT policies; anon is SELECT-only on `clients` public columns. (CORS/allowlist/bot-protection mechanism lives in `/scratch-foundation`.)
-- Consent: every form that collects a phone for texting must carry the SMS opt-in + terms language (discount form + website lead form). `/r/feedback` needs no SMS consent (feedback only, not a texting opt-in). `/r/enroll` is removed.
+- Consent: every form that collects a phone for texting must carry the SMS opt-in + terms language (discount form + website lead form). `/api/public/r/feedback` needs no SMS consent (feedback only, not a texting opt-in). `/api/public/r/enroll` is removed.
 - Each form writes the contact scoped to the correct `client_id` and enrolls into the named sequence; nothing enrolls into a sequence the form isn't mapped to here.
 - The mobile Review Request enrollment and the lead-form day-10 Auto-Enroll button share the same re-enrollment guard.

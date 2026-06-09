@@ -19,9 +19,12 @@ The round-trip was tested **via service-role SQL** because "the preview URL is a
 
 ## 🟡 Reconcile items — DECIDED 2026-06-09
 - **Status-flip timing — DECIDED: flip-on-SUBMIT (keep Lovable's impl).** Rating is re-selectable and commits only on submit; `≥threshold` → `review_completed` on rate-form submit; `<threshold` → /r/feedback, `negative_review` flips on **feedback-form submit** (abandoned feedback ≠ marked). Skill reconciled: spec §4 + `features` §4 updated to flip-on-submit wording (+ re-selection note). *(Note: user's sketch said flip on rate-submit; actual impl flips negative on feedback-submit — skill now matches the impl.)*
-- **Reactivation sequence_key — DECIDED: `reactivation`** (the 2a seed is canonical). Spec §9 (line 535) + `features` line 78 prose fixed `reactivation_drip` → `reactivation`. **STILL TO CONFIRM IN CODE:** the 2b report's prose says it exits "reactivation_drip" — UNVERIFIED whether the actual exit-on-click query (and future 2d enroll) uses `reactivation` or `reactivation_drip`. Folded into the Lovable prompt: confirm/fix to use sequence_key `reactivation` exactly. If it uses `reactivation_drip`, reactivation contacts never exit on click (over-texts past reviewers).
+- **Reactivation sequence_key — RESOLVED: `reactivation`.** Lovable patched + confirmed the exit query now uses `["review_request","reactivation"]` (all 7 seeded keys verified). Spec §9 + `features` prose fixed `reactivation_drip` → `reactivation`. ✅
+
+## 🟥→🟧 BLOCKER UPDATE — public accessibility: WAS broken, FIXED, awaiting curl proof
+Confirmed broken as flagged: top-level `/r/*` returned **302→auth-bridge for logged-out users** (funnel dead). **Fixed by relocating all 3 routes to `/api/public/r/*`** — the only auth-exempt prefix (the established public path from 1d). Correct fix. **Still awaiting a direct unauthenticated curl** on the promoted domain (`GET /api/public/r/<token>` → 302→`/api/public/r/rate`; `GET /api/public/r/rate` → 200; no login redirect) to close. All docs/skills route references renamed `/r/*` → `/api/public/r/*` (uniform; features §4 carries an anti-regression note: do NOT relocate to top-level). **Also confirm:** the inter-route 302s + form `action` URLs all use `/api/public/r/*` (not just the GET entry points) — the curl should exercise token→rate→feedback end-to-end.
 
 ## Status
-- **2b NOT closed** until: (1) public-access HTTP proof of `/r/` (BLOCKER); (2) status-flip decision + skill reconcile; (3) reactivation-key string confirmed = `reactivation`.
-- **Clear to start 2c** (notifications wiring — independent of `/r/` reachability).
+- **2b NOT closed** — only remaining gate: the **unauthenticated curl proof** of `/api/public/r/*` (fix applied, proof pending). Status-flip ✅ decided + reconciled; reactivation key ✅ resolved; route relocation ✅ applied + propagated.
+- **Clear to start 2c** (notifications wiring — independent).
 - 2e drip step-logic that consumes these tokens is deferred (2b scope = funnel-infra standalone).

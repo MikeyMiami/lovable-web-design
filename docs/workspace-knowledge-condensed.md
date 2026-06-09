@@ -15,7 +15,7 @@ TanStack Start v1 (React 19 + Vite 7), SSR, Cloudflare Workers (pure JS + fetch,
 ## Frontend-only vs shared-backend split [LOCKED]
 - **Remixed marketing site = frontend-only:** anon SELECT on public `clients` columns + CORS-guarded POSTs to the backend's public write routes. NO service-role, NO DB-writing server fns.
 - **Admin view + mobile app = shared backend** (authed, DB-touching), served on `app.theirdomain.com`.
-- **Tracked-link + funnel routes (`/r/<token>`, `/r/rate`, `/r/feedback`) = shared backend domain** (they write the DB), NOT the client marketing domain.
+- **Tracked-link + funnel routes (`/api/public/r/<token>`, `/api/public/r/rate`, `/api/public/r/feedback`) = shared backend domain** (they write the DB), NOT the client marketing domain.
 
 ## Security conventions [LOCKED]
 - **NO anon INSERT/UPDATE/DELETE anywhere.** All public writes go through server fns (admin client + Zod + `client_id` resolved server-side from the public slug / Origin → `clients.allowed_origins`, NEVER from the request body) + CORS allowlist + OPTIONS + rate-limit + Turnstile.
@@ -55,7 +55,7 @@ TanStack Start v1 (React 19 + Vite 7), SSR, Cloudflare Workers (pure JS + fetch,
 ## Terminology [LOCKED]
 - **Review Completed** = clicked review link / rated ≥ threshold → went to Google → enrolls into One-Year drip.
 - **Negative Review** = rated < threshold → private feedback page → does NOT enroll One-Year.
-- **Review funnel:** `/r/<token>` (tracked) → `/r/rate` (1–5 stars, threshold default 4 inclusive) → ≥thr Google + Review Completed, <thr `/r/feedback` + Negative Review.
+- **Review funnel:** `/api/public/r/<token>` (tracked) → `/api/public/r/rate` (1–5 stars, threshold default 4 inclusive) → ≥thr Google + Review Completed, <thr `/api/public/r/feedback` + Negative Review.
 - **Drips:** Review Request (4 SMS), One-Year Follow-Up (5 SMS, exit on reply/opt-out), Lead-Form (business-hours branched), Missed-Call Textback, Reactivation (CSV upload, same 4 texts as review).
 - Opt-out keyword **"pass"** + STOP/HELP/START, whole-word, handled at inbound webhook.
 - Naming: `{first_name}` customer-facing, `{full_name}` internal notifications.

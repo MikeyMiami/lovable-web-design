@@ -93,18 +93,18 @@ Current tabs: **Dashboard, Contacts, Conversations, Feedback, Automations, Uploa
 ### Link tracking + Review Funnel [BUILD — does not exist yet, skill must construct]
 - The review link in every SMS is a **per-contact tracked redirect**, NOT the raw Google URL.
 - At enrollment, generate a unique token → maps to (contact_id, client_id, sequence).
-- SMS contains `https://<shared-backend-domain>/r/<token>` (e.g. `links.myagency.com/r/<token>` or `app.myagency.com/r/<token>`). **NOT the client marketing domain** — these routes WRITE to the DB, and the per-client marketing site is frontend-only (no service-role/DB writes). All tracked-link + funnel routes (`/r/<token>`, `/r/rate`, `/r/feedback`) are served by the SHARED BACKEND.
-- On tap: public route looks up token → writes `review_clicked` event → **lands the contact on the Review Funnel rate page (`/r/rate`)**.
-- **Landing on `/r/rate` EXITS the contact from the review drip immediately** (they clicked through — this is the click the drip was watching for). Status + one-year handoff are then determined by their star selection (below).
+- SMS contains `https://<shared-backend-domain>/api/public/r/<token>` (e.g. `links.myagency.com/api/public/r/<token>` or `app.myagency.com/api/public/r/<token>`). **NOT the client marketing domain** — these routes WRITE to the DB, and the per-client marketing site is frontend-only (no service-role/DB writes). All tracked-link + funnel routes (`/api/public/r/<token>`, `/api/public/r/rate`, `/api/public/r/feedback`) are served by the SHARED BACKEND.
+- On tap: public route looks up token → writes `review_clicked` event → **lands the contact on the Review Funnel rate page (`/api/public/r/rate`)**.
+- **Landing on `/api/public/r/rate` EXITS the contact from the review drip immediately** (they clicked through — this is the click the drip was watching for). Status + one-year handoff are then determined by their star selection (below).
 
 ### Review Funnel pages [LOCKED]
 The same funnel is the destination for BOTH the review-drip tracked link and the reactivation link. **All funnel pages are served by the SHARED BACKEND domain** (they read/write the DB), NOT the per-client frontend-only marketing site.
 
-**`/r/rate`** — text "How would you rate us?" + a 1–5 star multiple-choice. Threshold = per-client `star_threshold` in `/admin-view` (default 4, **inclusive ≥**). The star value is **re-selectable and commits only on submit** (a star tap is not a committed choice — the customer can change it before submitting). Status is set on submit, from the submitted rating:
+**`/api/public/r/rate`** — text "How would you rate us?" + a 1–5 star multiple-choice. Threshold = per-client `star_threshold` in `/admin-view` (default 4, **inclusive ≥**). The star value is **re-selectable and commits only on submit** (a star tap is not a committed choice — the customer can change it before submitting). Status is set on submit, from the submitted rating:
 - **Submitted rating ≥ threshold** → status **`Review Completed`** (on rate-form submit) → redirect to the client's Google review page (deep-links the leave-a-review screen on their GBP) → **enroll into the One-Year Follow-Up drip** (normal handoff).
-- **Submitted rating < threshold** → go to `/r/feedback`; **status flips to `Negative Review` on FEEDBACK-form submit** (so an abandoned feedback form doesn't permanently mark the contact). **Does NOT enroll into the One-Year drip.**
+- **Submitted rating < threshold** → go to `/api/public/r/feedback`; **status flips to `Negative Review` on FEEDBACK-form submit** (so an abandoned feedback form doesn't permanently mark the contact). **Does NOT enroll into the One-Year drip.**
 
-**`/r/feedback`** (below-threshold path) — collects **Name, Email, Feedback**; **phone auto-fills** from the mapped contact (they arrived via their token). Stores in `review_feedback`. On submit → fires the owner email + mobile-app notification (below) → shows the customer confirmation screen.
+**`/api/public/r/feedback`** (below-threshold path) — collects **Name, Email, Feedback**; **phone auto-fills** from the mapped contact (they arrived via their token). Stores in `review_feedback`. On submit → fires the owner email + mobile-app notification (below) → shows the customer confirmation screen.
 
 **Customer confirmation screen** (after feedback submit):
 > I'm sorry we missed the mark... 😔
@@ -129,7 +129,7 @@ The same funnel is the destination for BOTH the review-drip tracked link and the
 > Phone: {phone}
 > Message: {feedback_message}
 
-**Status semantics:** `Review Completed` (≥ threshold, went to Google) vs `Negative Review` (< threshold, left private feedback). Both exit the review drip; only `Review Completed` hands off to One-Year. `/r/enroll` is REMOVED (enrollment happens via the mobile-app Review Request form).
+**Status semantics:** `Review Completed` (≥ threshold, went to Google) vs `Negative Review` (< threshold, left private feedback). Both exit the review drip; only `Review Completed` hands off to One-Year. `/api/public/r/enroll` is REMOVED (enrollment happens via the mobile-app Review Request form).
 New dynamic key: `{feedback_message}` (the feedback text). `{email}` from the feedback form.
 
 ### Sequence & exact copy [LOCKED]
@@ -272,7 +272,7 @@ New keys (set per-client in `/admin-view` Settings, added to template_vars contr
 - **Mobile app "Review Request" tab form** (first_name, last_name, phone, email) → enrolls into Review Request SMS Drip (§4) ONLY. Subject to the daily enrollment cap. This is the entry point for the review/1-year chain (review enrollment happens here, by the client — there is no public self-enroll page). **Re-enrollment guard:** a contact already enrolled in the review automation (by client_id + phone) cannot be re-enrolled — block and show "contact already enrolled" so owners can safely re-attempt without double-texting.
 - **One-Year Follow-Up drip has NO form** — automatic handoff from review-drip completion (§4/§5).
 - **Public website lead form** (first_name, last_name, phone, email, your_message) → enrolls into the Lead-Form drip (§7). Submitted to a public server function (`supabaseAdmin` + Zod; `client_id` resolved from the public slug; CORS + per-client domain allowlist + bot protection). NO anon INSERT. `source` set server-side (CHECK-constrained column).
-- Public funnel pages: `/r/rate`, `/r/feedback`. (`/r/enroll` removed.)
+- Public funnel pages: `/api/public/r/rate`, `/api/public/r/feedback`. (`/api/public/r/enroll` removed.)
 - Discount-claim form (§7b) — TBD.
 
 ## 7. FEATURE — Website Lead-Form Drip [LOCKED copy]
@@ -544,7 +544,7 @@ Mobile-first PWA, scoped to the logged-in client's `client_id`.
 
 **Copy:** SAME 4 message texts as the Review Request drip (§4) — no separate copy. (No "pass" P.S. line; opt-out still works via the inbound webhook.)
 
-**On click → land on `/r/rate`:** marks the contact, exits the drip, fires the reactivation click notification (below), runs the normal funnel (≥threshold → Google + `Review Completed`; <threshold → `/r/feedback` + `Negative Review`).
+**On click → land on `/api/public/r/rate`:** marks the contact, exits the drip, fires the reactivation click notification (below), runs the normal funnel (≥threshold → Google + `Review Completed`; <threshold → `/api/public/r/feedback` + `Negative Review`).
 
 **One-Year handoff:** ONLY if they leave a review (`Review Completed`, ≥threshold → Google). If they don't review, hit the negative path (`Negative Review`), or opt out → NOT enrolled in One-Year. (Identical rule to §4.)
 
@@ -656,7 +656,7 @@ Every external service/connection the build needs, with what to set up and when 
 - **Rate-limiter store** — in-memory won't work across Worker isolates; use Cloudflare Durable Objects / Workers KV / DB-based. Golden-master decision (no new account).
 
 ### Architecture note — shared-backend vs frontend-only split [LOCKED]
-The per-client **Remixed marketing site is frontend-only** (anon reads + CORS-guarded POSTs; no service-role, no DB writes). The **admin view AND the mobile app are part of the SHARED BACKEND** (authed, DB-touching), served on per-client subdomains (`app.theirdomain.com`), NOT frontend-only Remixes. The **tracked-link + funnel routes (`/r/<token>`, `/r/rate`, `/r/feedback`) are served by the SHARED BACKEND domain** (they write to the DB), not the client marketing domain.
+The per-client **Remixed marketing site is frontend-only** (anon reads + CORS-guarded POSTs; no service-role, no DB writes). The **admin view AND the mobile app are part of the SHARED BACKEND** (authed, DB-touching), served on per-client subdomains (`app.theirdomain.com`), NOT frontend-only Remixes. The **tracked-link + funnel routes (`/api/public/r/<token>`, `/api/public/r/rate`, `/api/public/r/feedback`) are served by the SHARED BACKEND domain** (they write to the DB), not the client marketing domain.
 
 **Project structure (see §0):** Project 1 = shared backend + admin + tenant app (owns the DB); Project 2 = lean marketing template; per-client marketing sites = Remixes of Project 2 with `.env` → Project 1's Supabase. Subdomain routing locked: tenant app `app.theirdomain.com`, marketing root `theirdomain.com`.
 
@@ -678,7 +678,7 @@ The per-client **Remixed marketing site is frontend-only** (anon reads + CORS-gu
 - Discount-Claim Form & drip — form structure, copy, exits one-year drip on submit (§7b).
 - Owner Email Notifications — Lovable native transactional, one per lead, formatted with line breaks (§7d). Sender = ONE platform-level agency domain (NS-delegated, `notify@myagency.com`), not per-client (§9d).
 - Missed-Call Textback — full scope + copy: 24/7, 4 triggers, 1-min/2-min drip, reply-skip, 7-day re-eligibility per contact, internal notification (§9).
-- Review Funnel — `/r/rate` (1–5, inclusive threshold), landing exits drip, ≥thr → Google + Review Completed + One-Year handoff, <thr → /r/feedback + Negative Review (no handoff) + owner email/notification; stat renamed "Review Link Clicks"; /r/enroll cut (§4/§6).
+- Review Funnel — `/api/public/r/rate` (1–5, inclusive threshold), landing exits drip, ≥thr → Google + Review Completed + One-Year handoff, <thr → /api/public/r/feedback + Negative Review (no handoff) + owner email/notification; stat renamed "Review Link Clicks"; /api/public/r/enroll cut (§4/§6).
 - AI Chat Widget — opt-in gate, FAQ answering from business data, pricing→request-form guardrail, Request path = lead-form drip with "New Website AI Chat Lead" label; own /chat-widget skill; depends on onboarding form for AI knowledge (§7e). AI invocation CONFIRMED: Lovable AI Gateway + LOVABLE_API_KEY + gemini-3-flash-preview (§9d / `/chat-widget`).
 - Customer Review Reactivation — CSV upload, same 4 texts as §4, immediate+24h×3, caps (50/day + 2/20min), dedup guard, click notification, One-Year only on Review Completed, no end notification (§9).
 - SMS copy de-meal'd — §4 + reactivation now use the meal-free review-request copy; "pass" P.S. line removed (opt-out still functional).

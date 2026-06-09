@@ -283,7 +283,7 @@ Sent in ADDITION to the in-app notification when a lead-form or discount-form su
 >
 > We've already replied to them in the chat. Open your app to see the conversation.
 
-**Subject: We Saved You From a Negative Review** (fires when a contact submits `/r/feedback` below threshold):
+**Subject: We Saved You From a Negative Review** (fires when a contact submits `/api/public/r/feedback` below threshold):
 > Hey {company_owner_first_name},
 >
 > We just saved you from getting a bad Google review. You can read about this customer's experience here:

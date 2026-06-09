@@ -32,9 +32,9 @@ The data layer every drip reads. Build first so features have their copy/timing 
 ### 2b — Tracked-link + Review Funnel system (`/features` review-drip + funnel; shared by review AND reactivation)
 The shared redirect/funnel infrastructure. Built once; both review and reactivation drips consume it.
 - Token generation: at enrollment, unique token → maps to (contact_id, client_id, sequence). **NET-NEW storage:** the as-built foundation (12 tables) has no token/tracked-link table — 2b adds one via an **additive migration** (a `tracked_links`/token table with client_id + contact_id + sequence_key + token). Since it carries `client_id`, it's a tenant table → it MUST get a `user_client_ids()`/`is_admin()` RLS policy and pass the guardrail-1 audit (see discipline reminder below).
-- Public routes on the SHARED BACKEND domain (NOT client marketing domain — they write the DB): `/r/<token>` (logs `review_clicked`, exits drip, lands on rate page), `/r/rate` (1–5 stars, threshold-gated), `/r/feedback` (below-threshold capture → owner email + notification).
+- Public routes on the SHARED BACKEND domain (NOT client marketing domain — they write the DB): `/api/public/r/<token>` (logs `review_clicked`, exits drip, lands on rate page), `/api/public/r/rate` (1–5 stars, threshold-gated), `/api/public/r/feedback` (below-threshold capture → owner email + notification).
 - Funnel logic: ≥threshold → `Review Completed` → Google redirect + One-Year enroll; <threshold → `Negative Review` → feedback page (no One-Year).
-- Validate: token round-trip (generate → resolve → event written → correct landing); threshold branching; `/r/feedback` writes `review_feedback` + fires notification; all routes server-side (no anon write path).
+- Validate: token round-trip (generate → resolve → event written → correct landing); threshold branching; `/api/public/r/feedback` writes `review_feedback` + fires notification; all routes server-side (no anon write path).
 - **Gate:** a stub enrollment's tracked link resolves, logs the click, exits the drip, and routes correctly by star selection.
 
 ### 2c — Notifications subsystem (`/mobile-app` §8 notifications table is built; this wires AUTOMATIONS writing to it)
