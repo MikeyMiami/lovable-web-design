@@ -58,6 +58,15 @@ GRANT EXECUTE ON FUNCTION public.claim_due_enrollments(integer, timestamptz, int
 2. **Configurable window.start + DST gap.** `sms_send_window.start` is per-client editable; if a client sets a start inside their tz's DST-gap hour (e.g. 02:30 where the 2am transition lands), `nextWindowOpen` would be ~1h off one day/year. 09:00 default is safe. Add a test/clamp if/when start becomes freely configurable in the UI.
 3. **Per-tick throughput ceiling.** `LIMIT 500 ÷ K 25 = 20 clients/batch`. The lease rotates fairness so no starvation, but at 20+ clients all bursting the same minute, drain spreads over a few ticks. Fine at current scale; revisit `_limit`/K if the agency reaches many simultaneous high-volume clients.
 
+## Post-1e correction — 0-offset terminal-detection bug (found at Stage 2a, 2026-06-09)
+The runner's steps_json walker had `step.offsetMinutes ? addMinutes(...) : null` — **falsy on `0`**, so a step with `offsetMinutes: 0` (chained internal-notifications) was misread as terminal → the drip would silently `complete`. This was NOT visible in the 1e stub validation (the stub sequences had no 0-offset steps); it surfaced when 2a seeded the real sequences (One-Year after-SMS2/after-SMS5 internals, Missed-Call internal) and the 2a walk-test exercised them. Fixed (code-only, no migration):
+```ts
+const hasOffset = step.offsetMinutes !== undefined && step.offsetMinutes !== null;
+const nextRun = hasOffset ? addMinutes(now, step.offsetMinutes as number) : null;
+const nextStatus = nextRun ? "active" : "completed";
+```
+Would have truncated One-Year at SMS2 + SMS5 and Missed-Call at SMS1. Walk-test (all 5 assertions PASS) is in `stage-2a-validation.md`. Lesson: stub validation can't catch contract edges the stub data doesn't exercise — prove the walker against the real seeded shapes.
+
 ## Carry-forward status (foundation, not 1e)
 - #1 duplicate-detection → upsert: ✅ CLOSED (this patch).
 - #3 `audit_log` (role grants + revokes): open TODO (spec §12) — before go-live.
