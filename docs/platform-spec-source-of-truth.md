@@ -100,9 +100,9 @@ Current tabs: **Dashboard, Contacts, Conversations, Feedback, Automations, Uploa
 ### Review Funnel pages [LOCKED]
 The same funnel is the destination for BOTH the review-drip tracked link and the reactivation link. **All funnel pages are served by the SHARED BACKEND domain** (they read/write the DB), NOT the per-client frontend-only marketing site.
 
-**`/r/rate`** — text "How would you rate us?" + a 1–5 star multiple-choice. Threshold = per-client `star_threshold` in `/admin-view` (default 4, **inclusive ≥**).
-- **Selection ≥ threshold** → status **`Review Completed`** → redirect to the client's Google review page (deep-links the leave-a-review screen on their GBP) → **enroll into the One-Year Follow-Up drip** (normal handoff).
-- **Selection < threshold** → status **`Negative Review`** → go to `/r/feedback`. **Does NOT enroll into the One-Year drip.**
+**`/r/rate`** — text "How would you rate us?" + a 1–5 star multiple-choice. Threshold = per-client `star_threshold` in `/admin-view` (default 4, **inclusive ≥**). The star value is **re-selectable and commits only on submit** (a star tap is not a committed choice — the customer can change it before submitting). Status is set on submit, from the submitted rating:
+- **Submitted rating ≥ threshold** → status **`Review Completed`** (on rate-form submit) → redirect to the client's Google review page (deep-links the leave-a-review screen on their GBP) → **enroll into the One-Year Follow-Up drip** (normal handoff).
+- **Submitted rating < threshold** → go to `/r/feedback`; **status flips to `Negative Review` on FEEDBACK-form submit** (so an abandoned feedback form doesn't permanently mark the contact). **Does NOT enroll into the One-Year drip.**
 
 **`/r/feedback`** (below-threshold path) — collects **Name, Email, Feedback**; **phone auto-fills** from the mapped contact (they arrived via their token). Stores in `review_feedback`. On submit → fires the owner email + mobile-app notification (below) → shows the customer confirmation screen.
 
@@ -532,7 +532,7 @@ Mobile-first PWA, scoped to the logged-in client's `client_id`.
 ### FEATURE — Customer Review Reactivation Drip [LOCKED]
 **Purpose:** win reviews from PAST customers (bulk-uploaded), drip-fed slowly so reviews arrive organically and don't flag Google.
 
-**Enrollment:** CSV/paste upload in `/admin-view` → normalize phones (E.164) → dedupe → enroll in `reactivation_drip`. Source `reactivation`.
+**Enrollment:** CSV/paste upload in `/admin-view` → normalize phones (E.164) → dedupe → enroll in the `reactivation` sequence (sequence_key = `reactivation`, matching the 2a seed). Source `reactivation`.
 - **Dedup guard:** do NOT enroll a contact already run through reactivation OR already marked `Review Completed`. (So re-uploading a list won't re-message past reviewers.)
 
 **Per-drip safety caps (independent from other drips' caps):**
