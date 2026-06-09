@@ -10,14 +10,14 @@ Source of truth: `docs/platform-spec-source-of-truth.md` (the spec) + `skills/*/
 ONE shared multi-tenant backend (the "golden master"), built once and frozen — all clients live in it, scoped by `client_id` + RLS. Per-client launch = a client row + config on the shared backend, plus a Remixed marketing site (frontend-only) pointed at the shared backend. Business logic is never regenerated per client (that's the anti-drift core). See spec §0.
 
 ## 1. Project structure (set up once)
-- **Project 1** — shared backend + agency/admin dashboard + per-client tenant app (`app.theirdomain.com`). Owns the database. Connect it to the GitHub repo (`MikeyMiami/lovable-web-design`) for two-way sync so the golden master is owned + version-controlled.
+- **Project 1** — shared backend + agency/admin dashboard + per-client tenant app (`app.theirdomain.com`). Owns the database. Once it generates code, have Lovable **create its own GitHub repo** (+ menu → GitHub → Create Repository) so the golden-master CODE is owned + version-controlled. NOTE: Lovable cannot connect to a pre-existing repo — the planning repo (`MikeyMiami/lovable-web-design`, holding spec + skills + these docs) stays SEPARATE as the source-of-truth library; Lovable's new repo holds the built app code. (Optionally copy `skills/`+`docs/` into the Lovable repo later so they ride alongside the code.)
 - **Project 2** — lean marketing-site template (presentational only; no admin/backend code).
 - **Per-client marketing sites** — Remix Project 2, customize design, point `.env` (`VITE_SUPABASE_URL` + anon key + `project_id`) at Project 1's Supabase.
 - **Subdomain routing (locked):** tenant app `app.theirdomain.com`, marketing root `theirdomain.com`.
 
 ## 2. How to feed the build to Lovable (the workflow)
 Confirmed with Lovable:
-- **Connect the GitHub repo** to Project 1 so Lovable reads skills by path (e.g. "read `skills/scratch-foundation/SKILL.md`"). Cleaner than pasting for 11 files.
+- **Skills are imported as Lovable Skills** (one-time snapshots, surfaced through the skills system). Lovable CANNOT live-read files from an external repo by path. So: **re-upload (delete + re-import) a skill right before you build with it**, to ensure Lovable has the current version. Just-in-time, one skill at a time — not all 11 constantly. The spec goes in **Workspace Knowledge** (always-on).
 - **Feed ONE layer at a time** — build → validate → next. Never paste all skills at once. Migrations approve one-at-a-time and `types.ts` regenerates after each, so building against unapproved schema produces stale types.
 - **Keep each pasted/feed chunk focused.** If a skill is large, split by sub-layer (schema → RLS → server fns → cron), exactly as the Stage 0–1 runbook does.
 - **Plan then Build:** a short Plan-mode confirm before each non-trivial Build turn (schema/RLS/cron); skip planning for pure code edits.
