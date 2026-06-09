@@ -726,3 +726,4 @@ scratch-foundation, features, automation-config, opt-in-forms, chat-widget, mobi
 
 ### SYSTEM NOTES (carry into the build)
 - Failed SMS sends retry up to 2× at the send layer before marking failed (the GHL "max retries" equivalent) — [BUILD] in the send/cron logic, not per-drip.
+- [BUILD — TODO] RLS-audit gate (guardrail 1): build against the foundation schema; CI/test fails if any tenant table lacks a client_id-scoped policy. Recommended NOW (audits current schema; guards all later migrations). Owner: foundation.
