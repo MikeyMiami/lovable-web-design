@@ -23,6 +23,9 @@ This skill VERIFIES; it does not build. If a check fails, fix it in the owning s
 - [ ] Two storage buckets: public-assets (public read), client-assets (private, client_id-scoped RLS).
 - [ ] Runtime secrets set: CRON_SECRET, parent Twilio auth token (NOT on any row).
 - [ ] template_vars is the single source for merge values (review_request_link et al. there, not columns).
+- [ ] **Isolation guardrail 1 — RLS audit gate** passes: the information_schema/pg_policies scan finds NO tenant table without a client_id-scoped policy.
+- [ ] **Isolation guardrail 4 — CORS resolver:** public-write client_id is resolved server-side from Origin/Host→allowed_origins, never from the request body (verify a forged body client_id is ignored).
+- [ ] **Isolation guardrail 3 — export-client server fn** exists and returns a full per-client bundle; archive-via-`status='archived'`+`deleted_at` offboard stops automation (cron filters active).
 
 ## B. Automation / cron engine
 - [ ] pg_cron + pg_net hitting /api/public/cron/sequences every 1–5 min; route checks x-cron-secret against CRON_SECRET.
@@ -31,6 +34,7 @@ This skill VERIFIES; it does not build. If a check fails, fix it in the owning s
 - [ ] Send window (9–7 client tz), daily send cap, per-sequence pacing all read from events.
 - [ ] Enrollment caps enforced at the enrollment-creation server fn (not send time); reactivation 50/day + 2/20min verified.
 - [ ] Every cron decision logged to events (sent / blocked-window / blocked-cap / blocked-batch / rescheduled).
+- [ ] **Isolation guardrail 2 — per-client fairness:** runner round-robins across clients so one large client can't starve others' drips within a tick.
 
 ## C. Features wired (each end-to-end)
 - [ ] Review Request drip (§4): mobile-app enrollment → 4 SMS (day 0/+4/+7/+7) → click-checks → final owner notification at +48h; re-enrollment guard.
