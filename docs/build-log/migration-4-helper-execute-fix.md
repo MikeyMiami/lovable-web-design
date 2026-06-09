@@ -1,7 +1,7 @@
 # Build Log — Migration 4: helper EXECUTE fix (PENDING APPLY)
 
-> Status: **DECISION RECORDED — awaiting applied SQL + verify outputs.** Captures the migration-3 bug, the agreed migration-4 fix, and the implementation gotchas. Finalize this note (paste migration 4 SQL + the two verify results) to flip foundation-validation **open-item #3 → RESOLVED**. No secret values stored here.
-> Reviewed independently (Claude Code) 2026-06-09; verdict: ship as migration 4 with the amendments below.
+> Status: **APPLIED & VERIFIED GREEN (2026-06-09).** Migration 4 shipped with the required `service_role` exemption; all three verifications passed (below). Foundation open-item #3 → **RESOLVED**. Remaining bookkeeping: archive migration 4's raw SQL into `foundation-migrations.sql` (raw SQL pending paste — alongside migration 2). No secret values stored here.
+> Reviewed independently (Claude Code) 2026-06-09; verdict was: ship as migration 4 with the amendments below — which it did.
 
 ## The bug (migration 3)
 `20260609034341_*.sql` revoked `EXECUTE` on the 4 SECURITY DEFINER helpers (`has_role`, `is_admin`, `is_agency_owner`, `user_client_ids`) from `PUBLIC, anon, authenticated`.
@@ -27,8 +27,11 @@ This also corrects the original validation report's claim ("policies invoke them
 ## Why not the cleaner alternative
 Dropping the `uuid` arg and reading `auth.uid()` internally removes the footgun entirely, but it's a **signature change → forces rewriting every policy → not append-only**. Given append-only migrations, `CREATE OR REPLACE` + guard + service_role exemption is the pragmatic correct path.
 
-## Acceptance — finalize this note when ALL of these are in
-- [ ] Migration 4 SQL pasted here (verbatim; secret-scanned — pure DDL, should be clean).
-- [ ] Verify A — **live authed SELECT:** seeded `client_owner` SELECTs own `contacts` → rows return, NO `permission denied for function`.
-- [ ] Verify B — **service-role smoke:** `select user_client_ids('<some user>')` via the admin/service-role client returns the real set (NOT empty) — proves the service_role exemption works.
-- [ ] On all green → flip foundation-schema-snapshot open-item #3 to RESOLVED; append migration 4 to `foundation-migrations.sql`.
+## Verification results (2026-06-09) — ALL GREEN
+- [x] **Verify A — live authed SELECT:** seeded `client_owner` SELECTed own `contacts` → rows returned, **no `permission denied for function`**. RLS evaluation restored. ✅
+- [x] **Verify B — service-role smoke:** `user_client_ids('<user>')` via the admin/service-role client returned the **real client set, not empty** → the `service_role` exemption works. ✅
+- [x] **Bonus — anon cross-user probe:** anon RPC calling a helper with **another** uuid returned `[]` → the self-guard blocks cross-user probing as intended. ✅
+- [ ] **Archive migration 4 raw SQL** into `foundation-migrations.sql` — **pending paste** (the `[paste it]` placeholder didn't arrive). Will secret-scan + append when supplied, together with migration 2's raw SQL.
+
+## Linter note — the 8 SECURITY DEFINER warnings are EXPECTED, do not "fix"
+Supabase's linter flags the 4 helpers as SECURITY DEFINER (×2 each → 8 warnings). **This is the deliberate, correct boundary — leave it.** The security model is: `EXECUTE` granted to anon/authenticated (REQUIRED for RLS policy evaluation) **+ the in-body self-guard** (`auth.role() <> 'service_role' AND _user_id IS DISTINCT FROM auth.uid()`) as the actual access boundary. **Do NOT REVOKE EXECUTE to silence the linter** — that is precisely what migration 3 did and it broke all authed RLS evaluation. The guard, not the EXECUTE revoke, is the boundary.
