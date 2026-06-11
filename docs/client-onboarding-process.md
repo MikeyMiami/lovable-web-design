@@ -59,6 +59,20 @@ There are **three kinds of Lovable projects** in the workspace:
 
 ## Template design rules (for when building a NEW template)
 
+### How to literally spin one up (step-by-step)
+
+1. **In the Lovable workspace: create a NEW project.** When prompted about backend/Cloud features — decline. This project is frontend-only (it reads from Project 1; it has no backend of its own). Name it `Template — {Niche} — {Style}` (e.g. "Template — Plumbing — Modern").
+2. **Import two skills into this new project** (GitHub subdirectory URLs, same as always): `template-builder` (the data contract + wiring rules) and `website-structure` (page set + the 4 copy voices + design system). Optionally `opt-in-forms` (lead-form field reference).
+3. **First prompt to Lovable:** state the niche, attach your design references (screenshots/links/style direction), and say: *"Build a client-site template per the template-builder skill: frontend-only, build the data loader + demo client object first, then design from my references — all business-specific content renders from the client object per the skill's contract, never hardcoded."*
+4. **Iterate on the design freely** ("bolder hero", "different font", more references) — this is the one-time credit spend. Visual edits don't touch the data wiring.
+5. **Run the skill's self-check** (in template-builder §Build workflow step 5): zero hardcoded business literals, services section loops, brand color re-themes, asset fallbacks render, lead form → `/api/public/intake`, demo renders without a slug / live data renders with one.
+6. **Validate against a real test client:** set the `.env` slug to a test client in Project 1 → every field renders their data, lead form lands a contact (domain must be in their allowed_origins).
+7. **FREEZE.** GitHub-connect for backup. This Lovable project is now the remixable golden master for this niche×style.
+
+WHEN: the FIRST template is built after Stage 4 (backend freeze). Don't pre-build a library — first real niche, prove the loop, grow on demand.
+
+### The rules the template must follow
+
 1. New **frontend-only** Lovable project (no Cloud), named `Template — {Niche} — {Style}`.
 2. Design freely against a **demo client object** shaped exactly like the real `clients` row + `template_vars` contract + asset manifest. Iterate on look/feel as much as needed — this is the one-time credit spend.
 3. **Standing prompt rule:** "All business-specific content (name, tagline, phone, colors, logo, services, photos, hours) renders from the `client` data object — NEVER hardcoded in components." Layout/spacing/fonts/section structure = hardcoded and universal; content = variables.
