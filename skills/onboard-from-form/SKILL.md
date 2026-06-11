@@ -5,7 +5,9 @@ description: Use when capturing a new client's onboarding data into the shared b
 
 # Onboard From Form — capture client data into the shared backend
 
-Takes the §9b onboarding inputs (owner-filled + agency-set) and writes them into the ONE shared backend as a new `clients` row + related config. This is data capture/mapping, not site generation. Runs after `/scratch-foundation` exists (the golden master), as part of per-client launch. Every write is server-side (admin client); the owner never writes directly to the DB.
+Takes the §9b onboarding inputs (owner-filled + agency-set) and writes them into the ONE shared backend as a new `clients` row + related config. This is data capture/mapping, not site generation. Every write is server-side (admin client); the owner never writes directly to the DB.
+
+**Built vs used:** the onboarding **wizard UI is BUILT once in Stage 3** (alongside `/admin-view`); it is **USED per-client at Stage 5** (launch) to capture each new client. The field→destination mapping below is the contract for both.
 
 ## Two input layers (§9b)
 - **Owner-filled** — the onboarding form the business owner completes (content + brand).
@@ -32,7 +34,7 @@ Takes the §9b onboarding inputs (owner-filled + agency-set) and writes them int
 | Logo (upload or request) + "need a logo?" flag | `public-assets` bucket → `clients.logo_url`; flag noted for agency |
 | Timezone (EST/CST/MST/PST/Honolulu) | `send_settings.timezone` (NOT on clients) |
 | Site style choice (1 of 4) | `clients.site_style` (corporate\|standard\|family_owned\|owner_operated) — drives `/website-structure` |
-| Photos (25–60 + team/owner photo) | `public-assets` (or `client-assets` if private) → referenced by site/gallery |
+| Photos (25–60 + team/owner photo), **categorized: work examples / per-service examples / staff** | `public-assets` (public) / `client-assets` (private) under structured paths `{client_id}/work-examples/…`, `{client_id}/services/{service_slug}/…`, `{client_id}/staff/…` → write an **asset manifest** (`template_vars.site_assets`) so the site knows what exists; **missing categories fall back to pre-approved niche-default images** bundled in the template. Forward spec: `docs/client-onboarding-process.md` + `/template-builder`. |
 | Consent (terms + SMS opt-in) | recorded; basis for contact consent |
 
 ### Agency-set → where it lands

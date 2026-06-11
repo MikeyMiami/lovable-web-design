@@ -51,6 +51,7 @@ This skill VERIFIES; it does not build. If a check fails, fix it in the owning s
 - [ ] One parent account via the connector gateway (fetch, no SDK); per-client From/MessagingServiceSid on the clients row.
 - [ ] Inbound + voice-status webhooks at the parent level; route by To → clients row; X-Twilio-Signature verified BEFORE any DB write.
 - [ ] STOP/HELP/START + "pass" opt-out handling wired.
+- [ ] **Inbound webhook drives REAL-TIME drip exits** (not deferred to the next pre-step check): one-year reply → exit + interest notification immediately (gaps are weeks/months — pre-step-only would delay the notification ~a month); missed-call reply-skip; opt-out. (Pre-step checking is the stub-mode fallback only.)
 - [ ] Per-client number provisioned, forwarded to call_forwarding_number, placed on site + GBP.
 
 ## E. Per-client go-live subset (lighter — backend already proven)

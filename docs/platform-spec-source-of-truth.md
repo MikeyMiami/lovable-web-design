@@ -13,7 +13,7 @@
 **Three phases:**
 1. **Author the skills** (where we are) — the skills are the complete canonical spec of how the backend is built, derived from this doc.
 2. **Build & prove the reference backend, once** — run the skills, build the entire shared multi-tenant backend, test every feature until flawless. This produces the **golden master** (tested, working code) — built one time, not per client.
-3. **Launch each client on the shared backend** — create a client record + config (the §9b onboarding data); Remix ONLY the marketing site (frontend) for the client's domain, pointed at the shared backend via its Supabase env (`VITE_SUPABASE_URL` + anon key + `project_id`). No per-client backend, DB, Cloud, or service-role key.
+3. **Launch each client on the shared backend** — create a client record + config (the §9b onboarding data); Remix ONLY the marketing site (frontend) for the client's domain, pointed at the shared backend via its Supabase env (`VITE_SUPABASE_URL` + anon key + `VITE_CLIENT_SLUG`). No per-client backend, DB, Cloud, or service-role key.
 
 **The clean split:**
 - **Backend = the ONE shared multi-tenant backend** (golden master, built/proven once, frozen, never regenerated per client). The part that must be reliable.
@@ -23,10 +23,10 @@
 
 **Why shared-backend (Option A), decided & locked:** considered one-shared-backend (A) vs separate-backend-per-client (B). Chose **A**. Decisive reason: B reintroduces the exact **AI-drift** this golden-master model exists to prevent — every future bug-fix/feature would be re-prompted across N projects and silently diverge. A keeps business logic in ONE codebase: one place to fix, ship, and verify, forever; the other clients get a fix the moment it deploys. Per-client *design* stays fully bespoke either way (only the marketing site is remixed), so A costs nothing on customization. Data isolation is held by disciplined RLS + the isolation guardrails (see `/scratch-foundation`: RLS-audit gate, per-client cron fairness, export-client fn, CORS resolver). Escape hatch: A→B (peel one whale client out to a dedicated backend via the export fn) is easy; B→A (merge DBs) is brutal — so A keeps options open. This is settled; do not reopen without a material change.
 
-**Project structure [LOCKED]:** two long-lived Lovable projects + N short-lived marketing remixes.
+**Project structure [LOCKED]:** Project 1 (the platform) + N template projects (a growing template library, one per niche×style — see `/template-builder` + `/website-structure`) + N short-lived per-client marketing remixes.
 - **Project 1** — the shared backend + agency/admin dashboard + per-client tenant app (`app.theirdomain.com`). All share auth, RLS, server fns, and types; they belong in one project. Project 1 owns the database.
-- **Project 2** — a lean marketing-site template (presentational; no admin/backend code).
-- **Per-client marketing sites** — Remix Project 2 (NOT Project 1, so admin code never ships in a client's marketing bundle), customize the design, point `.env` (`VITE_SUPABASE_URL` + anon key + `project_id`) at Project 1's shared Supabase. Custom domain attached at the remix level.
+- **Template projects** — frontend-only marketing-site templates (presentational; no admin/backend code), **one per niche×style**, built via `/template-builder` + `/website-structure` then FROZEN. The FIRST is built after the backend freeze (Stage 4); the library grows on demand (don't pre-build it).
+- **Per-client marketing sites** — Remix the matching template project (NOT Project 1, so admin code never ships in a client's marketing bundle); **no AI/design edits at remix time** — point `.env` at Project 1's shared Supabase by setting the ONE per-client line `VITE_CLIENT_SLUG` (the `VITE_SUPABASE_URL` + anon key are identical for every client). Custom domain attached at the remix level.
 - **Subdomain routing [LOCKED]:** tenant app at `app.theirdomain.com`; marketing at root `theirdomain.com`. Lock before building auth-redirect URLs + CORS allowlists (changing later means rewriting `/auth` redirects and every `/api/public/*` CORS header).
 - **Code ownership/reproducibility:** Lovable creates its OWN GitHub repo from Project 1 (it cannot attach to a pre-existing repo) — that repo + downloadable codebase = the golden master is owned and reproducible (within Lovable via Remix → migrations re-run; outside via export + own Supabase). The planning repo (spec + skills + build docs) stays SEPARATE as the source-of-truth library. Skills are fed to Lovable as imported Skill snapshots (re-upload to update — no live external-repo read). Remix carries code + migrations, NOT secrets/data/integrations/domain (re-added per project).
 
@@ -53,7 +53,8 @@ TanStack Start v1 (React 19 + Vite 7), SSR, Cloudflare Workers (pure JS + fetch,
 9. `/new-client-site` — per-client launch orchestrator: **provision a new client on the shared backend (client row + settings + Twilio subaccount/number + onboarding capture) + Remix the marketing site for the client's domain (frontend-only) + invoke the design layer. NOT a backend clone, NOT a regenerate.**
 10. `/website-structure` — the per-client DESIGN layer: page set (generated from onboarding, up to max), the 4 style choices, AI-driven copy + visual generation from onboarding data + assets + reference screenshots, and the codified style-template library (plug-and-play via Lovable cross-project referencing). Absorbs the old `/theme-to-brand` (brand colors/logo are part of this).
 11. `/onboard-from-form` — captures the §9b onboarding data into the system (config + AI knowledge + design inputs).
-(`/website-structure` and `/onboard-from-form` are the per-client design + data-capture skills; both now unblocked. `/theme-to-brand` is absorbed into `/website-structure`.)
+12. `/template-builder` — imported into a NEW frontend-only Lovable project to build a client-site template from design references: the client data contract (clients columns + template_vars + asset manifest), the data-loader/demo-object pattern, platform wiring (`/api/public/intake`, `/api/public/r/`), hard rules (never hardcode business values, frontend-only, anon reads). Used WITH `/website-structure` (page set + 4 style voices). One template, designed once, then remixed per client with zero AI edits.
+(`/website-structure` and `/onboard-from-form` are the per-client design + data-capture skills; both now unblocked. **The `/onboard-from-form` wizard is BUILT once in Stage 3 (with `/admin-view`) and USED per-client at Stage 5.** `/template-builder` builds the (frozen) marketing-site templates the per-client remixes copy. `/theme-to-brand` is absorbed into `/website-structure`.)
 
 ---
 
@@ -64,7 +65,7 @@ Current tabs: **Dashboard, Contacts, Conversations, Feedback, Automations, Uploa
 
 **Settings tab must hold these per-client configurable values:**
 - Timezone (drives all SMS windows).
-- **SMS Send window** (default **09:00–19:00**, client timezone) — applies to MARKETING/FOLLOW-UP SMS only (review drip, one-year drip, reactivation). Purpose: don't annoy past customers.
+- **SMS Send window** (default **09:00–19:00**, client timezone) — applies to MARKETING/FOLLOW-UP SMS only: **window-gated drips = review, one-year, reactivation** (`sequences.window_gated=true`). **Transactional drips fire 24/7 (`window_gated=false`): lead-form (both branches), missed-call textback, and discount-claim** (the discount SMS is a form-submission acknowledgment, like the lead-form — the customer just submitted, expecting a reply). Purpose: don't annoy past customers with off-hours marketing, while transactional replies stay prompt.
 - **Business Hours** (separate per-client window) — applies to the LEAD-FORM drip only (§7). Purpose: decide whether a fresh web lead gets the live in-hours response or the after-hours message. Independent from the SMS Send window. [BUILD — new field]
 - **Daily SMS send cap** (customizable per client) — max messages dispatched/day.
 - **Daily enrollment cap** (customizable per client, **default 50**) — max NEW contacts entering the review drip/day; overflow waits to next day. *(Distinct from send cap.)*
@@ -658,7 +659,7 @@ Every external service/connection the build needs, with what to set up and when 
 ### Architecture note — shared-backend vs frontend-only split [LOCKED]
 The per-client **Remixed marketing site is frontend-only** (anon reads + CORS-guarded POSTs; no service-role, no DB writes). The **admin view AND the mobile app are part of the SHARED BACKEND** (authed, DB-touching), served on per-client subdomains (`app.theirdomain.com`), NOT frontend-only Remixes. The **tracked-link + funnel routes (`/api/public/r/<token>`, `/api/public/r/rate`, `/api/public/r/feedback`) are served by the SHARED BACKEND domain** (they write to the DB), not the client marketing domain.
 
-**Project structure (see §0):** Project 1 = shared backend + admin + tenant app (owns the DB); Project 2 = lean marketing template; per-client marketing sites = Remixes of Project 2 with `.env` → Project 1's Supabase. Subdomain routing locked: tenant app `app.theirdomain.com`, marketing root `theirdomain.com`.
+**Project structure (see §0):** Project 1 = shared backend + admin + tenant app (owns the DB); N template projects (a growing library, one per niche×style — `/template-builder` + `/website-structure`); per-client marketing sites = Remixes of the matching template with `.env` `VITE_CLIENT_SLUG` → Project 1's Supabase. Subdomain routing locked: tenant app `app.theirdomain.com`, marketing root `theirdomain.com`.
 
 **Isolation guardrails (what makes shared-backend safe — built in `/scratch-foundation`):** (1) RLS-audit gate (CI fails if any tenant table lacks a client_id policy); (2) per-client cron fairness (round-robin, no starvation); (3) export-client server fn (offboarding/portability) + archive-via-status; (4) CORS resolver (client_id from server-resolved Origin/Host→allowed_origins, never request body).
 
@@ -710,8 +711,8 @@ Phase 2 (the build):
 ### FEATURES — all defined & locked ✓
 - All platform features are scoped AND locked, including AI Chat Widget (§7e) and Customer Review Reactivation (§9). No undefined features remain.
 
-### SKILLS — all 11 authored ✓
-scratch-foundation, features, automation-config, opt-in-forms, chat-widget, mobile-app, admin-view, onboard-from-form, website-structure, launch-check, new-client-site. Mutually consistent; foundation reconciled against the live DB.
+### SKILLS — all 12 authored ✓
+scratch-foundation, features, automation-config, opt-in-forms, chat-widget, mobile-app, admin-view, onboard-from-form, website-structure, launch-check, new-client-site, template-builder. Mutually consistent; foundation reconciled against the live DB.
 
 ### LATER / PARKED (non-blocking)
 - **PWA web-push notifications** — superseded by owner email notifications (§7d); revisit if real-time phone push wanted.
@@ -732,3 +733,4 @@ scratch-foundation, features, automation-config, opt-in-forms, chat-widget, mobi
 - [BUILD — TODO] Export-client server fn (isolation guardrail 3, `scratch-foundation` §11): service-role fn returning a full per-client bundle (`WHERE client_id=$1` across every tenant table) + archive-via-`status='archived'`+`deleted_at` offboard (cron filters active). Offboarding/portability + the A→B escape hatch. NOT yet built; before go-live. Owner: foundation/lifecycle. Verified at `/launch-check` §A.
 - [BACKLOG — IDEA] Read-only admin debug/research interface: authenticated (agency-owner/admin role, so RLS + `is_admin()` legitimately spans clients) READ-ONLY endpoint(s) for cross-data debugging/analysis — primarily over `events` (the cron-decision + funnel + status-change audit trail) and enrollment/message state. For programmatic analysis (e.g. an external tool querying "why didn't drip X fire" / send-block patterns / timing distributions). RULES: never expose the service-role key to the caller; SELECT-only; prefer aggregated/metadata views over raw PII (privacy) unless raw is specifically needed + handled. Overlaps with the export-client fn (generalize that pattern to read-across-for-analysis). Repo is public → keys stay runtime secrets, never committed. Owner: post-foundation tooling.
 - [GATE] Stage 1f (Turnstile + rate-limit on public lead-intake) MUST ship before ANY client launches — CORS is browser-only; a direct/non-browser POST with a known slug/allowed-origin can spam-insert without it. Mirrored in `/launch-check` §E.
+- [BUILD — 1f] Reply-driven drip exits must be REAL-TIME via the inbound-SMS webhook (one-year exit-on-reply + interest notification; missed-call reply-skip; opt-out) — exit + notify ON the reply, not at the next pre-step check. One-year inter-step gaps are weeks/months, so pre-step-only checking delays the "they replied" interest notification by ~a month (a hot lead goes cold). Pre-step checking is the stub-mode fallback; the 1f inbound webhook is the production path. Mirrored in `/launch-check` §D.
