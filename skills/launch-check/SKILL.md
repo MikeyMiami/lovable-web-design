@@ -15,7 +15,7 @@ This skill VERIFIES; it does not build. If a check fails, fix it in the owning s
 - [ ] RLS on every table; `(SELECT auth.uid())` wrap in all policies; helpers SECURITY DEFINER + STABLE; one permissive policy per action per table; no recursion on `user_roles`.
 - [ ] NO anon INSERT/UPDATE/DELETE anywhere; anon SELECT limited to `clients` public columns WHERE status='active'.
 - [ ] All public writes go through server fns (admin client + Zod + slug→client_id + server-set source).
-- [ ] CORS + per-client domain allowlist + OPTIONS + rate-limit + Turnstile/hCaptcha on public lead-intake routes; NO CORS on webhook/cron routes.
+- [ ] CORS + per-client domain allowlist + OPTIONS + rate-limit + Turnstile/hCaptcha on public lead-intake routes — this includes the AI-chat-widget endpoints `/api/public/chat/optin` + `/api/public/chat/request` (new public lead-writes at 2f), not just `/api/public/intake`; NO CORS on webhook/cron routes.
 - [ ] `enrollments` UNIQUE (client_id, contact_id, sequence_key) present (and existing dupes removed first).
 - [ ] Index set present incl. partial `enrollments(next_run_at) WHERE status='active'`; client_id-leading indexes on contacts/messages/events; user_roles(user_id).
 - [ ] Enum migrations applied: contact_status += review_completed, negative_review, reactivation; contact_source += chat_widget, mobile_enroll (all lowercase_snake).
@@ -55,7 +55,7 @@ This skill VERIFIES; it does not build. If a check fails, fix it in the owning s
 - [ ] Per-client number provisioned, forwarded to call_forwarding_number, placed on site + GBP.
 
 ## E. Per-client go-live subset (lighter — backend already proven)
-- [ ] **GATE — Stage 1f shipped:** Turnstile + rate-limiting are LIVE on all public lead-intake routes before this client goes public. CORS is browser-only — without 1f, a direct/non-browser POST with this client's slug or allowed-origin can spam-insert. NO client launches pre-1f.
+- [ ] **GATE — Stage 1f shipped:** Turnstile + rate-limiting are LIVE on all public lead-intake routes before this client goes public — incl. the 2f chat endpoints `/api/public/chat/optin` + `/api/public/chat/request` (carried forward from 2f-F2). CORS is browser-only — without 1f, a direct/non-browser POST with this client's slug or allowed-origin can spam-insert. NO client launches pre-1f.
 - [ ] Client row + all §9b config present; template_vars required keys all populated (no blanks).
 - [ ] timezone (send_settings), business_hours, send window, caps set.
 - [ ] Google review link + Place ID + star_threshold set; review engine functional.

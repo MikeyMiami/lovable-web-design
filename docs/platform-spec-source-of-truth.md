@@ -485,7 +485,7 @@ A corner chat widget on the client's website. An AI assistant answers FAQs from 
 - Retrieval context assembled from onboarding data + site content.
 - Request path reuses the §7 lead-form enrollment exactly; only the owner-notification label differs.
 - AI knowledge inputs = §9b onboarding fields (About Us, services, areas, hours, differentiators) + site content.
-- AI invocation (confirmed): Lovable AI Gateway (`https://ai.gateway.lovable.dev/v1`) + `LOVABLE_API_KEY` (ambient server runtime, never browser) + model `google/gemini-3-flash-preview`; streaming chat via `src/routes/api/chat.ts` (AI SDK `streamText`/`toUIMessageStreamResponse`, client `useChat`), one-shot via `createServerFn`; knowledge bundle = per-request system-prompt injection; handle 429/402. Full detail in `/chat-widget` + §9d.
+- AI invocation (confirmed): Lovable AI Gateway (`https://ai.gateway.lovable.dev/v1`) + `LOVABLE_API_KEY` (ambient server runtime, never browser) + model `google/gemini-3-flash-preview`; streaming chat via `src/routes/api/public/chat/stream.ts` (+ opt-in `…/chat/optin.ts`, request `…/chat/request.ts`; AI SDK `streamText`/`toUIMessageStreamResponse`, client `useChat`), one-shot via `createServerFn`; knowledge bundle = per-request system-prompt injection; handle 429/402. **Routes MUST be under `/api/public/*`** — logged-out visitors hit them; a top-level `api/chat.ts` would be auth-gated (2b `/r/*` lesson). Full detail in `/chat-widget` + §9d.
 
 ---
 
