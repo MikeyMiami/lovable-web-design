@@ -75,7 +75,7 @@ The per-client config surface — writes the `clients` row + `send_settings`.
 ---
 
 ## Stage 3 exit gate
-All tabs render real data scoped correctly by RLS; all write-back actions reuse Stage-2 server fns (no parallel logic); tenant isolation verified on every read surface; action-flag notifications consumed correctly. Then Stage 4 (freeze the golden master), then 1f (real Twilio + Turnstile/rate-limit launch gate — now including chat endpoints per F2).
+All tabs render real data scoped correctly by RLS; all write-back actions reuse Stage-2 server fns (no parallel logic); tenant isolation verified on every read surface; action-flag notifications consumed correctly. Then **Stage 4 freezes the golden master = the automation LOGIC + schema + surfaces (the drift-prone stuff)** — that is what "frozen" protects. **1f (real Twilio swap + message testing + Turnstile/rate-limit) is the deliberate FINAL pre-launch hardening AFTER the freeze**, gated by `/launch-check` §E before any client goes live — NOT a freeze blocker. Post-freeze, the ONLY changes allowed to touch the backend are the 1f Twilio-swap + Turnstile/rate-limit (incl. the chat endpoints per F2); nothing else.
 
 ## Discipline reminders
 - One sub-step per turn; build → validate → next.

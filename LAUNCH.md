@@ -48,7 +48,9 @@ Detailed sub-steps for Stage 0–1 are in `docs/phase2-build-guide-stage0-1.md`.
 
 **Stage 3 — Client-facing surfaces:** `/admin-view` + `/mobile-app` (both shared-backend, authed).
 
-**Stage 4 — Freeze the golden master:** full `/launch-check` A–D green → the backend is the proven, frozen master. Confirm the GitHub repo holds the built code.
+**Stage 4 — Freeze the golden master:** `/launch-check` A–D green (except the §A Turnstile/rate-limit launch-gate row) → the backend is the proven, frozen master. **Freeze = the automation LOGIC + schema + surfaces (the drift-prone stuff) are locked.** The one exception: §A's LIVE Turnstile + rate-limit row is a **launch gate (§E / 1f), not a freeze gate** — only its CORS + allowlist + OPTIONS structure is proven here. Confirm the GitHub repo holds the built code.
+
+**Stage 1f — Final pre-launch hardening (AFTER freeze):** real Twilio swap + message testing + LIVE Turnstile/rate-limit. The ONLY changes permitted to touch the frozen backend; gated by `/launch-check` §E before any client goes live.
 
 **Stage 5+ — Per-client launch** (repeatable, per client): see §5.
 
