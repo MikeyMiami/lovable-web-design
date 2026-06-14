@@ -31,6 +31,7 @@ This skill VERIFIES; it does not build. If a check fails, fix it in the owning s
 - [ ] pg_cron + pg_net hitting /api/public/cron/sequences every 1–5 min; route checks x-cron-secret against CRON_SECRET.
 - [ ] Runner: bounded batch (~500), FOR UPDATE SKIP LOCKED, group by client_id; blocked → reschedule next_run_at WITHOUT advancing step; allowed → render → send → insert message+event → advance.
 - [ ] Twilio 5xx → reschedule+jitter; 4xx → fail; send-layer retry up to 2×.
+- [ ] **PRE-FREEZE regression (3a send-primitive extraction):** `sendStubSmsWithRetry` was extracted to `lib/sms/send.server.ts` (now shared by the cron runner + the reply path). Re-run the 2e TEST1–TEST5 drip walks → claim-lease (FOR UPDATE SKIP LOCKED), window-gating, caps, reschedule-`next_run_at`-without-advancing, advance-on-success, and 2× retry ALL intact (only the stub-send call was extracted). AND confirm the primitive is SEND-ONLY — no DB writes / no cron-decision event-logging in it, else the interactive reply path inherits cron-style logging.
 - [ ] Send window (9–7 client tz), daily send cap, per-sequence pacing all read from events.
 - [ ] Enrollment caps enforced at the enrollment-creation server fn (not send time); reactivation 50/day + 2/20min verified.
 - [ ] Every cron decision logged to events (sent / blocked-window / blocked-cap / blocked-batch / rescheduled).
