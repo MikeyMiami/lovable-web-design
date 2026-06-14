@@ -46,26 +46,34 @@ The two tabs that WRITE back into Stage-2 (enrollment + the action-flag notifica
 - Validate: enroll reuses 2d path (caps/guard fire); notification feed renders all 12 types correctly; the two action buttons consume their action-jsonb flags + do the right thing; suppression holds.
 - **Gate:** review enroll respects caps/guard; both action-flag notifications work end-to-end (auto-enroll enrolls, open-conversation deeplinks).
 
-### 3c — Dashboard tab (`/mobile-app` Tab 4)
+### 3c — Conversations materialization (runner → `messages`/`conversations` + shared insert helper)
+Completes the Conversations inbox from 3a/3b: drip-sent SMS must show in the thread, not just in `events`. **Reclassified from a 1f item to a Stage-3 sub-step (the 3b F4 finding):** build it NOW with STUB status; 1f later only swaps stub status → real Twilio SID/delivery status (not new logic). *(This also completes the runner to its already-spec'd behavior — launch-check §B's runner line says "insert message+event"; the stub only did `event`.)*
+- The cron runner writes each outbound drip send into `messages` + bumps `conversations.last_message_at` (status = stub/`queued`). Today the stub logs `sms_sent` to `events` only.
+- Extract a shared **`insertOutboundMessage({clientId, contactId, body, sid?, status})`** helper with two variants — **admin (cron, service-role)** + **RLS (reply, authed)** — reused by the runner AND `reply.functions.ts`. Keep the send primitive (`sendStubSmsWithRetry`) SEND-ONLY; materialization lives in the callers (preserves the 3a send-only property).
+- Fixes the 3b consequence: the missed-call **Open-conversation** deeplink now opens a real (materialized) thread.
+- Validate: a stub drip send (missed-call SMS#1, review SMS#1) creates a `messages` row + conversation bump under the contact's `client_id`; the mobile Conversations inbox shows it; cron uses the admin variant + reply uses the RLS variant, both via the ONE `insertOutboundMessage` helper (no duplicated insert logic); RLS still scopes reads; `audit_tenant_rls()`=0 if any column added.
+- **Gate:** a stub drip send appears in the Conversations thread; the Open-conversation deeplink opens a non-empty thread; one shared insert helper serves both call-sites.
+
+### 3d — Dashboard tab (`/mobile-app` Tab 4)
 Read-only stat counters from `events`, client-tz.
 - Four counters: New Website Leads (week/month) = contacts with source `web_form` in period; Review Link Clicks (week/month) = `review_clicked` events in period. Computed in client timezone.
 - Validate: counts match a direct events query; week/month boundaries use client tz (the 1e tz-correctness lesson applies).
 - **Gate:** counters match a hand-run events query for the period.
 
-### 3d — Admin shell + Dashboard/Contacts/Conversations/Feedback tabs (`/admin-view`)
+### 3e — Admin shell + Dashboard/Contacts/Conversations/Feedback tabs (`/admin-view`)
 The agency surface (platform-admin / agency_owner context — can span clients via active-client selection). Read-heavy.
 - Admin shell + active-client context. Dashboard (KPIs), Contacts (CRM list + detail), Conversations (full SMS inbox + threads), Feedback (low-star private submissions).
 - Validate: admin can view the active client's data; switching active client re-scopes correctly; feedback shows review_feedback rows; no cross-client leakage beyond intended admin span.
 - **Gate:** admin reads scope to active client; feedback/contacts/conversations render from the real tables.
 
-### 3e — Admin Automations + Upload Customers tabs (`/admin-view`)
+### 3f — Admin Automations + Upload Customers tabs (`/admin-view`)
 The two admin tabs that WRITE/configure.
 - **Automations (`/admin/automations`):** edit message templates + sequence steps (the editable surface of automation-config content) — writes to `templates`/`sequences` (per-client overrides → client_id-scoped rows; never edits the global rows). Each drip shows a LIVE enrolled count (`enrollments WHERE status='active'` grouped by sequence_key). [BUILD — new]
 - **Upload Customers (`/admin/reactivation`):** CSV/paste uploader feeding the reactivation drip — reuse the 2d reactivation enroll path (E.164 normalize → dedupe → enroll, caps 50/day + 2/20min). Shows reactivation enrollment count + queued-from-upload.
 - Validate: template/sequence edits write client-scoped overrides (global rows untouched); enrolled counts are accurate; reactivation upload reuses the 2d path (caps/dedup fire). If any new tenant table/column → `audit_tenant_rls()`=0.
 - **Gate:** per-client template override writes correctly (global seed untouched); reactivation upload reuses 2d path with caps.
 
-### 3f — Settings tab (`/admin-view` Settings)
+### 3g — Settings tab (`/admin-view` Settings)
 The per-client config surface — writes the `clients` row + `send_settings`.
 - All the Settings fields: timezone, SMS send window, business hours (the separate lead-form window), daily send cap, daily enrollment cap, business identity, review config (place_id/link/threshold/google_review_toggle), template_vars (with missing-key surfacing), messaging config (twilio_number/messaging_service_sid/call_forwarding_number — non-secret per-client), notification recipient email, marketing domains/allowed_origins.
 - **The single-source rule [LOCKED]:** twilio_number stored once on the clients row; everything reads from it. Changing it in Settings updates site + automations everywhere; never hardcoded.
@@ -75,7 +83,11 @@ The per-client config surface — writes the `clients` row + `send_settings`.
 ---
 
 ## Stage 3 exit gate
-All tabs render real data scoped correctly by RLS; all write-back actions reuse Stage-2 server fns (no parallel logic); tenant isolation verified on every read surface; action-flag notifications consumed correctly. Then **Stage 4 freezes the golden master = the automation LOGIC + schema + surfaces (the drift-prone stuff)** — that is what "frozen" protects. **1f (real Twilio swap + message testing + Turnstile/rate-limit) is the deliberate FINAL pre-launch hardening AFTER the freeze**, gated by `/launch-check` §E before any client goes live — NOT a freeze blocker. Post-freeze, the ONLY changes allowed to touch the backend are the 1f Twilio-swap + Turnstile/rate-limit (incl. the chat endpoints per F2); nothing else.
+All tabs render real data scoped correctly by RLS; all write-back actions reuse Stage-2 server fns (no parallel logic); tenant isolation verified on every read surface; action-flag notifications consumed correctly; drip sends materialize into the inbox (3c).
+
+Then a **PRE-FREEZE CLEANUP stage** (after the Stage-3 tabs, before the Stage-4 freeze) batches the deferred non-Twilio items so the frozen master is complete: the **audit_log** table (role-mutation audit — grants + revokes), the **export-client** server fn (isolation guardrail 3), and the **3a send-primitive regression re-test** (re-run the 2e TEST1–TEST5 drip walks + confirm the primitive is send-only).
+
+Then **Stage 4 freezes the golden master = the automation LOGIC + schema + surfaces (the drift-prone stuff)** — that is what "frozen" protects. **1f is the deliberate FINAL pre-launch hardening AFTER the freeze — only the genuinely Twilio-dependent items:** real Twilio swap + message testing, Turnstile/rate-limit (the launch gate), real-time reply-driven drip exits (inbound webhook), and the materialization **status-swap** (stub status → real Twilio SID/delivery; the `messages`/`conversations` write + helper already exist from 3c). Gated by `/launch-check` §E — NOT a freeze blocker. Post-freeze, those 1f items are the ONLY changes allowed to touch the backend; nothing else.
 
 ## Discipline reminders
 - One sub-step per turn; build → validate → next.

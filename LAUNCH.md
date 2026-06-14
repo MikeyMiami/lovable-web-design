@@ -46,11 +46,13 @@ Detailed sub-steps for Stage 0–1 are in `docs/phase2-build-guide-stage0-1.md`.
 
 **Stage 2 — Feature/automation layer** (in dependency order): `/features` → `/automation-config` (seed templates + sequences) → `/opt-in-forms` → `/chat-widget`. Gate: `/launch-check` C per feature. (Operative build order is **infrastructure-first** — `/automation-config` *seeding* precedes `/features` *wiring*, since drips can't run until sequences/templates are seeded; see `docs/phase2-build-guide-stage2.md` for the sub-step sequence.)
 
-**Stage 3 — Client-facing surfaces:** `/admin-view` + `/mobile-app` (both shared-backend, authed).
+**Stage 3 — Client-facing surfaces:** `/admin-view` + `/mobile-app` (both shared-backend, authed). Includes the **3c Conversations-materialization** sub-step (runner → `messages`/`conversations` + shared `insertOutboundMessage` helper, stub status) that completes the inbox.
+
+**Stage 3.5 — Pre-freeze cleanup** (after the Stage-3 tabs, before the freeze): batch the deferred non-Twilio items so the frozen master is complete — **audit_log** table (role-mutation audit), **export-client** server fn (isolation guardrail 3), and the **3a send-primitive regression re-test** (re-run 2e TEST1–TEST5 + confirm the primitive is send-only). All gated within `/launch-check` A–D.
 
 **Stage 4 — Freeze the golden master:** `/launch-check` A–D green (except the §A Turnstile/rate-limit launch-gate row) → the backend is the proven, frozen master. **Freeze = the automation LOGIC + schema + surfaces (the drift-prone stuff) are locked.** The one exception: §A's LIVE Turnstile + rate-limit row is a **launch gate (§E / 1f), not a freeze gate** — only its CORS + allowlist + OPTIONS structure is proven here. Confirm the GitHub repo holds the built code.
 
-**Stage 1f — Final pre-launch hardening (AFTER freeze):** real Twilio swap + message testing + LIVE Turnstile/rate-limit. The ONLY changes permitted to touch the frozen backend; gated by `/launch-check` §E before any client goes live.
+**Stage 1f — Final pre-launch hardening (AFTER freeze):** the genuinely Twilio-dependent items only — real Twilio swap + message testing, LIVE Turnstile/rate-limit, real-time reply-driven drip exits (inbound webhook), and the outbound-message status-swap (stub status → real Twilio SID/delivery; the materialization + helper already exist from 3c). The ONLY changes permitted to touch the frozen backend; gated by `/launch-check` §E before any client goes live.
 
 **Stage 5+ — Per-client launch** (repeatable, per client): see §5.
 
