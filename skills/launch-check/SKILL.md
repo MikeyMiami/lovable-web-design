@@ -50,6 +50,7 @@ This skill VERIFIES; it does not build. If a check fails, fix it in the owning s
 
 ## D. Telephony (Twilio Option 1)
 - [ ] One parent account via the connector gateway (fetch, no SDK); per-client From/MessagingServiceSid on the clients row.
+- [ ] **Runner materializes outbound sends into `messages`/`conversations` (3b finding):** when real Twilio replaces the stub, the cron runner must write each outbound drip text into `messages` + bump `conversations.last_message_at` (today the stub logs `sms_sent` to `events` only → drip sends are absent from the Conversations inbox, and missed-call Open-conversation deeplinks land on an empty thread). Extract a shared `insertOutboundMessage({clientId,contactId,body,sid,status})` helper — **admin variant (cron, service-role) + RLS variant (reply, authed)** — reused by both the runner and `reply.functions.ts`. Keep the send primitive (`sendStubSmsWithRetry`) SEND-ONLY; materialization lives in the callers. More than a Twilio API swap.
 - [ ] Inbound + voice-status webhooks at the parent level; route by To → clients row; X-Twilio-Signature verified BEFORE any DB write.
 - [ ] STOP/HELP/START + "pass" opt-out handling wired.
 - [ ] **Inbound webhook drives REAL-TIME drip exits** (not deferred to the next pre-step check): one-year reply → exit + interest notification immediately (gaps are weeks/months — pre-step-only would delay the notification ~a month); missed-call reply-skip; opt-out. (Pre-step checking is the stub-mode fallback only.)
