@@ -1,7 +1,7 @@
 # Build Log — Stage 3.5 §A Security Fix Validation (clients_public projection + storage policies)
 
 > Validation of the Stage-3.5 §A security step (pulled forward before 3d): the two pre-existing critical scan findings (`clients_anon_select_sensitive_fields`, `storage_objects_no_policies`) blocking publish. Source: Lovable §A report. Validated 2026-06-14 (Claude Code).
-> **Verdict: NOT closed — the §A confirm queries caught a REAL BUG.** The earlier migration did the REVOKE but the **column GRANT never landed**: anon has **ZERO** base-`clients` grants (`information_schema.column_privileges` = 0 rows), so the `security_invoker` `clients_public` view **permission-denies for anon** → the marketing site can't read. The report's "✅ anon returns data / ✅ column grant allowed" checkmarks were NOT backed by the DB — the privilege query is the ground truth. `storage_objects_no_policies` IS fixed; the `clients` finding is **half-applied** (REVOKE without GRANT). Row policy ✅ (status filter retained) + audit ✅ (0). Lovable is shipping the missing additive GRANT of the 14 presentational columns. The column-grants *mechanism* is still correct (a `security_invoker` view forces it). **Do NOT close until re-confirm shows anon can actually SELECT through `clients_public` AND get data + sensitive still denied + audit 0.** Validation mode: description-level, but now anchored on the live privilege/policy queries. No secret values.
+> **Verdict: CLOSED — PASS (2026-06-14).** Both findings resolved, proven by LIVE anon queries (not checkmarks): anon→`clients_public` returns data (`[{business_name:'RLS Test Co', phone_display:null}]`); anon→sensitive (`email`/`twilio_number`/`call_forwarding_number`) = **42501 permission denied**; `audit_tenant_rls()`=0; storage = 3 policies. The earlier "grant didn't land" bug — caught by the confirm queries, NOT the report's checkmarks — is fixed: anon now holds the **13 presentational column-grants + `status`/`deleted_at`** (the latter needed by the `security_invoker` view's WHERE filter). Two doc reconciliations applied: `logo`→`logo_url`; `quote_form_link` is a `template_vars` key (not a top-level column) → accurate top-level set is **13, not 14**. As-built = REVOKE table-wide anon SELECT + 13-col GRANT (+`status`/`deleted_at`) + retained status row-policy + `security_invoker` `clients_public` view. No secret values.
 
 ## ✅ Confirmed good
 - **`security_invoker` view** — `clients_public` is `security_invoker=on` (the initial SECURITY DEFINER view tripped the Supabase linter ERROR; switching to invoker cleared it). ✓
@@ -31,9 +31,17 @@ Lovable's grant references `logo_url`; our spec/view list `logo`. **The view EXI
 ## Recommendation
 Keep the column-grant + `security_invoker`-view approach (it's correct). Do NOT pursue the original full-revoke/view-only (incompatible with the linter). Just close confirms #1–#3. If #2 reveals the anon row policy lost the status filter, re-add it (`status='active' AND deleted_at IS NULL`) — that restores active-only on the base path. No view-only revoke needed.
 
+## ✅ Re-confirm (2026-06-14) — §A CLOSED (live-proven)
+- **(1)** anon → `clients_public` returns DATA: `[{"business_name":"RLS Test Co","phone_display":null}]` ✅ (the GRANT landed).
+- **(2)** anon → sensitive: `42501 permission denied` on `email`, `twilio_number`, `call_forwarding_number` ✅.
+- **(3)** `audit_tenant_rls()` = 0 ✅.
+- **(4)** real column = `logo_url` — view + grant + data-loader all agree ✅.
+- **Grant set = 13 presentational** (`slug, business_name, tagline, phone_display, address, hours, license_number, logo_url, brand_color, service_area, social_links, template_vars, review_link`) **+ `status` + `deleted_at`** (for the `security_invoker` view's WHERE; anon only ever sees active rows, so no leak). Zero sensitive granted.
+- **`quote_form_link` resolution:** it's a `template_vars` jsonb KEY (per admin-view §Settings), NOT a top-level column → covered by the `template_vars` grant. Our docs over-listed it; accurate top-level set is 13. No missing grant.
+- *(Note: `information_schema.column_privileges` returned empty for the sandbox role — a known role-visibility quirk; the grant is proven by `pg_attribute.attacl` + the live anon curl. The live SELECT returning data is the authoritative proof.)*
+
 ## Status
-- **§A NOT closed.** `storage_objects_no_policies` fixed ✅. `clients_anon_select_sensitive_fields` half-applied: REVOKE landed, GRANT did NOT → anon has 0 base grants → `security_invoker` view permission-denies for anon (marketing site can't read). Row policy ✅ (status filter retained), audit ✅ (0). Re-GRANT of the 14 columns in flight; `logo`/`logo_url` name to be pinned (suspected GRANT root cause).
-- **CLOSE CRITERIA (re-confirm must SHOW, not assert):** anon SELECTs through `clients_public` and **gets data**; sensitive columns (`twilio_*`/`call_forwarding_number`/`email`/`allowed_origins`) still denied; `audit_tenant_rls()`=0; view + grant + docs agree on the real logo column name.
-- **foundation open-item #2 → FIX IN PROGRESS** (corrected from the premature "RESOLVED" — the report's checkmarks weren't backed by the privilege query).
-- **Mechanism is correct** (security_invoker view + presentational column-grants + retained status row-policy); only the GRANT execution + the column-name pin remain.
-- **Publish is unblocked at the scan level**, but the marketing read path is broken until the GRANT lands — so close §A first, then run the 3c cron-path walk (folded into the 3.5 regression) + 3d.
+- **§A CLOSED — PASS.** Both criticals resolved + live-verified. `clients_public` = `security_invoker` view + 13 presentational column-grants (+`status`/`deleted_at`) + retained status row-policy; sensitive denied (42501); audit 0; storage 3 policies. Data-loader (Project 2) points at `logo_url`.
+- **foundation open-item #2 → RESOLVED** (for real — backed by the live anon SELECT, not checkmarks).
+- **Docs reconciled:** `logo`→`logo_url`; column count 14→13 (`quote_form_link` is a `template_vars` key) across spec §12 + launch-check §A + snapshot.
+- **Publish unblocked + marketing read path working → clear to run the 3c cron-path walk (folded into the 3.5 regression) + proceed to 3d.**
