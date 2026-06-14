@@ -716,7 +716,7 @@ scratch-foundation, features, automation-config, opt-in-forms, chat-widget, mobi
 
 ### LATER / PARKED (non-blocking)
 - **PWA web-push notifications** — superseded by owner email notifications (§7d); revisit if real-time phone push wanted.
-- **Stats label** — DONE: dashboard renamed to "Review Link Clicks" (counts `review_clicked` landings).
+- **Stats label** — DONE: dashboard renamed to "Review Link Clicks" (counts `review_clicked` landings). **Dashboard lead counters SPLIT per channel (3d decision 2026-06-14):** Website Leads (`web_form`) + Chat Leads (`chat_widget`) + Review Link Clicks (`review_clicked`), each week/month, client-tz — replaces the single "New Website Leads". Discount-form folds into `web_form` (Website Leads) unless a distinct `discount_form` source is added. Authoritative def in `/mobile-app` Tab 4.
 
 ### ARCHITECTURE DECISIONS — ALL RESOLVED ✓
 - ~~Copy-strategy~~ RESOLVED (§9c): AI-generated copy steered by 4 style choices; templatized structure. `/website-structure` unblocked (absorbs `/theme-to-brand`).

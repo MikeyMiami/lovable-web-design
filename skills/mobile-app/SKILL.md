@@ -158,16 +158,20 @@ The Open-conversation button deep-links to that contact's thread in the Conversa
 > Email: {email}
 
 ## Tab 4 — Dashboard
-Weekly + monthly stat counters, computed from `events` scoped to this client. Four counters:
+Stat counters scoped to this client (RLS), each shown week + month, computed in the client's timezone. **Lead sources are SPLIT per channel** (so the owner sees each channel's performance separately; future-proofs for more sources). Six counters:
 
-> New Website Leads this week: {count}
-> New Website Leads this month: {count}
+> Website Leads this week: {count}
+> Website Leads this month: {count}
+> Chat Leads this week: {count}
+> Chat Leads this month: {count}
 > Review Link Clicks this week: {count}
 > Review Link Clicks this month: {count}
 
-- **New Website Leads** = count of contacts created with source `web_form` (lead form + discount form) in the period.
+- **Website Leads** = count of contacts with source `web_form` in the period (the public website lead form + the discount-claim form — both use `web_form`).
+- **Chat Leads** = count of contacts with source `chat_widget` in the period (the AI chat widget Request path).
 - **Review Link Clicks** = count of `review_clicked` events in the period (each = a contact landing on `/api/public/r/rate` via their tracked link). Renamed from "New Google Reviews" for accuracy, since landing ≠ a confirmed posted review.
-- "This week" / "this month" computed in the client's timezone.
+- Lead counters read `contacts` (by `source`); Review Link Clicks reads `events`. "This week" / "this month" boundaries are computed in the client's timezone.
+- *(Not counted as lead channels: `mobile_enroll` (owner-entered review requests) + `reactivation` (bulk uploads) — not inbound website/chat leads. Discount-form submissions currently fold into Website Leads via `web_form`; splitting them out would need a distinct `discount_form` source — pending product decision.)*
 
 ---
 
