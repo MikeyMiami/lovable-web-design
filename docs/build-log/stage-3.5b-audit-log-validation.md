@@ -1,0 +1,26 @@
+# Build Log — Stage 3.5 item 1 (audit_log) Validation
+
+> Validation of the role-mutation `audit_log` (Option 3: `user_roles` trigger as sole-writer/completeness-floor + fn-context enrichment via `SET LOCAL` GUC) against the spec §12 `[BUILD — TODO] audit_log` bullet + its DESIGN clause. Source: Lovable build report (with proof rows). Validated 2026-06-15 (Claude Code).
+> **Verdict: audit_log CLOSED — PASS (mechanism proven, all 7 points).** Trigger sole-writer caught both fn-path (actor populated, `source=fn`, reason) and direct-SQL (actor NULL, `source=direct_sql`) at exactly one row each; append-only (immutable for all roles incl service_role); RLS read = is_admin only; never-rolls-back; `SET LOCAL` txn-scoped; backfill row present; `audit_tenant_rls()`=0. **Two confirms carried** — the security-critical one is **1d-matrix retention in the audited RPCs** (audit records WHO granted; the 1d matrix must still restrict WHO-CAN grant — separate concern). Validation mode: description-level + proof rows. No secret values.
+
+## ✅ Validated (the 7 points)
+1. **Double-log / fn-path** — Proof 1 (`assign_user_role_audited`): actor `4efaaa92…` populated, `actor_source='fn'`, reason captured (the real operator via the GUC, NOT the service-role); exactly ONE row. ✓
+2. **Catch-all / direct-SQL** — Proof 2 (raw `INSERT INTO user_roles`): actor NULL, `actor_source='direct_sql'`, ONE row → the trigger caught what a fn-only audit would miss. ✓ (This is the whole point of Option 3.)
+3. **Never-rolls-back** — audit insert wrapped `EXCEPTION WHEN OTHERS THEN NULL`, AFTER trigger returns NULL → the role mutation commits even if the audit write fails. ✓ *(see Minor: prefer RAISE WARNING over silent NULL.)*
+4. **`SET LOCAL` hygiene** — `set_config(…, is_local := true)` → txn-scoped, no pooled-connection cross-attribution. ✓
+5. **Append-only + RLS** — immutability trigger `RAISE EXCEPTION` on UPDATE/DELETE for ALL roles incl `service_role`; RLS read = `is_admin()` (admin + agency_owner; `client_owner` denied); no write policies (trigger is the sole writer). ✓
+6. **Backfill** — row present for the pre-audit test-admin (`4efaaa92…`): actor NULL, `source=direct_sql`, `backfilled=true` → no real admin is unaudited. ✓
+7. **`audit_tenant_rls()`=0** post-migration ✓ (audit_log has no `client_id` → excluded from the tenant scan; migration didn't perturb anything).
+
+## Q — bypass + authorization (the user's question)
+**(a) No unaudited bypass exists — by design.** Even if the OLD `assignUserRole`/`revokeUserRole` somehow persisted and were called, the **trigger is on `user_roles` and fires for ANY mutation** — so the grant would STILL be audited (just with actor NULL / no reason). The trigger-as-sole-writer/completeness-floor means there is **no path to an unaudited grant**. *(Confirm, for context-completeness not completeness: the old DB fns are DROPPED / have zero callers, and `roles.functions.ts` calls only the audited RPCs — so all grants get the rich fn-context, not just a NULL-actor row.)*
+**(b) 🔴 SECURITY MUST-CONFIRM — the 1d authorization matrix is retained in the audited RPCs.** Audit ≠ authz: `audit_log` records *who granted whom* (accountability), but the **1d matrix must still ENFORCE who is ALLOWED to grant** (`client_owner` cannot grant admin/agency_owner; scoped to own `client_id`; only platform-admin grants any). The audited RPCs are presumably `SECURITY DEFINER` (to write `user_roles` + `audit_log`), which **bypasses RLS** — so the matrix check inside the RPC is the ONLY authz gate. **Confirm `assign_user_role_audited`/`revoke_user_role_audited` run the SAME 1d authorization checks (1d matrix) BEFORE the mutation.** If the rename added audit but dropped the matrix → a privilege-escalation hole (anyone could grant admin; it'd just be neatly audited). This is the one that matters most.
+
+## 🟡 Minor (hardening, non-blocking)
+- **Prefer `RAISE WARNING` over silent `THEN NULL`** in the audit EXCEPTION handler. The trigger is the *completeness floor*; if its insert ever silently fails (`THEN NULL`), a mutation goes unaudited with zero visibility — defeating the floor. A simple insert into an unconstrained append-only table should ~never fail, so this is belt-and-suspenders, but for a security control a **logged** drop (`RAISE WARNING 'audit_log write failed: %', SQLERRM`) beats an invisible one (same availability — the mutation still commits — but a dropped audit is at least monitorable).
+
+## Status
+- **audit_log CLOSED — PASS.** Mechanism proven across all 7 points; Option-3 design as spec'd.
+- **GATE — partially satisfied:** *"before any real admin/agency_owner grant, audit_log is live"* → **YES, audit is live + complete** (no unaudited path). BUT the grant path is only fully safe once **the 1d matrix is confirmed retained** in the audited RPCs (audit + authz are co-requirements). **Do not grant real admin/agency_owner until that's confirmed.**
+- **2 confirms:** 1d-matrix retention (security, blocking the "safe to grant" claim) + old-fn drop/no-callers (context). **1 minor:** WARNING-not-silent-NULL.
+- **Remaining Stage 3.5:** item 2 **export-client** (guardrail 3) · item 3 **regression re-test** (runner-renders-real-bodies full drip set + send-primitive + `runner_version`). Then `/launch-check` A–D green → Stage 4 freeze.
