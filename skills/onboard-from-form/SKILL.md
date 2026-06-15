@@ -23,10 +23,10 @@ Takes the §9b onboarding inputs (owner-filled + agency-set) and writes them int
 | Official Business Name (req) | `clients.business_name` + `template_vars.company_name` |
 | Tax ID / EIN | AGENCY-OPS ONLY — captured on the form, used by the agency for A2P registration (a manual Twilio process); NOT stored in the app DB (no feature reads it; no column). |
 | Current website link | `template_vars.company_website_link` + AI-knowledge source |
-| About Us (3–5 sentences, req) | site copy + AI-knowledge |
+| About Us (3–5 sentences, req) | `template_vars.about_us` → site copy + AI-knowledge bundle |
 | Top location + service areas (MAX 14) | `clients.service_area` (text[]) + site copy + AI-knowledge |
-| All services offered (req) | site copy + **AI chat-widget knowledge** |
-| Special things / differentiators | site copy + AI-knowledge |
+| All services offered (req) | `template_vars.services` → site copy + **AI chat-widget knowledge** |
+| Special things / differentiators | `template_vars.differentiators` → site copy + AI-knowledge bundle |
 | Hours of operation (req) | site + `send_settings.business_hours` (lead-form branching, §7) |
 | Social links (IG/FB/BBB/TikTok/Yelp, if applicable) | `clients.social_links` jsonb **[ADD column]** ({instagram, facebook, bbb, tiktok, yelp}; missing keys simply absent) → site footer/contact |
 | Full shipping address (req, no PO box) | AGENCY-OPS ONLY — used to mail business cards; NOT stored in the app DB (distinct from `clients.address`, which is the display address; no feature reads shipping). |
@@ -51,12 +51,12 @@ Takes the §9b onboarding inputs (owner-filled + agency-set) and writes them int
 | Sending subdomain / DKIM | **NOT created in v1** — `sending_subdomain`/`dkim_status` deferred (owner emails use ONE platform-level agency sender, not per-client domains); `ADD COLUMN` later only if per-client email is built |
 
 ## template_vars — the single source for merge values [LOCKED]
-All per-client merge values live in `clients.template_vars` (jsonb), NOT as dedicated columns. Required keys to populate at onboarding: `company_owner_first_name`, `company_name`, `company_website_link`, `review_request_link`, `discount__on_referral`, `discount_amount`, `quote_form_link`, `website_terms_page_link`. (review_request_link is the client's own direct Google review link, distinct from the per-contact tracked `review_link`.) Validate ALL required keys are present before the client goes live — missing keys render blank silently in messages.
+All per-client merge values live in `clients.template_vars` (jsonb), NOT as dedicated columns. Required keys to populate at onboarding: `company_owner_first_name`, `company_name`, `company_website_link`, `review_request_link`, `discount__on_referral`, `discount_amount`, `quote_form_link`, `website_terms_page_link`, `about_us`, `services`, `differentiators` (the last three are the AI-knowledge content fields — F-complete Option A, anon-safe public content). (review_request_link is the client's own direct Google review link, distinct from the per-contact tracked `review_link`.) Validate ALL required keys are present before the client goes live — missing keys render blank silently in messages.
 
 **SECURITY [LOCKED]:** `template_vars` is **ANON-READABLE** — it is one of the 13 columns in the §A `clients_public` projection (the marketing site reads merge values from it). So it holds **anon-safe merge values ONLY** — NEVER owner PII (notification email), secrets, or internal config. Owner-PII config (notification recipient email, etc.) belongs in a **dedicated `clients` column EXCLUDED from `clients_public`** (same posture as `clients.email` / `call_forwarding_number`). *(3g initially put `notification_email` in `template_vars` — must move out; see `stage-3g-validation.md` F-pii.)*
 
 ## AI chat-widget knowledge bundle (§7e dependency)
-The chat widget answers FAQs from the onboarding data. Assemble a retrieval bundle from: About Us, all services (detailed), service areas, hours, special/differentiators, business identity, + the client's website content. Store it where the §7e widget can load it as model context at chat time. This is the concrete resolution of §7e's "knowledge inputs."
+The chat widget answers FAQs from the onboarding data. **Storage [PINNED — F-complete Option A, 2026-06-15]:** the knowledge content lives as `template_vars` keys — `about_us`, `services`, `differentiators` (+ `service_area` column, hours) — all anon-safe public content. `src/lib/chat/knowledge.server.ts` iterates the full `template_vars` JSONB into the system prompt, so these are picked up automatically (no per-key consumer wiring). The retrieval bundle = those keys + business identity + site content. This is the concrete resolution of §7e's "knowledge inputs."
 
 ## Build notes
 - All writes via the admin (service-role) client in a server function — never owner-direct-to-DB. Zod-validate inputs.

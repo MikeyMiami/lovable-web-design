@@ -9,7 +9,7 @@ A corner chat widget on the client's marketing site. A Lovable-native AI answers
 
 ## AI model & knowledge
 - **Model:** Lovable's native/built-in AI (no third-party API). NOT per-client fine-tuning — **retrieval**: the client's business info is given to the model as context at chat time.
-- **Knowledge bundle [from `/onboard-from-form`]:** About Us, services (detailed), service areas, hours, special/differentiators, business identity + the client's website content. Answer quality = onboarding data captured. Load this bundle as model context for every chat.
+- **Knowledge bundle [from `/onboard-from-form`]:** About Us, services (detailed), service areas, hours, special/differentiators, business identity + the client's website content. **Stored as anon-safe `template_vars` keys** (`about_us`, `services`, `differentiators`, + `service_area`/hours) — F-complete Option A; `knowledge.server.ts` iterates the full `template_vars` into the system prompt (auto-picks up all keys). Answer quality = onboarding data captured. Load this bundle as model context for every chat.
 
 ## Opt-in gate [LOCKED]
 - Widget opens: **"What do you need help with?"** → two options: **Question** and **Request Services / Contact Us**.
