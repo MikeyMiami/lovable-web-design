@@ -14,6 +14,7 @@ Merge keys:
 - Dynamic (not template_vars): `message.body`, `request_time` (client tz), `full_name`, `your_message`, `caller_phone`, `call_time` (client tz), `feedback_message`, `email`.
 - Naming: `{first_name}` customer-facing; `{full_name}` internal notifications.
 - Formatting standard: internal notifications + emails stack details (Name / Phone / Message) on separate lines — never inline.
+- **Runtime resolution [LOCKED]:** at send time the cron runner resolves each SMS step's `templateKey` from `public.templates` via the SHARED `resolveTemplate(client_id, key)` — the SAME resolver the 2c notification dispatcher uses — **client override preferred, global fallback** (`.or(client_id.eq.X, client_id.is.null)` → prefer `client_id===X`), then renders with the merge keys above (incl. the per-contact tracked `review_link`). The runner must NOT emit a hardcoded/`step.body` literal. *(Was missing pre-3f — the runner emitted `[stub] <key>`; corrected in the Stage-3.5 pre-freeze must-fix. The SMS body templates must be seeded as global rows for every step `templateKey`.)*
 
 ---
 
