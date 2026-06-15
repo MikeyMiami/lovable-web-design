@@ -1,7 +1,7 @@
 # Build Log — Stage 3d Validation (Dashboard tab — split lead counters)
 
 > Validation of Stage 3d (mobile Tab 4: six counters — Website Leads `web_form`, Chat Leads `chat_widget`, Review Link Clicks `review_clicked`, each week/month, client-tz, RLS-scoped) against `skills/mobile-app` Tab 4 + the Stage-3 isolation requirements. Source: Lovable 3d report. Validated 2026-06-14 (Claude Code).
-> **Verdict: PASS (logic) — NOT closed; closing gate = the SEEDED boundary walk.** The report validated all six counters at **0/0** (this client has no `web_form`/`chat_widget`/`review_clicked` rows — its contacts are `source='manual'`, events are `sms_sent`/`cron_decision`/`notification_written`). That proves **query-returns-zero**, not **counts-correctly**. tz/RLS/source logic is sound; the discriminating boundary test is the real proof. Validation mode: description-level. No secret values.
+> **Verdict: CLOSED — PASS (2026-06-14).** Six counters (Website `web_form` / Chat `chat_widget` / Review Link Clicks `review_clicked`, each week/month), RLS-scoped via the browser client, client-tz boundaries. tz logic sound (DST-safe `fromZonedTime`, ISO Monday-start, sound timestamptz comparison, matches `date_trunc`); **boundary proof passed** — seeded `03:00Z` (Sun 23:00 NY) row correctly EXCLUDED from "this week" → cutoff is NY 04:00Z, not UTC. Both logic flags resolved: **F-tz-null** (null/malformed tz → UTC fallback, try/catch, header shows "Timezone: UTC" — no crash); **F-clicks-semantics** (counter = TOTAL CLICKS per-landing; `review_clicked` inserted per landing, `tracked_links.clicked_at` stays first-click-only per 2b). Validation mode: description-level. No secret values.
 
 ## ✅ Validated (logic)
 
@@ -14,16 +14,15 @@
 - *DST nuance (on record, not a gap):* neither a `02:00Z` nor `03:00Z` row distinguishes correct EDT (UTC-4) from a buggy fixed EST (UTC-5) — both exclude rows `< 04:00Z`. The DST dimension is covered instead by (a) `fromZonedTime` being per-date offset-aware by construction + (b) the verified `weekStart=04:00:00Z` (EDT offset applied for this date). A belt-and-suspenders DST test would be a winter-date (EST → 05:00Z cutoff) check — NOT required to close 3d.
 - *(Assumes the walk also showed the in-period non-zero seeds matching a hand-run SQL count — the basic counts-correctly check.)*
 
-## 🟥 Remaining before close — the 2 logic flags (Lovable closing)
-3d closes once these land (NOT covered by the boundary walk):
-1. **F-tz-null** — null/missing `send_settings.timezone` must NOT crash (`Intl.DateTimeFormat` RangeError); needs a fallback/empty-state.
-2. **F-clicks-semantics** — confirm `review_clicked` is written per-landing vs per-first-click (counter = clicks vs clickers) and mirrors 2b's idempotent `clicked_at` stamp.
+## ✅ The 2 logic flags — RESOLVED (2026-06-14)
+1. **F-tz-null — FIXED.** null/empty tz → "UTC" fallback; the `Intl.DateTimeFormat` probe is wrapped in try/catch so a malformed IANA string also falls back to UTC (no RangeError/crash); the header shows "Timezone: UTC" so the fallback is visible.
+2. **F-clicks-semantics — CONFIRMED (intentional).** Counter = **TOTAL CLICKS (per-landing)** — `events('review_clicked')` inserts unconditionally per landing; `tracked_links.clicked_at` stays first-click-only (the 2b funnel-state stamp for drip-exit/dedupe, untouched). Consistent with 2b. `/mobile-app` Tab 4 wording updated to "TOTAL CLICKS (per-landing, not unique clickers)".
 
 ## 🟡 Flags (logic — non-blocking)
 - **F-tz-null (defensive): null/missing `send_settings.timezone`.** If `maybeSingle()` returns null or `timezone` is null, `periodBoundsUtc(tz)` feeds an invalid `timeZone` to `Intl.DateTimeFormat` → RangeError → the Dashboard crashes. Every properly-onboarded client has a tz (required field), so low-risk, but add a fallback (client default / UTC) or a clear empty-state rather than a throw. Confirm in the seeded walk that a tz is resolved.
 - **F-clicks-semantics (really a 2b question): does `review_clicked` write per-landing or per-first-click?** "Review Link Clicks" counts `review_clicked` events; if the funnel route writes one per landing, repeat opens inflate the counter (total clicks); if idempotent (first-click only), it's unique clickers. Either is defensible — just confirm it's intentional (the 2b route stamps `clicked_at` idempotently; confirm the EVENT mirrors that). Not a 3d bug (3d faithfully counts the rows that exist).
 
 ## Status
-- **3d PASS (logic) + boundary proof SATISFIED — NOT closed; pending only the 2 flag-fixes.** RLS ✓, tz boundary logic ✓ (DST-safe, ISO Monday-start, sound timestamptz comparison, matches `date_trunc`), sources/event-type ✓; the seeded `03:00Z` boundary row was correctly EXCLUDED from "this week" → tz-cutoff proven (NY 04:00Z, not UTC). `02:00Z` is the same discriminator → redundant, no second walk.
-- **Closes once both land (Lovable):** F-tz-null (null/missing tz must not crash → fallback/empty-state); F-clicks-semantics (`review_clicked` per-landing vs per-first-click; mirror 2b's idempotent `clicked_at`).
-- On those, 3d closes → **Stage 3 tabs complete (3a–3d) + §A**, leaving the **Stage-3.5 cleanup** (audit_log, export-client, 3a send-primitive regression re-test incl. the runner materialization re-confirm) before the Stage-4 freeze.
+- **3d CLOSED — PASS.** Six counters, RLS-scoped, client-tz; tz boundary proof passed (03:00Z row excluded → NY-cutoff); both flags resolved (F-tz-null → UTC fallback; F-clicks-semantics = total clicks per-landing, `/mobile-app` Tab 4 reworded).
+- **Stage 3 tabs 3a–3d ✅ + §A ✅.** Still PENDING in Stage 3 (the renumber SHIFTED these, did NOT fold them): **3e** — admin shell + Dashboard/Contacts/Conversations/Feedback; **3f** — admin Automations + Upload Customers; **3g** — Settings. (All `/admin-view`.)
+- **Then Stage 3.5 cleanup** (audit_log; export-client / guardrail-3; the 3a send-primitive regression re-test incl. the runner-materialization re-confirm) → **Stage 4 freeze**.

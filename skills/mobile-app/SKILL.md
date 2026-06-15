@@ -169,7 +169,7 @@ Stat counters scoped to this client (RLS), each shown week + month, computed in 
 
 - **Website Leads** = count of contacts with source `web_form` in the period (the public website lead form + the discount-claim form — both use `web_form`).
 - **Chat Leads** = count of contacts with source `chat_widget` in the period (the AI chat widget Request path).
-- **Review Link Clicks** = count of `review_clicked` events in the period (each = a contact landing on `/api/public/r/rate` via their tracked link). Renamed from "New Google Reviews" for accuracy, since landing ≠ a confirmed posted review.
+- **Review Link Clicks** = count of `review_clicked` events in the period = **TOTAL CLICKS (per-landing, not unique clickers)** — `review_clicked` is inserted unconditionally per landing on `/api/public/r/rate`; `tracked_links.clicked_at` stays first-click-only (the 2b funnel-state stamp for drip-exit/dedupe). Renamed from "New Google Reviews" for accuracy, since landing ≠ a confirmed posted review.
 - Lead counters read `contacts` (by `source`); Review Link Clicks reads `events`. "This week" / "this month" boundaries are computed in the client's timezone.
 - *(Not counted as lead channels: `mobile_enroll` (owner-entered review requests) + `reactivation` (bulk uploads) — not inbound website/chat leads. Discount-form submissions currently fold into Website Leads via `web_form`; splitting them out would need a distinct `discount_form` source — decided 2026-06-14: fold into Website Leads; revisit only on client demand.)*
 
