@@ -53,6 +53,8 @@ Takes the §9b onboarding inputs (owner-filled + agency-set) and writes them int
 ## template_vars — the single source for merge values [LOCKED]
 All per-client merge values live in `clients.template_vars` (jsonb), NOT as dedicated columns. Required keys to populate at onboarding: `company_owner_first_name`, `company_name`, `company_website_link`, `review_request_link`, `discount__on_referral`, `discount_amount`, `quote_form_link`, `website_terms_page_link`. (review_request_link is the client's own direct Google review link, distinct from the per-contact tracked `review_link`.) Validate ALL required keys are present before the client goes live — missing keys render blank silently in messages.
 
+**SECURITY [LOCKED]:** `template_vars` is **ANON-READABLE** — it is one of the 13 columns in the §A `clients_public` projection (the marketing site reads merge values from it). So it holds **anon-safe merge values ONLY** — NEVER owner PII (notification email), secrets, or internal config. Owner-PII config (notification recipient email, etc.) belongs in a **dedicated `clients` column EXCLUDED from `clients_public`** (same posture as `clients.email` / `call_forwarding_number`). *(3g initially put `notification_email` in `template_vars` — must move out; see `stage-3g-validation.md` F-pii.)*
+
 ## AI chat-widget knowledge bundle (§7e dependency)
 The chat widget answers FAQs from the onboarding data. Assemble a retrieval bundle from: About Us, all services (detailed), service areas, hours, special/differentiators, business identity, + the client's website content. Store it where the §7e widget can load it as model context at chat time. This is the concrete resolution of §7e's "knowledge inputs."
 
