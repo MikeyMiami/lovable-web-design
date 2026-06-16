@@ -58,9 +58,9 @@ Verify: a public form POST from an allowed origin succeeds; from a non-allowed o
 
 Verify: cron fires on schedule; hitting the endpoint without the secret is rejected; a test enrollment advances correctly; blocked sends reschedule without skipping a step.
 
-### 1f. Twilio Option 1 wiring
-1. Connector gateway (fetch, no SDK); outbound with per-client From/MessagingServiceSid.
-2. Inbound + voice-status webhooks at the parent; route by To→clients row; X-Twilio-Signature verify BEFORE any DB write.
+### 1f. Messaging-provider (TextGrid) wiring + net-new inbound webhooks
+1. Provider (TextGrid) API (fetch, no SDK); outbound with per-client From/MessagingServiceSid (caller-resolved; send primitive SEND-ONLY).
+2. Inbound + voice-status webhooks (NET-NEW; per-client subaccount routes — don't exist in the frozen master); route by To→clients row; X-TextGrid-Signature verify BEFORE any DB write.
 3. STOP/HELP/START + `pass` opt-out handling.
 
 Verify: `/launch-check` section D — webhooks verify signature, route by To, opt-out works.

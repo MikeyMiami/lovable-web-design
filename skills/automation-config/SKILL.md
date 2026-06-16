@@ -200,7 +200,7 @@ Then ends.
 ---
 
 ## Drip 5 — Missed-Call Textback
-Fires 24/7 (live call; not gated by send window or Business Hours). Trigger: Twilio call status `busy`/`no-answer`/`canceled`/`failed` (literal Twilio strings; voicemail reports as `completed` and does NOT fire). Re-eligibility: fires only if this contact (client_id + phone) has NOT received a missed-call textback in the last 7 days (boundary = 7 days from the last send). Wait 1 min → SMS #1 + internal notification → wait 2 min → SMS #2 only if no reply.
+Fires 24/7 (live call; not gated by send window or Business Hours). Trigger: provider (TextGrid) call status `busy`/`no-answer`/`canceled`/`failed` (Twilio-API-compatible literal status strings; voicemail reports as `completed` and does NOT fire). Re-eligibility: fires only if this contact (client_id + phone) has NOT received a missed-call textback in the last 7 days (boundary = 7 days from the last send). Wait 1 min → SMS #1 + internal notification → wait 2 min → SMS #2 only if no reply.
 
 **SMS #1 (after 1-min wait):**
 > Hey, sorry I missed you! I'll get back to you as soon as possible!

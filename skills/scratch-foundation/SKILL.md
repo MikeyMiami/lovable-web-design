@@ -5,10 +5,10 @@ description: Use when building or rebuilding the shared multi-tenant backend cor
 
 # Scratch Foundation — the shared multi-tenant backend core
 
-Builds the ONE shared multi-tenant backend (the golden master) from nothing, deterministically, in a fixed order. Run this FIRST. Every client lives in this one backend, scoped by `client_id` + RLS. Never regenerated per client. Validated against Lovable's environment (one-shared-backend, server-fn public writes, Twilio one-parent-account, pg_cron drip runner).
+Builds the ONE shared multi-tenant backend (the golden master) from nothing, deterministically, in a fixed order. Run this FIRST. Every client lives in this one backend, scoped by `client_id` + RLS. Never regenerated per client. Validated against Lovable's environment (one-shared-backend, server-fn public writes, messaging-provider (TextGrid) agency-master + per-client-subaccount, pg_cron drip runner).
 
 ## Stack invariants
-TanStack Start v1 (React 19, Vite 7), SSR on Cloudflare Workers — **pure JS + fetch, no native/Node-only deps** (this rules out the Twilio SDK; use fetch). Lovable Cloud / Supabase (Postgres + Auth + RLS + Storage). Server logic via `createServerFn` + routes under `src/routes/api/public/*` (these bypass the auth gate — used for webhooks + public form intake + cron). Phones stored E.164. Naming: `{first_name}` customer-facing, `{full_name}` internal.
+TanStack Start v1 (React 19, Vite 7), SSR on Cloudflare Workers — **pure JS + fetch, no native/Node-only deps** (this rules out the Twilio/TextGrid SDK; use fetch). Lovable Cloud / Supabase (Postgres + Auth + RLS + Storage). Server logic via `createServerFn` + routes under `src/routes/api/public/*` (these bypass the auth gate — used for webhooks + public form intake + cron). Phones stored E.164. Naming: `{first_name}` customer-facing, `{full_name}` internal.
 
 ## Build order (deterministic)
 1. Extensions + schema (tables) → 2. SECURITY DEFINER helpers → 3. RLS policies + indexes → 4. The three Supabase clients → 5. Auth/roles bootstrap → 6. Server-fn + public-route skeleton (incl. CORS) → 7. Cron drip-runner skeleton → 8. Storage buckets → 9. Runtime secrets. Do them in this order; later steps depend on earlier ones.
@@ -50,7 +50,7 @@ Create as `SECURITY DEFINER`, `STABLE`, `set search_path = public`:
 RLS on EVERY table. Patterns:
 - **Tenant tables:** `client_id IN (SELECT user_client_ids((SELECT auth.uid())))`. Wrap `auth.uid()` as `(SELECT auth.uid())` so Postgres treats it as an InitPlan (evaluated once per query, not per row) — the single biggest perf win at scale.
 - **Admin override:** combine into ONE permissive policy per action per table: `is_admin((SELECT auth.uid())) OR client_id IN (SELECT user_client_ids((SELECT auth.uid())))`. Do NOT create multiple permissive policies for the same action (they OR and each runs).
-- **`clients` anon read:** anon may SELECT only PUBLIC columns of `clients WHERE status='active'` (slug, business identity, branding, template_vars, review_link, quote_form_link). Twilio fields are non-secret but need not be anon-exposed — scope the anon SELECT to the public columns the marketing site needs. NO secret columns exist on the row (parent Twilio token is a runtime secret).
+- **`clients` anon read:** anon may SELECT only PUBLIC columns of `clients WHERE status='active'` (slug, business identity, branding, template_vars, review_link, quote_form_link). Provider (TextGrid) fields are non-secret but need not be anon-exposed — scope the anon SELECT to the public columns the marketing site needs. NO secret columns exist on the row (the master-account auth token is a runtime secret).
 - **NO anon INSERT/UPDATE/DELETE anywhere.** All public writes go through server functions (§6).
 
 **Isolation guardrail 1 — RLS audit gate [LOCKED]:** ship a test/CI assertion that scans `information_schema` + `pg_policies` and **FAILS** if any tenant table (any table with a `client_id` column) has no RLS policy, OR has a policy whose `USING`/`WITH CHECK` lacks a `client_id` membership check (`client_id IN (SELECT user_client_ids(...))` or `is_admin(...)`). This turns cross-client leak risk from a runtime accident into a build-time gate — no tenant table can ship without tenant scoping. Run it as part of `/launch-check` section A.
@@ -75,7 +75,7 @@ Supabase Auth. On signup/invite, write the user's role into `user_roles` (agency
 - Validate every field with **Zod** (min/max, regex, enum). Resolve `client_id` from the public **slug** (never trust a client_id from the caller). Insert via the **admin (service-role)** client. Set `source` server-side (CHECK-constrained column).
 - **CORS:** public lead-intake routes are called cross-origin from the Remixed marketing domains. Provide a shared `withCors()` helper: emit `Access-Control-Allow-Origin` (from the client's `allowed_origins` allowlist — NOT `*` in production), handle `OPTIONS` preflight, allow `Content-Type`. Apply **rate-limiting + Turnstile/hCaptcha** on these routes. The anon key is NOT a security boundary here — Zod + allowlist + bot-protection are.
 - **Isolation guardrail 4 — CORS/allowlist resolver [LOCKED]:** the `client_id` for a public write is resolved SERVER-SIDE from the request's Origin/Host → matched against `clients.allowed_origins` (or the public slug in the route) — **NEVER taken from the request body.** A caller cannot forge another tenant's `client_id`. The resolver returns the matched `client_id` (and rejects unknown origins); the server fn uses that, ignoring any client_id in the payload.
-- **Webhook + cron routes** (`/api/public/twilio/*`, `/api/public/cron/*`) are server-to-server → NO CORS. They get signature/secret checks instead (§7, Twilio).
+- **Webhook + cron routes** (`/api/public/twilio/*`, `/api/public/cron/*`) are server-to-server → NO CORS. They get signature/secret checks instead (§8, provider/TextGrid signature).
 
 ## 7. Cron drip-runner skeleton
 **pg_cron + pg_net** hitting `/api/public/cron/sequences` every 1–5 min (no native scheduler / Cloudflare Cron in this stack). Protect the route with a **shared secret**: check `process.env.CRON_SECRET` against an `x-cron-secret` header (NOT the anon key — that leaks to every marketing site). pg_cron passes the header via `net.http_post`'s headers arg.
@@ -85,20 +85,20 @@ Runner shape (per tick):
 - Group by `client_id`; load `send_settings` + overrides.
 - For each enrollment, evaluate throttle (SMS send window 9–7 client tz, daily_send_cap, per-sequence pacing like reactivation's 2/20min — all counted from `events`):
   - **Blocked** → set `next_run_at = nextEligibleSlot()` and **do NOT advance `current_step`** (never drop/skip a step). If blocked by daily_cap or batch pacing, break this client's loop (defer the rest).
-  - **Allowed** → render template → send via Twilio (§ below) → insert `message` + `event('sms_sent')` → advance `current_step`, set `next_run_at = now() + step.offsetMinutes` (gap to the NEXT step; `offsetMinutes` absent = terminal → `status='completed'`, distinct from `0` = next step immediately due — see the sequences-table note). The pre-first-step delay is `start_delay_minutes`, applied at ENROLLMENT, never here. (+ any terminal action, e.g. §4 final notification).
-- Twilio errors: 5xx → reschedule with jitter; 4xx (bad number) → `status='failed'`. Send-layer retries failed sends up to 2× before marking failed (the GHL "max retries" equivalent).
+  - **Allowed** → render template → send via the messaging provider (TextGrid) (§ below) → insert `message` + `event('sms_sent')` → advance `current_step`, set `next_run_at = now() + step.offsetMinutes` (gap to the NEXT step; `offsetMinutes` absent = terminal → `status='completed'`, distinct from `0` = next step immediately due — see the sequences-table note). The pre-first-step delay is `start_delay_minutes`, applied at ENROLLMENT, never here. (+ any terminal action, e.g. §4 final notification).
+- Provider (TextGrid) errors: 5xx → reschedule with jitter; 4xx (bad number / opted-out) → `status='failed'`. Send-layer retries failed sends up to 2× before marking failed (the GHL "max retries" equivalent).
 - **Log every decision** into `events` (sent / blocked-window / blocked-cap / blocked-batch / rescheduled) for observability.
 
 **Isolation guardrail 2 — per-client fairness [LOCKED]:** the runner already orders by `client_id` and groups by client. Make fairness explicit so one large client can't starve others within a bounded tick: **round-robin across clients** (process one batch-slice per client per tick, cycling clients) rather than draining all of one client's due enrollments first. Combined with the existing "break this client's loop on cap" rule, this guarantees every active client gets serviced each tick regardless of how many enrollments a single big client has queued. Fairness is enforced at BOTH layers: the CLAIM uses a per-client window (`row_number() PARTITION BY client_id <= K`) so the batch itself is balanced, and the processing loop round-robins one enrollment per client per pass (PER_CLIENT_SLICE cap). The claim-level window is what actually prevents cross-tick starvation — round-robin over a batch monopolized by one client (bare `ORDER BY client_id LIMIT 500`) does not.
 
 Enrollment caps (e.g. reactivation 50/day) are enforced at the **enrollment-creation server fn** (count today's enrollments for that client+sequence before inserting), NOT at send time.
 
-## 8. Twilio integration (Option 1 — one parent account)
-**One parent Twilio account**, wired via Lovable's connector gateway (`connector-gateway.lovable.dev/twilio/...`, **fetch + URLSearchParams, NOT the SDK** — SDK pulls Node deps that break on Workers). Per-client `From` / `MessagingServiceSid` come from the `clients` row (non-secret). The ONLY Twilio secret is the parent auth token (a runtime secret).
+## 8. Messaging-provider integration (TextGrid — agency master account + per-client subaccounts)
+**One agency master messaging-provider (TextGrid) account** with **per-client subaccounts** (subaccount → Brand → Campaign → number). Reached via the provider API with **fetch + URLSearchParams, NOT the SDK** (SDK pulls Node deps that break on Workers); exact base path/transport in `skills/textgrid-provider`. Per-client `From` / `MessagingServiceSid` come from the `clients` row (non-secret). The master-account auth token is the only platform secret (a runtime secret); per-client subaccount creds live in the additive `provider_*` columns (1f). *(The send path is a STUB in the frozen master; the real provider swap is 1f.)*
 - **Outbound:** gateway POST to `/Messages.json` with the per-client `From`/`MessagingServiceSid`.
-- **Inbound SMS** (`/api/public/twilio/inbound`) + **voice-status** (`/api/public/twilio/voice-status`): ONE set of webhook URLs at the parent level. **Verify `X-Twilio-Signature` (HMAC-SHA1 over URL + sorted POST params, parent auth token) BEFORE any DB write** — these routes have no auth gate. Resolve the client by the `To` number → `clients` row.
+- **Inbound SMS** (`/api/public/twilio/inbound`) + **voice-status** (`/api/public/twilio/voice-status`) **[1f — NET-NEW, not in the frozen master]**: per-client subaccount webhook routes (provider = TextGrid). **Verify `X-TextGrid-Signature` (HMAC-SHA1 over URL + sorted POST params, per-client `provider_webhook_secret`) BEFORE any DB write** — these routes have no auth gate. Resolve the client by the `To` number → `clients` row.
 - STOP/UNSUBSCRIBE/CANCEL/END/QUIT + **`pass`** (whole-word) → set `opted_out_at`, cancel active enrollments, send confirmation. HELP/INFO → info reply. START/YES/UNSTOP → opt back in.
-- (Option 2, BYO-Twilio, NOT v1: per-client accountSid/authToken in a server-only `client_secrets` table, bypassing the gateway. Reserved.)
+- (Option 2, BYO-provider/BYO-Twilio, NOT v1: per-client accountSid/authToken in a server-only `client_secrets` table. Reserved.)
 
 ## 9. Storage buckets
 - **public-assets** (public read) — client logos, hero images the marketing sites display.
@@ -106,8 +106,8 @@ Enrollment caps (e.g. reactivation 50/day) are enforced at the **enrollment-crea
 
 ## 10. Runtime secrets (never on a row, never anon-reachable)
 - `CRON_SECRET` (x-cron-secret header check).
-- Parent Twilio auth token.
-- (NO `client_secrets` table in v1 — Option-2/BYO-Twilio only.)
+- Master-account messaging-provider (TextGrid) auth token.
+- (NO `client_secrets` table in v1 — Option-2/BYO-provider/BYO-Twilio only.)
 
 ## 11. Tenant lifecycle (isolation guardrail 3)
 - **Export-client server fn [LOCKED]:** a service-role server fn that, given a `client_id`, runs `SELECT ... WHERE client_id = $1` across every tenant table (contacts, conversations, messages, enrollments, events, review_feedback, send_settings, notifications) and returns a JSON/CSV bundle. This is the offboarding/portability tool — write once, reuse forever. Makes "a client wants their data" or "hand a client off to their own backend" a one-call operation, which is what makes the shared-backend model safe to leave.
@@ -121,7 +121,7 @@ Enrollment caps (e.g. reactivation 50/day) are enforced at the **enrollment-crea
 - [ ] `enrollments` UNIQUE (client_id, contact_id, sequence_key).
 - [ ] Partial index `enrollments(next_run_at) WHERE status='active'` + the client_id index set.
 - [ ] Cron: bounded batch, FOR UPDATE SKIP LOCKED, reschedule-without-advancing, jitter/fail handling, 2× send retry, decision logging, CRON_SECRET header.
-- [ ] Twilio via fetch/gateway, signature-verify-before-write, route by To, per-client From/SID from row, parent token as secret.
+- [ ] Provider (TextGrid) via fetch (no SDK), signature-verify-before-write, route by To, per-client From/SID from row, master token as secret, per-client subaccount creds in provider_* cols.
 - [ ] Two storage buckets (public-assets / client-assets).
 - [ ] soft-delete `deleted_at` on contacts/clients; `events.created_by`.
 - [ ] All caps/dedupe/throttle read `events`; sends write `events` in live AND stub mode.

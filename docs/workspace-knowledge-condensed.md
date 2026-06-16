@@ -33,7 +33,7 @@ TanStack Start v1 (React 19 + Vite 7), SSR, Cloudflare Workers (pure JS + fetch,
 - Enums are real Postgres ENUMs (need `ALTER TYPE ADD VALUE`). Add: `contact_status` += review_completed, negative_review, reactivation; `contact_source` += chat_widget, mobile_enroll. All values lowercase_snake.
 - `timezone` lives on `send_settings` (not clients). Merge values live in `template_vars` (e.g. `review_request_link`), not as columns.
 - Soft-delete `deleted_at` on contacts/clients. `events.created_by`. Partial index `enrollments(next_run_at) WHERE status='active'`.
-- NO `client_secrets` table in v1 (reserved for Option-2 BYO-Twilio only).
+- NO `client_secrets` table in v1 (reserved for Option-2 BYO-provider/BYO-Twilio only).
 
 ## Send timing [LOCKED]
 - Marketing/follow-up SMS (review, one-year, reactivation): only **9am–7pm client tz** (SMS Send Window). Outside → defer to 9am next day, preserve order.
@@ -44,7 +44,7 @@ TanStack Start v1 (React 19 + Vite 7), SSR, Cloudflare Workers (pure JS + fetch,
 
 ## External dependencies [CONFIRMED]
 - **Email (owner notifications):** Lovable native transactional, ONE platform agency sender (NS-delegated domain, `notify@myagency.com`), ~120/min. NOT per-client. Needs Lovable Cloud.
-- **Twilio Option 1:** ONE parent account via connector gateway (fetch, NO SDK). Per-client From/MessagingServiceSid (non-secret, on `clients`); parent auth token = runtime secret. Inbound + voice-status webhooks at parent, route by `To`. Verify `X-Twilio-Signature` BEFORE any DB write.
+- **Messaging provider = TextGrid** (Twilio-API clone; fetch, NO SDK): agency master account → **per-client subaccount → Brand (client EIN) → Campaign → number**; each vets independently per-client (~2–4 days). Per-client From/MessagingServiceSid (non-secret, on `clients`, column names retained); master auth token = runtime secret; per-client `provider_webhook_secret` for webhook verification. **Inbound + voice-status webhooks are NET-NEW at 1f** (do NOT exist in the frozen master): per-client subaccount routes under `/api/public/*`, route by `To`, verify **`X-TextGrid-Signature`** BEFORE any DB write. Outbound `from` is caller-resolved; the send primitive stays SEND-ONLY.
 - **AI chat widget:** Lovable AI Gateway `https://ai.gateway.lovable.dev/v1`, auth `LOVABLE_API_KEY` (ambient server runtime, never browser), model `google/gemini-3-flash-preview`. Streaming chat → `src/routes/api/chat.ts` (AI SDK `streamText`/`toUIMessageStreamResponse`, client `useChat`); one-shot → `createServerFn`. Knowledge = per-request system-prompt injection. Handle 429/402.
 - **Google:** NO OAuth/API — stored strings only (`review_link`, `review_place_id`).
 - **Storage:** Supabase `public-assets` (public-read), `client-assets` (private, client_id-scoped).

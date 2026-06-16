@@ -67,14 +67,15 @@ Per-contact token = know exactly who landed (required to set the right contact's
 ---
 
 ## Feature: Missed-Call Textback [LOCKED]
-**Trigger:** inbound call to the client's Twilio number ends with a Twilio status of `busy` / `no-answer` / `canceled` / `failed` (literal Twilio strings; voicemail reports as `completed` and does NOT fire — catching it needs AMD, out of scope). Voice-status webhook (`/api/public/twilio/voice-status`).
+**Trigger:** inbound call to the client's provider (TextGrid) number ends with a status of `busy` / `no-answer` / `canceled` / `failed` (Twilio-API-compatible literal status strings; voicemail reports as `completed` and does NOT fire — catching it needs AMD, out of scope). Voice-status webhook (`/api/public/twilio/voice-status`).
 **Timing:** fires 24/7 — live signal, NOT gated by SMS Send Window or Business Hours. Transactional; exempt from the bulk throttle.
 **Re-eligibility (7-day rule) [BUILD]:** fires only if the contact (client_id + phone) has no missed-call textback in the last 7 days. Track a per-contact `last_missed_call_textback_at` timestamp; on a missed call, fire only if `now - last_missed_call_textback_at >= 7 days` (or never sent); update the timestamp on send. Within 7 days → log but suppress. This replaces the old 30-min dedupe.
 **Flow:** on missed-call status → wait 1 min → send SMS #1 + fire internal notification (same time) → wait 2 min → if the caller replied in that window, skip SMS #2; else send SMS #2. (Copy in automation-config.)
 **Contact handling:** create/match the contact by `phone_e164`, log the missed call (event); replies flow into the normal inbox. A brand-new caller has no name yet — the internal notification keys off `{caller_phone}` + `{call_time}`, with an "Open conversation" button.
 **SMS #2 reply-skip** uses the same inbound-webhook reply detection used for one-year-drip exits.
 
-## Feature: Customer Review Reactivation [LOCKED]
+## Feature: Customer Review Reactivation [DEPRECATED 2026-06-16 — superseded by the agency reactivation number pool]
+**Per-client reactivation (this drip, sending from `clients.twilio_number`) is LOGICALLY DEPRECATED.** All real reactivation traffic now runs from agency-owned pool numbers — see `reactivation-number-pool-spec`. This path is purely enrollment-driven (only the admin "Upload Customers" CSV → `enrollReactivation`; NO auto-trigger), so deprecation = route zero traffic → dormant. Frozen code left physically intact (no modification/re-tag). Original spec retained below for reference.
 Admin uploads CSV/paste at `/admin/reactivation` → normalize phones (E.164) → upsert contacts deduped by (client_id, phone) then (client_id, email), source `reactivation` → enroll in the `reactivation` sequence (sequence_key = `reactivation`, per the 2a seed).
 - **Dedup guard:** skip contacts already run through reactivation OR already `Review Completed`.
 - **Per-drip safety caps (independent):** max 50 new enrollments/day; max 2 dripped every 20 min. The 50/day cap is the Google-protection lever (limits new review asks/day; a 5k upload trickles over ~100 days).
@@ -83,13 +84,13 @@ Admin uploads CSV/paste at `/admin/reactivation` → normalize phones (E.164) �
 - **One-Year handoff:** only on `Review Completed` (left a review). No review / Negative Review / opt-out → no handoff.
 - **No final owner notification** after no response (ends silently after SMS 4). Copy/timing in automation-config.
 
-## Feature: Inbound SMS → CRM (built — scope)
-`/api/public/twilio/inbound`: verify Twilio signature when configured; resolve client by destination number, contact by sender; compliance keywords (STOP/STOPALL/UNSUBSCRIBE/CANCEL/END/QUIT + **`pass`** → opt out [BUILD: add `pass` as whole-word match]; HELP/INFO → info; START/YES/UNSTOP → opt back in); else upsert conversation, insert inbound message, write `inbound_sms` event. This webhook also detects drip exits-on-reply (one-year drip; missed-call SMS#2 skip).
+## Feature: Inbound SMS → CRM [1f — NET-NEW, not built]
+`/api/public/twilio/inbound` **[1f — NET-NEW; no inbound route/signature exists in the frozen master]**: verify the provider (TextGrid) `X-TextGrid-Signature` when configured; resolve client by destination number, contact by sender; compliance keywords (STOP/STOPALL/UNSUBSCRIBE/CANCEL/END/QUIT + **`pass`** → opt out [BUILD: add `pass` as whole-word match]; HELP/INFO → info; START/YES/UNSTOP → opt back in); else upsert conversation, insert inbound message, write `inbound_sms` event. This webhook also detects drip exits-on-reply (one-year drip; missed-call SMS#2 skip).
 
 ---
 
 ## Cross-feature build notes
 - New SMS sequences MUST include an opt-out exit path; STOP/HELP/START + `pass` is global at the inbound webhook.
 - Marketing sends honor SMS Send Window + daily send cap + batch pacing in the cron runner; blocked sends reschedule without advancing. Lead-form/missed-call sends are transactional (Business-Hours branch / immediate), not deferred by the marketing window.
-- Outbound senders write `events` in live and stub mode, so all click/cap/dedupe logic reads `events`, never a Twilio round-trip.
+- Outbound senders write `events` in live and stub mode, so all click/cap/dedupe logic reads `events`, never a provider round-trip.
 - Notifications subsystem (table + automations writing to it + mobile-app UI reading it, incl. the interactive Auto-Enroll button) is net-new and required by multiple features — build it as part of the mobile-app layer.
