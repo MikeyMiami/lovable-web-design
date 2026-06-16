@@ -28,7 +28,7 @@
 2. **No secret stored (bootstrapping) → FAIL CLOSED:** if a client has no `provider_webhook_secret`, reject `401` (do not process). Real webhooks can't arrive until a number is provisioned anyway; STUB-validate with a synthetic request signed by a test secret you set on a test client.
 3. **Unknown `To` (no client match) → `200` empty TwiML, drop + no-op** (don't 500 / don't let the provider retry-storm). Nothing to log under (no client_id).
 4. **Idempotency:** dedupe inbound by `MessageSid`. Add a **partial unique index** `messages(twilio_sid) WHERE twilio_sid IS NOT NULL` (additive) and treat a `23505` on insert as "already processed → ack 200". Status callbacks are naturally idempotent (set status).
-5. **Inbound-created contact source:** find-or-create the contact by `(client_id, phone_e164=From)`. If `contact_source` lacks an inbound value, **add `inbound_sms` + `inbound_call`** via additive `ALTER TYPE ... ADD VALUE` (confirm the enum first). 
+5. **Inbound-created contact source:** find-or-create by `(client_id, phone_e164=From)`. **Confirmed enum:** `contact_source = web_form, review_enroll, missed_call, import, manual, chat_widget, mobile_enroll`. The **voice/missed-call path reuses the EXISTING `missed_call` source — no migration.** For an unknown inbound-**SMS** sender (rare — inbound is almost always a reply from a contact we already have), either add `inbound_sms` (additive `ALTER TYPE ADD VALUE`) for accurate provenance, or reuse `manual`. *(Rec: add `inbound_sms`; it's a one-line additive.)*
 6. **STOP handling = belt-and-suspenders:** set `opted_out_at` **and** immediately `exitActiveEnrollments` for the contact (real-time), rather than waiting for the next runner tick. (D1 is the backstop.)
 7. **`statusCallback` wiring:** set per-number at provision (step 5/6); step 2 only builds the `/sms-status` route. Frozen send primitive stays untouched.
 
@@ -48,9 +48,8 @@
 ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS provider_webhook_secret text;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_messages_twilio_sid
   ON public.messages (twilio_sid) WHERE twilio_sid IS NOT NULL;
--- if needed (confirm enum first), additive:
+-- inbound-SMS unknown-sender provenance (optional; missed_call source already exists for the voice path):
 -- ALTER TYPE public.contact_source ADD VALUE IF NOT EXISTS 'inbound_sms';
--- ALTER TYPE public.contact_source ADD VALUE IF NOT EXISTS 'inbound_call';
 ```
 *(Note: the unique index will also cover step-1's outbound `STUB-`/real sids — confirm no existing dup sids before adding; STUB uuids are unique.)*
 
@@ -105,6 +104,6 @@ Bump `RUNNER_VERSION` (e.g. → `v20260617-1`) in the same commit — the cron r
 - **[BACKLOG] HELP auto-reply.** TextGrid answers HELP natively; the app need only record it. No app reply required unless we want a branded HELP.
 
 ## Open / confirm items
-- Confirm the `contact_source` enum values (to know whether the `ADD VALUE`s are needed).
+- ~~Confirm `contact_source` enum~~ DONE: `web_form, review_enroll, missed_call, import, manual, chat_widget, mobile_enroll`. `missed_call` exists (voice path needs no migration); only optional `inbound_sms` for unknown SMS senders.
 - The exact route paths (`/api/public/sms/inbound`, `/sms-status`, `/voice-status`) must match what provisioning sets as `smsUrl`/`statusCallback`/`voiceUrl` at step 5/6 — lock the names here.
 - Parent-on-subaccount auth confirm (carried from step 1) does not gate step 2, but the **per-subaccount `webhook_secret`** is what step 2 verifies against — confirm TextGrid returns it on subaccount create (10DLC doc says yes).
