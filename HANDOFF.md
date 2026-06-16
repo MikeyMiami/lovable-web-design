@@ -1,6 +1,6 @@
 # HANDOFF — session context for a fresh Claude Code instance
 
-> **Point a new instance here:** "Read `HANDOFF.md` to know what we're doing." This is the single go-to context file. Last updated **2026-06-16**.
+> **Point a new instance here:** "Read `HANDOFF.md` to know what we're doing." This is the single go-to context file. Last updated **2026-06-16**. Planning-repo head: **`029896d`** (all reconciles in; user's masters confirmed in full byte-parity).
 
 ---
 
@@ -41,23 +41,23 @@ Review record: `docs/build-log/1f-prep-textgrid-reactivation-review.md` (commit 
 - **from-resolution seam:** the send primitive takes `{clientId, contactId, body}` — **no `from`**. At 1f the **CALLER** must resolve+pass `from` (= `clients.twilio_number`) + subaccount auth, keeping the primitive SEND-ONLY. The reactivation pool reuses this exact seam (passes a pool number as `from`).
 - **Reactivation pool placement:** **separate agency-ops layer** — net-new agency-scoped tables (`reactivation_numbers`, `reactivation_campaigns`, **separate** `reactivation_campaign_enrollments` queue), RLS read = `is_admin()` (like `audit_log`/export-client), NOT tenant-RLS. **Separate finite-campaign runner** that reuses only the send primitive. **Do NOT** put pool enrollments in the frozen `enrollments` table (the frozen `claim_due_enrollments` would grab them + send from the wrong number) and **do NOT** add branching to the frozen runner. Buildable as net-new with **ZERO frozen-master modification**.
 
-**Commits this session (planning repo `lovable-web-design`):**
+**Commits this session (planning repo `lovable-web-design`), in order:**
 - `8394680` — the 1f-prep review record.
 - `02b02e6` — provider-neutral reconciles + reactivation deprecation across spec, LAUNCH.md, launch-check, onboard-from-form, new-client-site, features.
-- `fffb21f` — **self-review fix:** §9.D had residual stale items (header/auth/webhooks/A2P bullets) still in the old "Twilio Option 1 / one shared A2P campaign / parent-level webhooks" model, contradicting the per-client model written above them. Reconciled.
+- `fffb21f` — **self-review fix:** §9.D had residual stale items (header/auth/webhooks/A2P bullets) still in the old "Twilio Option 1 / one shared A2P campaign / parent-level webhooks" model, contradicting the per-client model above them. Reconciled.
+- `8c9aae4` — added this `HANDOFF.md`.
+- `42689fb` — **Bucket-1 provider-neutralize sweep** across all active authoritative docs (spec §0/§9/§9b.D/§10/§12, LAUNCH, scratch-foundation §8 full incl. connector-gateway→direct-API, workspace-knowledge-condensed:47, features, automation-config, admin-view, new-client-site, phase2-build-guide-stage0-1 §1f). Also recovered the silently-lost features:77 reactivation `[DEPRECATED]` header.
+- `029896d` — two Stage-0 stragglers (phase2-build-guide-stage0-1 lines 10/13).
 
-All mirror lines for `02b02e6` + `fffb21f` were handed to the user (they've mirrored `02b02e6`; **`fffb21f` §9.D mirror lines were the most recent hand-off**).
+**PARITY CONFIRMED:** the user has mirrored EVERY hand-off byte-for-byte; their masters == planning repo @ `029896d`. The TextGrid provider-neutralize reconcile + reactivation deprecation are **COMPLETE**. No active-doc stale-model `Twilio` prose remains (verified by repo-wide grep both sides).
 
 ---
 
-## 4. OPEN ITEMS / next steps
-1. **`fffb21f` mirror lines** — confirm the user has mirrored the §9.D fix (5 items: header line 604, secrets/outbound/inbound bullets 606–608, A2P bullet 611).
-2. **Provider-neutralize sweep — DONE 2026-06-16 (commit `42689fb`).** All ACTIVE authoritative docs reconciled to the per-client TextGrid model: spec (§0/§9/§9b.D/§10/§12), LAUNCH, scratch-foundation (§8 full), workspace-knowledge-condensed:47 (always-on Lovable context), features, automation-config, admin-view, new-client-site, phase2-build-guide-stage0-1 §1f. **Kept (intentional):** literal route paths (`/api/public/twilio/*`), columns (`twilio_number`/`twilio_messaging_service_sid`/`twilio_sid`), Twilio-API-compatible status strings, the "BYO-Twilio" option name, "Twilio-API clone/compatible" descriptors. **Left as-is (HISTORICAL build-logs/build-guides — rewriting = falsifying the record):** `docs/build-log/*`, `docs/phase2-build-guide-stage2.md`, `stage3.md` (they correctly say "real Twilio is 1f" for when written). One open architecture confirm: scratch-foundation §8 now defers the exact send transport to `skills/textgrid-provider` (was "Lovable connector gateway" — TextGrid is reached by direct API, not Lovable's Twilio connector; confirm against the textgrid-provider draft).
-3. **A2P `vertical`/industry field GAP** — per-client Brand registration needs a `vertical`; no explicit onboarding field exists. Derive from the client's niche/`search_term` or add a field. Flagged in `onboard-from-form` build-notes.
-4. **3 user-draft files (in the user's "outputs", NOT in this repo — I provide text, I don't edit them):**
-   - `textgrid-provider` SKILL + TextGrid impact map — fold Corrections 1+2 (inbound = NET-NEW) + state `from` is caller-passed / primitive stays SEND-ONLY.
-   - `reactivation-number-pool-spec` — add the "supersedes the deprecated per-client reactivation" header note.
-5. **When 1f starts:** build the 1f scope (§2) + the reactivation pool as net-new agency layer (§3). Re-validate + **re-tag** the frozen master after each backend-touching 1f change (post-freeze contract: only 1f hardening + re-validated bug-fixes may touch it).
+## 4. OPEN ITEMS / next steps (the reconcile work is DONE — these are what's LEFT)
+1. ~~Provider-neutralize sweep + §9.D fix~~ **DONE & in full parity (`029896d`).** Nothing outstanding here.
+2. **A2P `vertical`/industry field GAP** — per-client Brand registration needs a `vertical`; no explicit onboarding field exists. Derive from the client's niche/`search_term` or add a field. Flagged in `onboard-from-form` build-notes. (Decision still needed; not yet resolved.)
+3. **3 user-draft files (in the user's "outputs", NOT in this repo — I provide text, the user edits them).** Status: the user reports all three are now folded — `textgrid-provider` SKILL (direct API: `fetch` to `api.textgrid.com`, Bearer auth; Corrections 1+2 in; `from` caller-passed / primitive SEND-ONLY; the two stray "connector gateway" mentions fixed), TextGrid impact map, and `reactivation-number-pool-spec` (supersedes-header added). If revisited, these are the user's files — provide text, don't edit.
+4. **When 1f starts (NOT started yet — the real next phase):** build the 1f scope (§2) + the reactivation pool as a net-new agency layer (§3 of "what we did"). Re-validate + **re-tag** the frozen master after each backend-touching 1f change (post-freeze contract: only 1f hardening + re-validated bug-fixes may touch it). Expect Lovable build reports to validate via the usual loop.
 
 ---
 
