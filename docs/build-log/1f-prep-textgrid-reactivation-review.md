@@ -44,3 +44,13 @@ The send primitive takes `{clientId, contactId, body}` — **no `from`**. At 1f 
 
 ## H. Doc reconciles (provider-neutral wording) — proposed, see turn response for verbatim
 spec §12 (1f bullets + line 738 + line 604 + line 71), LAUNCH.md freeze deferred-1f list, launch-check §B/§D, onboard-from-form (A2P Brand fields), new-client-site (add A2P registration step). Reword "Twilio"/"real-Twilio" → "messaging provider (TextGrid)"; fold Corrections 1+2 (inbound = net-new). Applied on confirmation.
+
+## I. APPLIED 2026-06-16 (provider-neutral wording + "(TextGrid)" concrete target)
+Reconciles + the per-client-reactivation logical deprecation applied to the planning repo (NO frozen-code change). Files touched:
+- **spec** §9 inbound line (1f net-new), §9 messaging-config + parent-account lines (subaccount→Brand→Campaign + additive provider_*/a2p_* cols), §6 messaging-config note, materialization real-provider swap, §12 GATE 1f line, **§12 per-client-reactivation [DEPRECATED] note** (enrollment-driven, NO auto-trigger — verified: only admin Upload-Customers CSV → reactivationUpload → enrollReactivation; frozen code intact).
+- **LAUNCH.md** Stage-4 deferred-1f list + Stage-1f line + §5 per-client telephony.
+- **launch-check** §A secret, §B materialization + 5xx/retry, §C missed-call + reactivation rows, §D header + status-swap + inbound (net-new) + status-swap + per-client number, §E GATE + per-client A2P.
+- **onboard-from-form** EIN→Brand, messaging number/SID, agency-set line, telephony build-note + **A2P `vertical`/industry FLAG** (missing onboarding field — derive from niche/search_term or add).
+- **new-client-site** §2 reframed as per-client TextGrid A2P (subaccount→Brand→Campaign→number, vets independently) + §5 gate.
+- **features** skill — Customer Review Reactivation header → [DEPRECATED — superseded by agency reactivation pool].
+Per-client reactivation **auto-trigger verification: NONE** — purely enrollment-driven (admin CSV only). Deprecation = route zero traffic; frozen code physically intact, no re-tag.

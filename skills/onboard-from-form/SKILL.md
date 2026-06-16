@@ -11,7 +11,7 @@ Takes the §9b onboarding inputs (owner-filled + agency-set) and writes them int
 
 ## Two input layers (§9b)
 - **Owner-filled** — the onboarding form the business owner completes (content + brand).
-- **Agency-set** — config you set during setup (review link, Twilio, domains, etc.).
+- **Agency-set** — config you set during setup (review link, messaging-provider (TextGrid) number/A2P, domains, etc.).
 
 ## Field → destination mapping
 
@@ -21,7 +21,7 @@ Takes the §9b onboarding inputs (owner-filled + agency-set) and writes them int
 | Full Name (req) | derive `template_vars.company_owner_first_name` (first token of full name) |
 | Business Phone | `clients.call_forwarding_number` (their real phone / lead-notify target) |
 | Official Business Name (req) | `clients.business_name` + `template_vars.company_name` |
-| Tax ID / EIN | AGENCY-OPS ONLY — captured on the form, used by the agency for A2P registration (a manual Twilio process); NOT stored in the app DB (no feature reads it; no column). |
+| Tax ID / EIN | Used for the per-client A2P **Brand** registration (TextGrid §4; EIN must be ≥15 days old). Captured on the form; NOT a standing app-DB column (consumed at registration time). |
 | Current website link | `template_vars.company_website_link` + AI-knowledge source |
 | About Us (3–5 sentences, req) | `template_vars.about_us` → site copy + AI-knowledge bundle |
 | Top location + service areas (MAX 14) | `clients.service_area` (text[]) + site copy + AI-knowledge |
@@ -46,7 +46,7 @@ Takes the §9b onboarding inputs (owner-filled + agency-set) and writes them int
 | Terms page (A2P-compliant, hosted) | generated (§9b.C) → `template_vars.website_terms_page_link` |
 | Quote form link | `template_vars.quote_form_link` (defaults to the lander) |
 | Marketing domain(s) | `clients.allowed_origins` (text[]) — powers CORS allowlist (§6) |
-| Twilio number + Messaging Service SID | `clients.twilio_number`, `clients.twilio_messaging_service_sid` (non-secret, under the one parent account) |
+| Messaging number + Messaging Service SID | `clients.twilio_number`, `clients.twilio_messaging_service_sid` (non-secret; column names retained; hold the per-client messaging-provider (TextGrid) subaccount's number/SID) |
 | Call-forwarding number | `clients.call_forwarding_number` (may match the owner's Business Phone) |
 | Sending subdomain / DKIM | **NOT created in v1** — `sending_subdomain`/`dkim_status` deferred (owner emails use ONE platform-level agency sender, not per-client domains); `ADD COLUMN` later only if per-client email is built |
 
@@ -64,5 +64,6 @@ The chat widget answers FAQs from the onboarding data. **Storage [PINNED — F-c
 - Creating the client today: `createClient` accepts only slug/business_name/phone_display/email; everything else here is set via an extended onboarding capture / `updateClientSettings` (extend it to cover all §9b fields — [BUILD]).
 - Assets: logo + public hero images → `public-assets` (public read); private uploads → `client-assets` (client_id-scoped).
 - A2P terms page (§9b.C) is generated as part of onboarding and its URL stored in `template_vars.website_terms_page_link`.
-- Telephony setup (§9b.D) — provisioning the Twilio number under the parent account, forwarding, GBP/site placement — is an onboarding step (orchestrated by `/new-client-site`); this skill just records the resulting `twilio_number`/`messaging_service_sid`.
+- Telephony setup (§9b.D) — the per-client messaging-provider (TextGrid) flow (subaccount → Brand → Campaign → number, forwarding, GBP/site placement) — is an onboarding step (orchestrated by `/new-client-site`, detail in `skills/textgrid-provider`); this skill just records the resulting `twilio_number`/`messaging_service_sid`.
+- **A2P field coverage (FLAG):** the per-client Brand/Campaign registration (TextGrid §4) needs EIN ✓ (captured), legal business name ✓, website ✓, business address ✓ (`clients.address`), and the opt-in/T&C URL ✓ (generated terms page). **Missing today: an explicit `vertical`/industry field** for the Brand — derive it from the client's niche/`search_term` or add an onboarding field; confirm before registration, as the Brand vet requires it.
 - Style + content captured here are the inputs `/website-structure` consumes to generate the site.

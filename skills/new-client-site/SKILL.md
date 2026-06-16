@@ -17,11 +17,12 @@ Launches one client on top of the proven golden-master backend. This is an ORCHE
 - Set `allowed_origins` to the client's marketing domain(s) (so CORS will pass for their site's form POSTs).
 - Validate template_vars required keys are all populated.
 
-### 2. Telephony (Twilio Option 1)
-- Provision a number under the ONE parent Twilio account; store From / MessagingServiceSid on the clients row (non-secret).
-- Forward the number to `call_forwarding_number`; ensure inbound + voice-status route by To → this client.
-- Confirm the agency's A2P 10DLC campaign covers the new number (no per-client re-vetting).
-- Place the number on the site + Google Business Profile.
+### 2. Messaging provider + per-client A2P registration (TextGrid)
+- Create the client's **subaccount** under the agency master account; store `provider_subaccount_sid` / `provider_webhook_secret` on the clients row.
+- Register **Brand** (client EIN, ≥15 days old) → **Campaign** (use-case, sample messages, opt-in/out/help language, T&C + privacy links from the marketing site) → **provision + attach a number** (local area code). Each subaccount vets **INDEPENDENTLY per-client** (~2–4 days — register at signing so it vets during the site build). Detail: `skills/textgrid-provider` §4.
+- Store From / MessagingServiceSid on the clients row (non-secret, column names retained).
+- Set per-number webhooks (`smsUrl` / `voiceUrl` / `statusCallback`) → `/api/public/*` (verified by `X-TextGrid-Signature`); forward the number to `call_forwarding_number`.
+- Write the provisioned number to `clients.twilio_number` (single-source — the unchanged runner picks it up). Place it on the site + Google Business Profile.
 
 ### 3. Remix the marketing site (frontend-only)
 - Remix the marketing-site project for the client's domain. Do NOT enable Cloud / provision a new Supabase.
@@ -34,7 +35,7 @@ Launches one client on top of the proven golden-master backend. This is an ORCHE
 - As the template library matures, prefer applying a proven design template (Mode 2) over generating fresh (Mode 1).
 
 ### 5. Verify (gate)
-- Run **`/launch-check`** (per-client go-live subset, section E): config complete, template_vars populated, Twilio forwarded + placed, allowed_origins set, site pages match onboarding, terms page linked, consent present.
+- Run **`/launch-check`** (per-client go-live subset, section E): config complete, template_vars populated, provider number forwarded + placed (per-client A2P Campaign approved), allowed_origins set, site pages match onboarding, terms page linked, consent present.
 - End-to-end smoke test: submit a lead form from the live domain → contact created on the shared backend → drip enrolls → SMS sends → owner notified.
 - All green → client is live.
 
