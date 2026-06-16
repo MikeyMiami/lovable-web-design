@@ -45,15 +45,23 @@
 
 ### 1. Additive migration(s) — `audit_tenant_rls()=0` after
 ```sql
+-- (1) per-client webhook secret — additive
 ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS provider_webhook_secret text;
+
+-- (2) idempotency index. FIRST run the dup check; create the index ONLY if it returns 0 rows:
+--       SELECT twilio_sid, count(*) FROM public.messages
+--         WHERE twilio_sid IS NOT NULL GROUP BY 1 HAVING count(*) > 1;
+--     → 0 rows: proceed.  → any rows: STOP + flag (do NOT force the index; resolve the dups first).
 CREATE UNIQUE INDEX IF NOT EXISTS uq_messages_twilio_sid
-  ON public.messages (twilio_sid) WHERE twilio_sid IS NOT NULL;
--- inbound-SMS unknown-sender provenance [LOCKED add] (missed_call source already exists for the voice path):
+  ON public.messages (twilio_sid) WHERE twilio_sid IS NOT NULL;   -- partial: NULL sids exempt
+
+-- (3) inbound-SMS provenance [LOCKED add]. MUST be its OWN migration that fully COMMITS before the
+--     inbound route (which inserts source='inbound_sms') is deployed/run: Postgres cannot use a
+--     newly-ADDed enum value in the SAME transaction that adds it. Do NOT combine with route code,
+--     and do NOT reference 'inbound_sms' in the same txn. (missed_call source already exists.)
 ALTER TYPE public.contact_source ADD VALUE IF NOT EXISTS 'inbound_sms';
--- NOTE: ADD VALUE cannot run inside a txn with its use in some PG versions — run the enum add
--- in its OWN migration, before any code references 'inbound_sms'.
 ```
-*(Note: the unique index will also cover step-1's outbound `STUB-`/real sids — confirm no existing dup sids before adding; STUB uuids are unique.)*
+*(The partial index covers step-1's outbound `STUB-`/real sids too — the dup check above is the gate; STUB uuids are unique by construction.)*
 
 ### 2. Signature verifier — `src/lib/webhooks/textgrid-signature.server.ts` (net-new)
 `verifyTextGridSignature({ url, rawBody, secret, header })` → `crypto.subtle` HMAC **SHA-1** over `url + rawBody`, base64, constant-time compare to `header`. Returns bool. (Model on `chat/token.server.ts`'s HMAC helper; SHA-1 not SHA-256.)
