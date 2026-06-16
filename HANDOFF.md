@@ -24,7 +24,8 @@ A multi-tenant SMS-automation **"golden master" backend** built in **Lovable** (
   2. **NET-NEW inbound webhook layer** (`X-TextGrid-Signature` HMAC-SHA1) — inbound SMS→CRM, real-time reply-driven drip exits, missed-call. **This does NOT exist in the frozen master — built fresh at 1f** (verified against the repo; the old spec's "Inbound SMS→CRM [built]" was inaccurate).
   3. **LIVE Turnstile + rate-limiting** on public lead-intake routes.
   4. Additive per-client provider columns: `provider_subaccount_sid`, `provider_webhook_secret`, `a2p_brand_id`, `a2p_campaign_id`, `a2p_status`.
-- **1f has NOT started yet.** "On to 1f when Mikey starts it."
+- **1f STEP 1 (outbound TextGrid swap) is being built** (relayed to Lovable for a STUB-mode build 2026-06-16). Spec: `docs/1f-step1-outbound-swap-build-spec.md`. **Built on an UNCONFIRMED auth assumption:** Option 1 (agency MASTER `AuthToken` authenticates against the per-client subaccount `AccountSid`). Question is OUT to TextGrid support (sent 2026-06-16, ~1–2 day reply); the TextGrid docs actually *lean Option 2* (subaccounts get their own `auth_token`; parent-on-subaccount for Messages is undocumented). The primitive's `auth`/`sendingAccountSid` are **decoupled**, so flipping to Option 2 is a caller-only change. **If a LIVE send returns 401, this is the cause** — see `textgrid-provider` skill §2 (LIVE-failure insurance) + §7 open-item, and the build-spec "Open / confirm items." STUB is unaffected; do NOT set `SMS_MODE=live` before the confirm.
+- **Remaining 1f steps NOT started.** "On to the rest of 1f as Mikey drives it."
 
 ### Locked product decisions
 - **Messaging provider = TextGrid** (no Twilio, no grey-area bridge). Per-client flow: **subaccount → Brand (client EIN, ≥15 days old) → Campaign → number**, each subaccount **vets INDEPENDENTLY per-client** (~2–4 days). NOT one shared agency campaign.
