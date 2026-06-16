@@ -7,10 +7,10 @@ How to feed the skills to Lovable to build the golden-master backend, starting w
 ## STAGE 0 — Wiring (do these BEFORE feeding skills)
 These are setup actions in Lovable/Supabase/Cloudflare, not skill-feeds. From spec §9d.
 
-1. **Stable backend domain** — confirm the shared backend's custom domain (or stable `project--<id>.lovable.app` URL). Gates Twilio webhooks, cron, tracked links.
+1. **Stable backend domain** — confirm the shared backend's custom domain (or stable `project--<id>.lovable.app` URL). Gates provider (TextGrid) webhooks, cron, tracked links.
 2. **Enable extensions** — in Supabase: enable `pg_cron` and `pg_net`.
 3. **Storage buckets** — create `public-assets` (public read) and `client-assets` (private). RLS policies come with `/scratch-foundation`.
-4. **Runtime secrets** — set in Lovable Cloud secrets: `CRON_SECRET`, parent Twilio auth token, Turnstile secret (create the Turnstile widget first to get site+secret keys). AI key only if Lovable's answer to the ❓ says one's needed.
+4. **Runtime secrets** — set in Lovable Cloud secrets: `CRON_SECRET`, parent messaging-provider (TextGrid) auth token, Turnstile secret (create the Turnstile widget first to get site+secret keys). AI key only if Lovable's answer to the ❓ says one's needed.
 5. **❓ Confirm-in-Lovable items** (don't block Stage 1, but resolve before the email/AI build steps): email from-domain/ESP specifics; native-AI invocation API + context size.
 
 > Note: the migrations + RLS + cron job themselves are built by `/scratch-foundation` in Stage 1 — Stage 0 is just the environment (domain, extensions on, buckets exist, secrets present).
