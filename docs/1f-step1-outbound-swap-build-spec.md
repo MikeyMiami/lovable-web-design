@@ -3,7 +3,7 @@
 > The exact change-set for the FIRST 1f hardening step: swap the stub send for a real TextGrid outbound send. Audited against the real frozen code @ `golden-master-v1.1` (`cloud-spark-setup@5e41f41`). Decisions locked 2026-06-16. Hand this verbatim to Lovable; validate the build report against real code before re-tag.
 
 ## Scope
-**IN:** real outbound SMS via TextGrid; a pure-transport send primitive (`{to, from, body, sendingAccountSid, auth}` — ZERO DB access); caller-side from/to/auth resolution; render-completeness guard at the send boundary; one additive column (`provider_subaccount_sid`); a `SMS_MODE=stub|live` switch; real SID + initial status written by both callers.
+**IN:** real outbound SMS via TextGrid; a pure-transport send primitive (`{to, from, body, sendingAccountSid, auth}` — ZERO DB access); caller-side from/to/auth resolution; render-completeness guard (primitive, LIVE-only) + **universal pre-send opt-out enforcement** (runner + reply, mode-agnostic); one additive column (`provider_subaccount_sid`); a `SMS_MODE=stub|live` switch; real SID + initial status written by both callers.
 
 **OUT (separate 1f items — do NOT build here):** the net-new inbound + voice + **delivery-status (StatusCallback) webhook layer**; Turnstile/rate-limit; the reactivation number pool; the `a2p_*` / `provider_webhook_secret` columns. (Delivery `delivered`/`failed`/`undelivered` arrives via the StatusCallback webhook built in the webhook-layer item — this step writes only the *synchronous* send result.)
 
@@ -120,13 +120,14 @@ export async function sendSmsWithRetry(args: SendArgs): Promise<SendResult> {
   return last;
 }
 ```
-**SEND-ONLY invariant:** this file imports no supabase client and performs no DB read/write. (Regression check.)
+**SEND-ONLY invariant:** this file imports no supabase client and performs no DB read/write. (Regression check.) The render-guard lives here (LIVE-only, body-text-only, no DB). The **opt-out** guard does NOT live here — it needs a DB read + enrollment-exit fate, so it's caller-side (below).
 
 ## 3. Caller A — cron runner (`src/lib/cron/runner.server.ts`)
 Resolve send params caller-side, then call the renamed primitive.
 - **Per-client provider cache (one load/tick):** extend the existing per-tick client cache (the `send_settings` load ~`:249`) to also load `clients.twilio_number` + `clients.provider_subaccount_sid`.
-- **`to`:** the contact's `phone_e164` (already read in `loadContactVars`; expose/read it for the send).
+- **`to`:** the contact's `phone_e164` (already read in `loadContactVars`; expose/read it for the send). **Also load `contacts.opted_out_at`** for the opt-out guard below.
 - **Resolve `auth`** from `getTextGridConfig()` master creds; **`sendingAccountSid`** = the client's `provider_subaccount_sid`; **`mode`** = config mode. **No `statusCallback` in step 1.**
+- **[D1] Universal pre-send opt-out guard (mode-AGNOSTIC — fires in STUB too):** before the SMS send, if the contact's `opted_out_at IS NOT NULL` → `exitEnrollment(enr, "exited_opted_out")` + the existing exit event; do NOT send, do NOT advance. This **generalizes the current `one_year_followup`-only opt-out exit to ALL sequences** (review_request / reactivation / lead_form / missed_call) — the frozen runner only checks opt-out for one_year, so once inbound capture (step 2) sets `opted_out_at`, every other drip would otherwise text an opted-out contact. **Compliance-critical (TCPA).** It is runner-side, not in the pure-transport primitive, precisely because the fate is enrollment-level (exit) and it MUST fire in STUB (where the primitive's LIVE-only guards don't run).
 - **Config-missing guard (LIVE):** if `mode==='live'` and `from`/`to`/`sendingAccountSid` is missing → **reschedule WITHOUT advancing** + emit a distinct `send_config_missing` event (mirror the existing `template_missing` self-heal at `:460`); do NOT burn the step, do NOT funnel into the 2× retry.
 - Replace the send call at `~:490`:
 ```ts
@@ -138,9 +139,11 @@ const result = await sendSmsWithRetry({
 });
 ```
 - **Status writes:** at the `sms_sent` event (`~:522`) drop `stub: true`; add `status: result.status`. At `insertOutboundMessageAdmin` (`~:533`) change `status: "stub"` → `status: result.status` and keep `sid: result.sid`.
+- **[D2] Render-incomplete = SELF-HEAL, never terminal-fail.** The primitive returns `{ok:false, retryable:false, error:"unrendered_token"}` when a residual `{…}` token survives (LIVE only). The runner MUST special-case this **before** the generic non-retryable→`status='failed'` branch: `if (!result.ok && result.error === "unrendered_token")` → **reschedule WITHOUT advancing** + emit a distinct `render_incomplete` event (+ alert); enrollment stays `active`. Behaves **identically to `template_missing` / `send_config_missing`** (don't ship, don't advance, reschedule, emit event, stay active) — a transient bad merge-var must NEVER permanently/silently drop a customer from their drip. Do NOT funnel into the 2× send-retry.
 
 ## 4. Caller B — reply box (`src/lib/messages/reply.functions.ts`)
-- After the RLS conversation lookup, resolve under the authed client: `clients.twilio_number` + `clients.provider_subaccount_sid` (by `convo.client_id`) and `contacts.phone_e164` (by `convo.contact_id`).
+- After the RLS conversation lookup, resolve under the authed client: `clients.twilio_number` + `clients.provider_subaccount_sid` (by `convo.client_id`) and `contacts.phone_e164` + `contacts.opted_out_at` (by `convo.contact_id`).
+- **[D1] Opt-out guard (mode-agnostic):** if `contacts.opted_out_at IS NOT NULL` → block the send and throw `contact_opted_out`; do NOT send, do NOT materialize. (No `render_incomplete` path here — the reply body is user-typed, not template-merged.)
 - Replace the send at `:41`:
 ```ts
 const result = await sendSmsWithRetry({
@@ -165,10 +168,11 @@ Bump `RUNNER_VERSION` `v20260616-1` → **`v20260616-2`** in the SAME commit (ro
 1. **Deploy `SMS_MODE=stub`.** Confirm promotion: `POST …/cron/sequences?ping=1` → `runner_version="v20260616-2"` before interpreting anything (deploy-lag gate).
 2. **2e regression (manual ticks), STUB:** re-run TEST1–TEST5 → claim-lease / window / caps / reschedule-without-advancing / advance-on-success / 2× retry all intact after the signature refactor; bodies rendered (no `[stub]` literal); `messages.status` + `twilio_sid` populated from the stub result; `sms_sent` event carries `status`.
 3. **SEND-ONLY:** code-review + regression confirm `send.server.ts` does zero DB.
-4. **Render guard:** a template with an unresolvable `{token}` under `mode=live` → `unrendered_token`, non-retryable, NO transmit (and `messages` not written). In `stub` the literal `{token}` still ships (diagnostic) — both behaviors asserted.
-5. **Config-missing self-heal:** a LIVE client with null `provider_subaccount_sid` → `send_config_missing` event, step NOT advanced, no retry burn.
-6. **LIVE smoke (AFTER the TextGrid auth confirm + a real subaccount):** one real send to a test number → real `sid`, `status` `queued`/`sent`, `messages` row updated.
-7. **Re-validate + re-tag `golden-master-v1.2`** (`audit_tenant_rls()`=0; both repos).
+4. **Render guard = self-heal (D2):** a template with an unresolvable `{token}` under `mode=live` → NO transmit, `messages` NOT written, enrollment stays `active`, `render_incomplete` event emitted, step NOT advanced (identical shape to `template_missing`). In `stub` the literal `{token}` still ships (diagnostic). Assert it is NOT terminal-failed.
+5. **Opt-out block (D1) — assert in STUB too:** set a contact's `opted_out_at`, fire its drip tick → NO send (no `messages` row, no `sms_sent`), enrollment `exited` with `exited_opted_out`; the reply box to that contact → `contact_opted_out` thrown. Mode-agnostic (must block under `SMS_MODE=stub`). Cover a review_request/reactivation drip specifically (the ones the frozen runner did NOT previously guard).
+6. **Config-missing self-heal:** a LIVE client with null `provider_subaccount_sid` → `send_config_missing` event, step NOT advanced, no retry burn.
+7. **LIVE smoke (AFTER the TextGrid auth confirm + a real subaccount):** one real send to a test number → real `sid`, `status` `queued`/`sent`, `messages` row updated.
+8. **Re-validate + re-tag `golden-master-v1.2`** (`audit_tenant_rls()`=0; both repos).
 
 ## Open / confirm items (carry)
 - **TextGrid parent-on-subaccount auth confirm** — "can the MASTER `AuthToken` authenticate `Messages.json` against a subaccount's `AccountSid`, or is subaccount-scoped auth required?" Gates **LIVE**, not STUB. Owner: user → TextGrid. Add to `textgrid-provider` skill §7 open-items. The decoupled `sendingAccountSid`/`auth` shape makes either answer a caller-only change.
