@@ -28,9 +28,9 @@
 2. **No secret stored (bootstrapping) → FAIL CLOSED:** if a client has no `provider_webhook_secret`, reject `401` (do not process). Real webhooks can't arrive until a number is provisioned anyway; STUB-validate with a synthetic request signed by a test secret you set on a test client.
 3. **Unknown `To` (no client match) → `200` empty TwiML, drop + no-op** (don't 500 / don't let the provider retry-storm). Nothing to log under (no client_id).
 4. **Idempotency:** dedupe inbound by `MessageSid`. Add a **partial unique index** `messages(twilio_sid) WHERE twilio_sid IS NOT NULL` (additive) and treat a `23505` on insert as "already processed → ack 200". Status callbacks are naturally idempotent (set status).
-5. **Inbound-created contact source:** find-or-create by `(client_id, phone_e164=From)`. **Confirmed enum:** `contact_source = web_form, review_enroll, missed_call, import, manual, chat_widget, mobile_enroll`. The **voice/missed-call path reuses the EXISTING `missed_call` source — no migration.** For an unknown inbound-**SMS** sender (rare — inbound is almost always a reply from a contact we already have), either add `inbound_sms` (additive `ALTER TYPE ADD VALUE`) for accurate provenance, or reuse `manual`. *(Rec: add `inbound_sms`; it's a one-line additive.)*
+5. **Inbound-created contact source:** find-or-create by `(client_id, phone_e164=From)`. **Confirmed enum:** `contact_source = web_form, review_enroll, missed_call, import, manual, chat_widget, mobile_enroll`. The **voice/missed-call path reuses the EXISTING `missed_call` source — no migration.** For an unknown inbound-**SMS** sender (rare — inbound is almost always a reply from a contact we already have): **[LOCKED] add `inbound_sms`** (additive `ALTER TYPE ADD VALUE`) for accurate provenance.
 6. **STOP handling = belt-and-suspenders:** set `opted_out_at` **and** immediately `exitActiveEnrollments` for the contact (real-time), rather than waiting for the next runner tick. (D1 is the backstop.)
-7. **`statusCallback` wiring:** set per-number at provision (step 5/6); step 2 only builds the `/sms-status` route. Frozen send primitive stays untouched.
+7. **`statusCallback` wiring [LOCKED]:** set per-number at provision (step 5/6); step 2 only builds the `/sms-status` route. **The frozen v1.2 send primitive is NOT re-touched.**
 
 ## TextGrid facts (from the Breeze/Voice/10DLC docs)
 - Inbound SMS webhook: `application/x-www-form-urlencoded`, PascalCase `From, To, Body, MessageSid, SmsStatus=received, NumSegments, NumMedia` (+ `MediaUrl0..`). Respond TwiML (`<Response></Response>` to ack).
@@ -48,8 +48,10 @@
 ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS provider_webhook_secret text;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_messages_twilio_sid
   ON public.messages (twilio_sid) WHERE twilio_sid IS NOT NULL;
--- inbound-SMS unknown-sender provenance (optional; missed_call source already exists for the voice path):
--- ALTER TYPE public.contact_source ADD VALUE IF NOT EXISTS 'inbound_sms';
+-- inbound-SMS unknown-sender provenance [LOCKED add] (missed_call source already exists for the voice path):
+ALTER TYPE public.contact_source ADD VALUE IF NOT EXISTS 'inbound_sms';
+-- NOTE: ADD VALUE cannot run inside a txn with its use in some PG versions — run the enum add
+-- in its OWN migration, before any code references 'inbound_sms'.
 ```
 *(Note: the unique index will also cover step-1's outbound `STUB-`/real sids — confirm no existing dup sids before adding; STUB uuids are unique.)*
 
@@ -83,7 +85,13 @@ Bump `RUNNER_VERSION` (e.g. → `v20260617-1`) in the same commit — the cron r
 2. **Signature verify:** a correctly-signed synthetic inbound passes; a bad/missing signature → `401`; a client with no `provider_webhook_secret` → `401` (fail-closed).
 3. **Tenant resolution:** signed inbound with a known `To` resolves the right client; unknown `To` → `200` empty, no-op.
 4. **Inbound CRM:** signed inbound creates/upserts the conversation + an inbound `messages` row (`direction='inbound'`, `status='received'`, `twilio_sid=MessageSid`) + `inbound_sms` event; a **duplicate** `MessageSid` is a no-op (idempotent).
-5. **Opt-out capture:** `Body="STOP"` (and `Body="pass"`, whole-word) → `opted_out_at` set + active enrollments `exited`; `Body="START"` → cleared; `"passport"` does NOT trigger (whole-word).
+5. **Opt-out capture — ⭐ HIGHEST-STAKES (end-to-end TCPA goes live here); exercise hardest:**
+   - (a) signed inbound `Body="STOP"` → `contacts.opted_out_at` set **AND** `exitActiveEnrollments` runs in the SAME request (all active enrollments → `exited` + `drip_exit` event) — real-time, not next tick.
+   - (b) `Body="pass"` (whole-word) → same as STOP. **`Body="passport"` / `"my password"` → does NOT opt out** (`\bpass\b`).
+   - (c) `Body="START"` → `opted_out_at` cleared.
+   - (d) **D1 end-to-end proof (the loop closes):** after (a), make a fresh enrollment due for that contact + run a runner tick → D1 EXITS it (`exited_opted_out`), **no `sms_sent`, no outbound `messages` row**. Proves the step-2 *write* + step-1 *read* are wired end-to-end.
+   - (e) reply box to the opted-out contact → throws `contact_opted_out`, no message inserted.
+   - Standard set: STOP/STOPALL/UNSUBSCRIBE/CANCEL/QUIT/END all opt out; START/YES/UNSTOP all clear.
 6. **Real-time reply-exit:** an active `one_year_followup` contact sends a reply → enrollment `exited` (`exited_on_reply`/`drip_exit`) + the `one_year_reply_interest_internal` notification written.
 7. **Missed-call trigger:** a signed `voice-status` with `CallStatus=no-answer` → contact found/created + `missed_call_textback` enrolled (throttle respected on a second within-window call) + `missed_call` notification.
 8. `audit_tenant_rls()=0`.
