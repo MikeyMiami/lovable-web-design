@@ -1,6 +1,6 @@
 ---
 name: textgrid-provider
-description: Use when implementing the Stage-1f messaging-provider swap (Twilio → TextGrid) on the frozen golden master, OR when onboarding a client's per-tenant A2P 10DLC registration. Defines the TextGrid send-path swap (outbound SMS), inbound webhook config (reply-driven exits + missed-call textback), voice call-forwarding, and the per-client subaccount→Brand→Campaign→number ISV registration flow. NOT for message copy/timing (automation-config), the client marketing site's opt-in form/privacy content (a separate A2P-site-compliance concern — see §6 handoff), or admin UI (admin-view). This is a 1f IMPLEMENTATION skill: it changes the provider TARGET, not the frozen architecture.
+description: Use when implementing the Stage-1f messaging-provider swap (Twilio → TextGrid) on the frozen golden master, OR when onboarding a client's per-tenant A2P 10DLC registration. Defines the TextGrid send-path swap (outbound SMS), inbound webhook config (reply-driven exits + missed-call textback), voice call-forwarding, and the per-client subaccount→Brand→Campaign→number ISV registration flow. NOT for message copy/timing (automation-config), the client marketing site's opt-in form/privacy content (a separate A2P-site-compliance concern — see §6 handoff), or admin UI (admin-view). This is a 1f IMPLEMENTATION skill — it changes the provider TARGET, not the frozen architecture.
 ---
 
 # TextGrid Provider — the 1f messaging swap + per-client A2P/ISV registration
