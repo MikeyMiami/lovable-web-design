@@ -52,14 +52,7 @@ All mirror lines for `02b02e6` + `fffb21f` were handed to the user (they've mirr
 
 ## 4. OPEN ITEMS / next steps
 1. **`fffb21f` mirror lines** — confirm the user has mirrored the §9.D fix (5 items: header line 604, secrets/outbound/inbound bullets 606–608, A2P bullet 611).
-2. **Remaining stale "Twilio"/"X-Twilio-Signature"/"Twilio Option 1" references** found on the repo-wide sweep — decide per-file:
-   - **ACTIVE authoritative docs (SHOULD reconcile — was outside the agreed batch, ask the user):**
-     - `skills/scratch-foundation/SKILL.md:99` — inbound route names `/api/public/twilio/...` + `X-Twilio-Signature` + parent-level webhooks.
-     - `docs/workspace-knowledge-condensed.md:47` — "Twilio Option 1 … X-Twilio-Signature" (this feeds Lovable Workspace Knowledge, always-on — high impact).
-     - `docs/platform-spec-source-of-truth.md` §12 net-state lines **690, 694, 707, 709** — "Twilio Option 1", "real Twilio swap".
-     - `LAUNCH.md:45` — Stage-1 build-order says "→ Twilio Option 1".
-     - `docs/phase2-build-guide-stage0-1.md:61,63` — "1f. Twilio Option 1 wiring", X-Twilio-Signature.
-   - **HISTORICAL build-logs / build-guides (LEAVE AS-IS — point-in-time record; rewriting = falsifying history, against the keep-records rule):** `docs/build-log/stage-4-freeze.md`, `stage-3.5d-*`, `stage-3c-*`, `stage-1e-*`, `docs/phase2-build-guide-stage2.md`, `stage3.md`. These correctly say "real Twilio is 1f" for when they were written. At most add a forward-note; do not rewrite.
+2. **Provider-neutralize sweep — DONE 2026-06-16 (commit `42689fb`).** All ACTIVE authoritative docs reconciled to the per-client TextGrid model: spec (§0/§9/§9b.D/§10/§12), LAUNCH, scratch-foundation (§8 full), workspace-knowledge-condensed:47 (always-on Lovable context), features, automation-config, admin-view, new-client-site, phase2-build-guide-stage0-1 §1f. **Kept (intentional):** literal route paths (`/api/public/twilio/*`), columns (`twilio_number`/`twilio_messaging_service_sid`/`twilio_sid`), Twilio-API-compatible status strings, the "BYO-Twilio" option name, "Twilio-API clone/compatible" descriptors. **Left as-is (HISTORICAL build-logs/build-guides — rewriting = falsifying the record):** `docs/build-log/*`, `docs/phase2-build-guide-stage2.md`, `stage3.md` (they correctly say "real Twilio is 1f" for when written). One open architecture confirm: scratch-foundation §8 now defers the exact send transport to `skills/textgrid-provider` (was "Lovable connector gateway" — TextGrid is reached by direct API, not Lovable's Twilio connector; confirm against the textgrid-provider draft).
 3. **A2P `vertical`/industry field GAP** — per-client Brand registration needs a `vertical`; no explicit onboarding field exists. Derive from the client's niche/`search_term` or add a field. Flagged in `onboard-from-form` build-notes.
 4. **3 user-draft files (in the user's "outputs", NOT in this repo — I provide text, I don't edit them):**
    - `textgrid-provider` SKILL + TextGrid impact map — fold Corrections 1+2 (inbound = NET-NEW) + state `from` is caller-passed / primitive stays SEND-ONLY.
