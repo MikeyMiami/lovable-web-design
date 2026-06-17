@@ -6,7 +6,7 @@ Multi-tenant Reviews/SMS automation SaaS for local service businesses (white-lab
 - **ONE shared multi-tenant backend** ("golden master") serves ALL clients. Built once, frozen, NEVER regenerated per client. Every tenant row keyed by `client_id`; isolation via RLS.
 - **Per-client launch** = add a client row + config to the shared backend + Remix only that client's marketing site (frontend-only). NOT a backend clone, NOT an AI-regenerate.
 - **Why shared (not per-client backends):** per-client backends reintroduce AI-drift (every fix re-prompted across N projects, diverges). Shared = one codebase, one place to fix. Do not reopen.
-- **Project structure:** Project 1 = shared backend + admin dashboard + tenant app (`app.theirdomain.com`); owns the DB. Project 2 = lean marketing template. Per-client sites = Remixes of Project 2, `.env` → Project 1's Supabase.
+- **Project structure:** Project 1 = shared backend + admin dashboard + tenant app (`app.theirdomain.com`); owns the DB. **N STYLE templates** (one frontend-only Lovable project per style preset — Family-Owned, Owner-Operated, Corporate/Professional, Modern Professional, Local Professional; niche is a decoupled DATA layer, not a separate project). Per-client sites = Remixes of the chosen style template, `.env` → Project 1's Supabase. (Layer model: `/template-builder` + `docs/stage5-template-builder-build-spec.md`.)
 - **Subdomain routing [LOCKED]:** tenant app `app.theirdomain.com`; marketing root `theirdomain.com`.
 
 ## Stack [LOCKED]

@@ -17,6 +17,26 @@ description: Use when building a client-site TEMPLATE in a NEW frontend-only Lov
 4. **All platform URLs are fixed contracts:** lead form POSTs to `{VITE_SUPABASE_URL's host}/api/public/intake`; any tracked/funnel links use `/api/public/r/...` paths (top-level `/r/*` is auth-gated = dead for logged-out visitors — never use it). The site NEVER writes to the database directly — public writes go only through those `/api/public/*` endpoints.
 5. **Anon reads only.** The data loader uses the anon key (RLS-scoped: active clients, public columns). Never request or reference a service-role key in this project.
 
+## Layer model — Layout / Style / Niche [LOCKED — v2]
+
+A client site composes THREE decoupled layers (+ branding + business data):
+- **Layout / Template** — the reusable structural site shell (THIS project), built from a design, selectable by niche-fit. **NOT niche-labeled.**
+- **Style** — a selectable PRESET (copy voice + photo selection/treatment) that fills the shell and gives it a feel. Set: **Family-Owned, Owner-Operated, Corporate/Professional, Modern Professional, Local Professional.** Reusable, not client-specific. In v1 the style is embodied IN this project (a `Template — {Style}` project); `clients.site_style` is the **template/style SELECTION key** (which project to remix) — **NOT a render-time branch.**
+- **Niche** — a SEPARATE, selectable content/context layer (plumbing, roofing, HVAC, dentist…), applied onto ANY style/layout. **Pure DATA** — `template_vars.segment` + the niche-default fallback images + the two compliance category strings (`{customer_care_category}`/`{marketing_category}`), all keyed to the niche via the `/a2p-site-compliance` niche library (skill #14). The shell is niche-AGNOSTIC; never hardcode niche content.
+
+**DECOUPLE niche from style:** any niche composes with any style → build styles once + grow the niche library independently = **N+M to maintain, not N×M.** Adding a niche works instantly across all styles; adding a style works instantly across all niches. Niche lives in `template_vars` (data-only) — do NOT add a `clients.niche` column.
+
+## Baked-in compliance surface [LOCKED — from `/a2p-site-compliance`]
+
+Compliance + Turnstile bake into the STYLE shell (this project), so every style × niche × client combination is compliant by construction. Reproduce VERBATIM from `docs/a2p-compliance-copy-source-of-truth.md` (tokens only — never paraphrase the compliance language):
+- **Two-checkbox opt-in** on every lead form (lead, discount, chat-optin): both **unchecked by default + not a condition of service** (form submits without them); phone optional; fixed consent skeleton + `{customer_care_category}`/`{marketing_category}` from `template_vars`.
+- **Named Privacy Policy + Terms of Service + SMS Program** pages (rendered from the canonical doc via tokens).
+- **Footer** Privacy/Terms/SMS-Program links on EVERY page; all links working, no typos.
+- **Working `/review` page** = the always-present "Review Us" page; loads + presents a working review action (CTA to `client.review_link`, optional comment POST to `/api/public/intake`) — no new backend route.
+- **Cloudflare Turnstile widget** on all 3 lead forms with the agency PUBLIC site key; submit `turnstile_token` in the POST body. Backend is **fail-closed** → a form WITHOUT the widget = **zero leads.** (Build/test with the Cloudflare test keys; real keys set at launch.)
+
+These render through `useClient()` from `template_vars` like all other content — data-only, **zero frozen-backend change** (`get_client_public` already projects `template_vars`).
+
 ## The client data contract (what the template renders from)
 
 ### Direct `clients` columns (fetched by slug)
@@ -33,7 +53,9 @@ description: Use when building a client-site TEMPLATE in a NEW frontend-only Lov
 | brand_color | text | THE theme color — apply as CSS var `--brand` site-wide (default #bd703e) |
 | service_area | text[] | "Serving X, Y, Z" section/strip |
 | social_links | jsonb | Footer/contact icons ({instagram, facebook, bbb, tiktok, yelp} — render only the present ones) |
-| site_style | text | Which of the 4 copy voices this client uses (corporate / standard / family_owned / owner_operated — see website-structure skill) |
+| site_style | text | The **template/style SELECTION key** (which `Template — {Style}` project was remixed: Family-Owned / Owner-Operated / Corporate-Professional / Modern-Professional / Local-Professional). A label, **not a render-time branch** — this project already embodies one style. (Free text, not enum — see website-structure.) |
+| (niche) | template_vars.segment | The **niche selection** (plumbing / roofing / …) — pure data; drives niche content/context + the two compliance category strings via the `/a2p-site-compliance` library. NOT a `clients` column. |
+| brand colors | brand_color + template_vars | Primary = `clients.brand_color`; secondary/tertiary = `template_vars.brand_secondary`/`brand_tertiary` (optional). Captured at onboarding, agency-editable. |
 | review_link | text | "Leave us a review" CTAs (direct Google link) |
 | template_vars | jsonb | Everything below |
 
@@ -85,4 +107,6 @@ Follow the **website-structure skill** (import it alongside this one) for the lo
 6. Report what was built + any flagged new template_vars keys (rule 3) for the human to validate and add to the onboarding wizard.
 
 ## After validation (human-side, for reference)
-Template is FROZEN (golden-master discipline — no per-client edits, ever; improvements are deliberate + versioned via CHANGELOG, reaching existing clients only by re-remix). Per-client use: Remix → rename → set VITE_CLIENT_SLUG → connect domain → add domain to allowed_origins in the platform admin. See docs/client-onboarding-process.md for the full onboarding flow.
+Template is FROZEN (golden-master discipline — no per-client edits, ever; improvements are deliberate + versioned via CHANGELOG, reaching existing clients only by re-remix). Per-client use: Remix → rename → set VITE_CLIENT_SLUG → connect domain → add domain to allowed_origins in the platform admin (+ add the domain as a Turnstile hostname). See docs/client-onboarding-process.md for the full onboarding flow and docs/stage5-template-builder-build-spec.md for the layer model.
+
+**Pre-generation happens in Project-1 admin, not here:** the onboarding submission assembles in the per-client admin view as a **pre-generation console** (selections + prefilled style + branding + the #14 A2P-prep pack) for the agency to review/edit before remixing, alongside an **immutable read-only record** of the original submission (logo + answers, stored in the `client-assets` bucket). Those are admin-app builds (`/admin-view`, `/onboard-from-form`); this template just renders the resulting client data.

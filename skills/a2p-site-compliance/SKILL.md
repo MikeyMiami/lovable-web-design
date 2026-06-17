@@ -165,9 +165,9 @@ Stored verbatim in **`docs/a2p-compliance-copy-source-of-truth.md`**; the genera
 - **The ONLY free generation:** the **business-description text** + the **contextual noun in sample scenarios** (e.g. plumbing vs roofing), from the onboarding description + segment, **anchored to the §0 approved structure.** Sample-message **STRUCTURE stays fixed** (named brand, ≥2 STOP, real values, link token).
 
 ### C. The dummy review page [BUILD into the generated site]
-- Build a **real review-submission page** at **`{site_url}/review`** that records a review internally; `review_link_url` = that URL, **prefilled into the sample-message link token.**
-- If the real review flow isn't wired yet at submission, the dummy page makes the link **valid**. When the real review system lands, the URL **matches or gets swapped — note the swap in the handoff.**
-- The page **must actually load + accept a submission** (carriers may click it) — not a placeholder/404.
+- **v1 [frontend-only]:** the `/review` page = the always-present "Review Us" page (`/website-structure`); it must **load + present a working review action** — a CTA to `client.review_link` (Google) and/or an optional comment box POSTing to the **existing** `/api/public/intake` route. `review_link_url` = that page's URL, **prefilled into the sample-message link token.** No new backend route (a brand-new public review route would touch the frozen backend — not v1).
+- **[BACKLOG]** a real on-site review-capture pipeline (new public route) when the review system is built; when it lands, the URL **matches or gets swapped — note the swap in the handoff.**
+- The page **must actually load + accept the review action** (carriers may click it) — not a placeholder/404.
 
 ---
 
@@ -189,3 +189,4 @@ Skills/specs that need a pointer at `/a2p-site-compliance`. Anchor points + sugg
 - **`vertical` enum mapping** — the Section 2 segment labels (canonical §G) resolve to the TextGrid enum KEYS (`docs/1f-step6-a2p-registration-field-requirements.md`); confirm at build.
 - **Review-page URL swap** — when the real review system lands, reconcile `{review_link}` (Section C) and note it in the handoff.
 - **Niche library grows** — append approved niche rows over time; DEFAULT covers unlisted niches; consent copy is never freestyled.
+- **The compliance surface is BAKED into the STYLE template at build time** (`/template-builder`), so every per-client remix inherits it. Tokens fill at remix from `template_vars`; `{customer_care_category}`/`{marketing_category}` are sourced from the Niche library (keyed by `template_vars.segment`) at onboarding → the SAME values feed the site form AND the §3 admin pack (single source, byte-consistent). The niche is a DATA layer decoupled from the style (any niche × any style). See `docs/stage5-template-builder-build-spec.md`.

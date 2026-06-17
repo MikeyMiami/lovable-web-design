@@ -27,7 +27,11 @@ Visual design, fonts, colors, copy, and layout are AI-driven, from combining:
 
 This resolves the copy-strategy decision: copy is **AI-GENERATED, steered by the style choice** — templatized STRUCTURE, generated copy (not hardcoded, not manually rewritten per client).
 
-## The 4 site styles (copy voice + visual direction)
+## Site styles (copy voice + photo treatment)
+
+> **[v2 — Stage-5 layer model]** Style = a selectable PRESET (copy voice + photo selection/treatment) that fills a layout shell. The current preset set is **Family-Owned, Owner-Operated, Corporate/Professional, Modern Professional, Local Professional** (revised from the original 4 below; `clients.site_style` is free text — no migration). Style is **DECOUPLED from niche**: any niche (a data layer, `template_vars.segment` + the `/a2p-site-compliance` library) composes onto any style. `site_style` is the template/style **SELECTION key** (which `Template — {Style}` project to remix), **NOT a render-time branch**. Authoritative layer model: `/template-builder` + `docs/stage5-template-builder-build-spec.md`. The original 4 voices below remain valid descriptions of tone/direction:
+
+### The original 4 site styles (copy voice + visual direction)
 - **Corporate** — polished, professional, formal; sleek/minimal visual.
 - **Standard Business** — straightforward, service-focused, balanced.
 - **Local Family-Owned** — warm, community-rooted, personal.
@@ -48,7 +52,7 @@ This is the design analog of the backend's golden-master logic: generate while d
 ## Build notes
 - Runs on the per-client Remixed marketing site (frontend-only): reads public client data via anon SELECT; lead/discount/funnel forms POST to the shared backend's CORS-guarded public routes (foundation §6). No service-role key on this project.
 - **[LAUNCH PREREQUISITE — 1f step 3 dependency] Every public lead-intake form (website lead form, discount-claim, AND the chat-widget opt-in) MUST render the Cloudflare Turnstile widget with the agency's PUBLIC site key, and submit the resulting token as `turnstile_token` in the POST body.** The backend enforces Turnstile on `intake`/`discount`/`chat/optin` (fail-closed on an invalid token), so a form WITHOUT the widget → no token → **every legit submission is rejected → zero leads.** Add the client's marketing domain as a Turnstile hostname at launch. Site key is public (safe in the frontend); the secret stays a backend runtime secret. (Spec §10 Bot-protection; build-spec `docs/1f-step3-turnstile-ratelimit-build-spec.md`; gated in `/launch-check` §E.)
-- **[A2P-PREP — compliance pages] Every site carries the carrier-compliance surface from `/a2p-site-compliance`:** the two-checkbox opt-in (unchecked/optional; fixed consent skeleton + per-niche category strings keyed by `{segment}`), the named (not generic) Privacy Policy + Terms of Service, the SMS Program page, footer Privacy/Terms/SMS-Program links on every page, and the working `{site_url}/review` page. **Copy is reproduced VERBATIM from `docs/a2p-compliance-copy-source-of-truth.md` — tokens only, never paraphrased.** (Carrier 10DLC review reads the live site.)
+- **[A2P-PREP — compliance pages] Every site carries the carrier-compliance surface from `/a2p-site-compliance`:** the two-checkbox opt-in (unchecked/optional; fixed consent skeleton + per-niche category strings keyed by `{segment}`), the named (not generic) Privacy Policy + Terms of Service, the SMS Program page, footer Privacy/Terms/SMS-Program links on every page, and the working `{site_url}/review` page. **Copy is reproduced VERBATIM from `docs/a2p-compliance-copy-source-of-truth.md` — tokens only, never paraphrased.** (Carrier 10DLC review reads the live site.) These pages + the Turnstile widget are **baked into the STYLE template** (`/template-builder`) once, so every per-client remix inherits them — not authored per client.
 - Generate exactly the pages the onboarding supports (count services/areas; cap at 12/14).
 - Service-area pages are the home page re-focused per area (don't author each from scratch — re-target the lander).
 - Assets come from the storage buckets; copy is generated from onboarding data steered by `site_style`.
