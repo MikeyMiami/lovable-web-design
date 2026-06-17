@@ -117,9 +117,9 @@ Webhooks are configured PER NUMBER at provision time via `IncomingPhoneNumbers` 
 
 ---
 
-## §6 — Handoff to A2P-site-compliance (skill #13, separate)
+## §6 — Handoff to A2P-site-compliance (separate skill)
 
-The Campaign creation (§4 step 4) CONSUMES the client's marketing site: `privacyPolicyLink`, `termsAndConditionsLink`, the opt-in URL/screenshot (`messageFlow`/CTA media via `/campaigns/{campaignId}/cta`), and sample messages. Those artifacts are PRODUCED by the client's marketing template (Stage-5 template-builder world), not by this provider skill. The A2P-site-compliance skill (#13) owns: the privacy-policy page (with the "mobile opt-in not shared with 3rd parties" clause), the ToS SMS disclosure, and the opt-in form (unchecked + OPTIONAL checkbox, all CTA disclosures). **This skill assumes those exist and are live at registration time; #13 guarantees they do.** Documented handoff, two skills, one approval requirement.
+The Campaign creation (§4 step 4) CONSUMES the client's marketing site: `privacyPolicyLink`, `termsAndConditionsLink`, the opt-in URL/screenshot (`messageFlow`/CTA media via `/campaigns/{campaignId}/cta`), and sample messages. Those artifacts are PRODUCED by the client's marketing template (Stage-5 template-builder world), not by this provider skill. The A2P-site-compliance skill owns: the privacy-policy page (with the "mobile opt-in not shared with 3rd parties" clause), the ToS SMS disclosure, and the opt-in form (unchecked + OPTIONAL checkbox, all CTA disclosures). **This skill assumes those exist and are live at registration time; the A2P-site-compliance skill guarantees they do.** Documented handoff, two skills, one approval requirement.
 
 **Possible frozen-funnel concern to flag in review:** if the frozen funnel's opt-in (chat-widget + lead-form) does NOT already present SMS consent as unchecked + optional + fully-disclosed, that's a frozen-backend funnel adjustment (1f/bug-fix), not pure template work. Claude Code should confirm against the real funnel code.
 
