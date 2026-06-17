@@ -77,6 +77,7 @@ This skill VERIFIES; it does not build. If a check fails, fix it in the owning s
 - [ ] Site pages generated to match onboarding (services/areas counts, ≤12/≤14); brand color themed; assets loaded.
 - [ ] A2P-compliant terms/privacy page generated + linked (website_terms_page_link).
 - [ ] Consent/SMS opt-in language present on all public forms.
+- [ ] **A2P compliance (per `/a2p-site-compliance`):** contact email domain == site domain; Privacy Policy + ToS named (not generic) + footer-linked on every page; Privacy Policy carries the SMS Data Protection Statement ("mobile opt-in not shared with third parties for marketing"); ToS carries the SMS Messaging clauses 1–8; two-checkbox opt-in **unchecked + optional** with the exact consent language; 5 sample messages use **real values** (no `{Name}`/`{Company}`) + **≥2 STOP**; all links work + no typos; `{site_url}/review` loads + accepts a submission. (Verbatim copy: `docs/a2p-compliance-copy-source-of-truth.md`.)
 - [ ] End-to-end smoke test: submit a lead form from the live domain → contact created → drip enrolls → SMS sends → owner notified.
 
 ## Output

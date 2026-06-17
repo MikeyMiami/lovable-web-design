@@ -23,6 +23,7 @@ Launches one client on top of the proven golden-master backend. This is an ORCHE
 - Store From / MessagingServiceSid on the clients row (non-secret, column names retained).
 - Set per-number webhooks (`smsUrl` / `voiceUrl` / `statusCallback`) → `/api/public/*` (verified by `X-TextGrid-Signature`); forward the number to `call_forwarding_number`.
 - Write the provisioned number to `clients.twilio_number` (single-source — the unchanged runner picks it up). Place it on the site + Google Business Profile.
+- Brand/Campaign copy + URLs (Description, CTA, samples, T&C + privacy links) come **pre-generated from `/a2p-site-compliance`** (the admin A2P-prep panel; verbatim copy `docs/a2p-compliance-copy-source-of-truth.md`); the contact email domain MUST equal the site domain.
 
 ### 3. Remix the marketing site (frontend-only)
 - Remix the marketing-site project for the client's domain. Do NOT enable Cloud / provision a new Supabase.
@@ -32,6 +33,7 @@ Launches one client on top of the proven golden-master backend. This is an ORCHE
 ### 4. Invoke the design layer
 - Run **`/website-structure`**: generate the page set from onboarding (services/areas up to 12/14, only what's supported), steer copy + visual by `site_style`, theme the brand color, load assets, mimic the agency-uploaded reference screenshots.
 - Generate the A2P-compliant terms/privacy page (§9b.C) → store its URL in template_vars.
+- Generate the compliance pages (two-checkbox opt-in, named Privacy/ToS, SMS Program page, footer links, working `/review` page) per `/a2p-site-compliance` — copy reproduced VERBATIM from `docs/a2p-compliance-copy-source-of-truth.md` (tokens only).
 - As the template library matures, prefer applying a proven design template (Mode 2) over generating fresh (Mode 1).
 
 ### 5. Verify (gate)

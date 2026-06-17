@@ -599,7 +599,7 @@ Verbatim from the live client form (light edits for our system):
 - **Timezone** — editable in admin (default from the owner's pick).
 
 ### C. A2P-compliant terms page [BUILD]
-The agency hosts each client's terms/privacy page. Needs a documented process to generate an **A2P 10DLC-compliant terms & conditions + privacy page** from the onboarding data (business name, contact, SMS consent language, opt-out instructions, data handling). This page is what `{website_terms_page_link}` points to. Required for compliant SMS consent on all forms.
+The agency hosts each client's terms/privacy page. Needs a documented process to generate an **A2P 10DLC-compliant terms & conditions + privacy page** from the onboarding data (business name, contact, SMS consent language, opt-out instructions, data handling). This page is what `{website_terms_page_link}` points to. Required for compliant SMS consent on all forms. **The full compliance surface (Privacy Policy + ToS + SMS Program page + two-checkbox opt-in + the copy-paste Brand/Campaign pack) is owned by `/a2p-site-compliance`; verbatim carrier copy lives in `docs/a2p-compliance-copy-source-of-truth.md` (tokens-only substitution + a per-niche category library).**
 
 ### D. Per-client telephony setup [LOCKED pattern — messaging provider = TextGrid; per-client subaccount model]
 - **One parent messaging-provider (TextGrid) account** (the agency's master; billing rolls up; TextGrid = Twilio-API clone — see `skills/textgrid-provider`). Per client, a **subaccount** (vets independently, ~2–4 day A2P cadence) → Brand (client EIN) → Campaign → **number** (local area code matching their market). Store the per-client **From number (`clients.twilio_number`)** + optional **Messaging Service SID (`clients.twilio_messaging_service_sid`)** — both NON-secret; column names retained, hold the provider's values. **Net-new per-client provider columns added additively at 1f:** `provider_subaccount_sid`, `provider_webhook_secret`, `a2p_brand_id`, `a2p_campaign_id`, `a2p_status`.
@@ -621,7 +621,7 @@ The per-client DESIGN layer, applied on top of the shared golden-master backend 
 ### Page set [LOCKED]
 Pages are generated FROM the onboarding data, up to the max below. Only build pages the onboarding form supports (e.g. 5 services + 8 areas → 5 service pages + 8 area pages, not the max).
 
-**Always present:** Home/Lander, Contact Us, Gallery, Thank You, Review + Referral Follow-up Form, Discount Funnel, Review Us, Terms & Conditions, Privacy Policy.
+**Always present:** Home/Lander, Contact Us, Gallery, Thank You, Review + Referral Follow-up Form, Discount Funnel, Review Us, Terms & Conditions, Privacy Policy. (+ an SMS Program page; the Terms/Privacy/SMS-Program/opt-in copy is the VERBATIM `/a2p-site-compliance` set — `docs/a2p-compliance-copy-source-of-truth.md`, tokens only.)
 **Data-driven (one each, up to max):** Service page per service (**max 12**); Service Area page per area (**max 14**).
 
 - **Service Area pages** = essentially the Home/Lander, re-focused on serving that specific area (local-SEO: ranks for "[service] in [city]").
