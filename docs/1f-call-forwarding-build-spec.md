@@ -41,6 +41,7 @@
 - `resolveTenantByNumber(To)` → unknown → `<Response><Reject/></Response>` (or empty) 200; no `provider_webhook_secret` → 401; `verifyTextGridSignature(request.url, rawBody, secret, header)` → fail 401. *(4 invariants reused.)*
 - If `call_forwarding_number` set → respond:
   `<Response><Dial timeout="20" callerId="{To}" action="{ABS_URL}/api/public/voice-status" method="POST">{call_forwarding_number}</Dial></Response>`
+  - **`{ABS_URL}` = the CANONICAL production origin** (not a preview/proxy-rewritten host). The dial-action callback is signature-verified by `voice-status` (HMAC signs the URL), so the action URL the provider calls back MUST equal what the Worker signs over — a non-canonical host → HMAC mismatch → 401 → the missed call is lost. **This is the SAME URL-exactness LIVE-watch as the inbound routes (carried gate #3)** — verify at the LIVE smoke. (For STUB, `new URL(request.url).origin` is identical to canonical.)
 - If NOT set → respond `<Response><Say>Sorry we missed your call — we'll text you shortly.</Say></Response>` AND `enroll({sequenceKey:"missed_call_textback"})` + the `missed_call` notification + throttle (reuse `voice-status`'s missed-call block, or factor it into a shared `fireMissedCall(clientId, fromPhone, toPhone, callSid)` helper called by both routes).
 - `Content-Type: application/xml`.
 
@@ -53,7 +54,7 @@
 1. Deploy → `?ping=1` echoes `v20260617-4`.
 2. **Forward TwiML:** signed `voiceUrl` POST (`CallStatus=ringing`) for a test client WITH `call_forwarding_number` set → 200, body is `<Response><Dial … callerId="<clientNum>" action="…/voice-status">+1…</Dial></Response>` (contains the forward number).
 3. **No-forward fallback:** same with `call_forwarding_number` NULL → `<Say>` response AND a `missed_call_textback` enrollment + `missed_call` event.
-4. **Dial-action missed:** signed POST to `voice-status` with `DialCallStatus=no-answer` → textback enrolled (throttle respected on a 2nd within-window).
+4. **Dial-action missed:** signed POST to `voice-status` with `DialCallStatus=no-answer` **AND `To=<client number>`** (the field `voice-status` calls `resolveTenantByNumber` on — set it correctly so resolution SUCCEEDS and we test the missed-call logic, not an accidental resolution-failure pass) + `From`/`CallSid` → textback enrolled (throttle respected on a 2nd within-window). *(Which dial-action field carries the client number is the open 8th LIVE gate — STUB sets `To` deliberately.)*
 5. **No double-fire:** `DialCallStatus=completed` (answered) → no textback.
 6. **Signature:** bad/missing sig → 401; no secret → 401; unknown `To` → reject/200.
 7. `audit_tenant_rls()=0` (no schema change, but confirm).
