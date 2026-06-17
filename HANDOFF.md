@@ -30,9 +30,9 @@ A multi-tenant SMS-automation **"golden master" backend** built in **Lovable** (
 - **NEXT: remaining 1f (ordering Mikey's call)** — **A2P registration flow** (per-client subaccount→Brand→Campaign→number; full field list in `docs/1f-step6-a2p-registration-field-requirements.md`; also wires the **per-number webhooks** step 2 deferred), **call-forwarding**, the **reactivation number pool** (net-new agency layer), and **pg_cron scheduling LAST**. **Frontend-widget launch prerequisite** recorded in `/website-structure` + `/launch-check` §E (Turnstile widget + public site key on all 3 forms before first launch — backend is fail-closed). **LIVE flip remains gated on** the TextGrid parent-on-subaccount auth confirm (`textgrid-provider` §2/§7) + the outbound form-encoding/content-type watch.
 
 ### Carried items — consolidated checklist (MUST-CLEAR before LIVE + backlog; nothing lost)
-> Single source for everything deferred across steps 1–3. None of these block building the remaining STUB 1f steps; the 7 gates ALL block the real-provider / real-traffic LIVE flip.
+> Single source for everything deferred across steps 1–3 + call-forwarding. None of these block building the remaining STUB 1f steps; the gates ALL block the real-provider / real-traffic LIVE flip.
 
-**LIVE-flip gates (7):**
+**LIVE-flip gates (8):**
 1. [ ] **TextGrid parent-on-subaccount auth confirm** — built on Option-1 (master token vs subaccount SID); docs lean Option-2; `auth`/`sendingAccountSid` decoupled so the flip is caller-only. A LIVE send 401 ⇒ this. (`textgrid-provider` §2/§7; step-1 spec.)
 2. [ ] **Outbound form-encoding/content-type watch** — build POSTs `application/x-www-form-urlencoded` + PascalCase `To/From/Body`; Breeze doc shows `application/json` + lowercase. 415/400 at LIVE ⇒ switch to JSON. (step-1 validation.)
 3. [ ] **Inbound URL-exactness (HMAC)** — signature = `HMAC-SHA1(request.url + rawBody)`; configured `smsUrl`/`statusCallback`/`voiceUrl` must EXACTLY equal `request.url` (scheme/host/slash/query/proxy) or every sig 401s. Pin canonical URL at provisioning. (step-2; `textgrid-provider` §3.)
@@ -40,9 +40,11 @@ A multi-tenant SMS-automation **"golden master" backend** built in **Lovable** (
 5. [ ] **Turnstile live fail-probe** — STUB proved pass; the `success:false`→403 branch is code-verified; live fail-probe deferred (Lovable secret-rebind infra). Exercise with the real widget at LIVE. (step-3.)
 6. [ ] **Real Turnstile widget + `TURNSTILE_SECRET_KEY` on forms** — backend fail-CLOSED on bad token but fail-OPEN (protection OFF, alerted) if secret unset; marketing Remixes must render widget + public site key on all 3 forms (else zero leads). (`/website-structure` + `/launch-check` §A/§E.)
 7. [ ] **D1 "subsequent-tick-exits-it" sub-step** — opt-out→enforcement end-to-end (set `opted_out_at` → next runner tick exits `exited_opted_out`, no send) needs a `CRON_SECRET` tick (write-only on Lovable Cloud). Verify at LIVE; opt-out CAPTURE already proven on the live webhook. (step-2.)
+8. [ ] **`<Dial action>` callback field names** — confirm against the Breeze Voice doc at the LIVE smoke: the dial-action callback's exact `To`/`From`/`DialCallStatus` fields + which identifies the CLIENT (original called number) vs the FORWARD number, so `resolveTenantByNumber` resolves the client. STUB controls the payload; if the dial-action `To` is the forward number, resolve by original caller or pass the client number in the `action` URL. (call-forwarding spec.)
 
 **Backlog (non-blocking):**
 - [ ] **[FIX] `rate_limit_hits` old-window GC** — periodic `DELETE … WHERE window_start < now() - interval '1 day'` (slow growth). (step-3.)
+- [ ] **[BACKLOG] Business-hours-gated forwarding** — v1 always-forwards when `call_forwarding_number` is set; a BH gate (after-hours → straight to textback, no ring) is a future option. (call-forwarding spec.)
 - [ ] **[COSMETIC] doc-comment sweep** — `parseIntent` docstring still says "whole-word `\bpass\b`" (now sole-word); runner/reply "Twilio (Stage 1f) is STUBBED" comments (now TextGrid). Non-functional. (steps 1–2.)
 
 ### Locked product decisions
