@@ -57,7 +57,7 @@ TanStack Start v1 (React 19 + Vite 7), SSR, Cloudflare Workers (pure JS + fetch,
 - **Negative Review** = rated < threshold → private feedback page → does NOT enroll One-Year.
 - **Review funnel:** `/api/public/r/<token>` (tracked) → `/api/public/r/rate` (1–5 stars, threshold default 4 inclusive) → ≥thr Google + Review Completed, <thr `/api/public/r/feedback` + Negative Review.
 - **Drips:** Review Request (4 SMS), One-Year Follow-Up (5 SMS, exit on reply/opt-out), Lead-Form (business-hours branched), Missed-Call Textback, Reactivation. **Reactivation is now the AGENCY number-POOL model** (separate `reactivation_*` tables + a finite-campaign runner + `/cron/reactivation`; sends from a pool number with agency master creds, auto-releases when the campaign's last follow-up fires). The legacy per-client reactivation drip (sent from `clients.twilio_number`, same 4 texts as review, CSV upload) is **LOGICALLY DEPRECATED** — frozen code intact, routes zero traffic.
-- Opt-out keyword **"pass"** = **SOLE-word** (the whole inbound message must be just "pass"; tightened from whole-word `\bpass\b`, which false-positived "pass this along") + STOP/HELP/START, handled at the **net-new inbound webhook** (1f; verifies `X-TextGrid-Signature` before any DB write).
+- Opt-out keyword **"pass"** = **SOLE-word** (whole inbound msg must be exactly "pass"; tightened from `\bpass\b`, which false-positived "pass this along") + STOP/HELP/START, at the **net-new inbound webhook** (1f; verifies `X-TextGrid-Signature` before any DB write).
 - Naming: `{first_name}` customer-facing, `{full_name}` internal notifications.
 
 ## Build discipline [LOCKED]
