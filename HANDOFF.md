@@ -1,6 +1,6 @@
 # HANDOFF — session context for a fresh Claude Code instance
 
-> **Point a new instance here:** "Read `HANDOFF.md` to know what we're doing." This is the single go-to context file. Last updated **2026-06-16**. Planning-repo head: **`029896d`** (all reconciles in; user's masters confirmed in full byte-parity).
+> **Point a new instance here:** "Read `HANDOFF.md` to know what we're doing." This is the single go-to context file. Last updated **2026-06-17**. **Current state: 1f build steps 1–5 BUILT + STUB-validated + re-tagged — `cloud-spark-setup` @ `golden-master-v1.6` (`c491623`).** Remaining 1f: **A2P registration** + **pg_cron-LAST**, then the **LIVE flip** (8-gate carried checklist in §2). User's masters kept in byte-parity via hand-off mirror lines (planning-repo head advances each commit).
 
 ---
 
@@ -55,25 +55,19 @@ A multi-tenant SMS-automation **"golden master" backend** built in **Lovable** (
 
 ---
 
-## 3. What we just did this session (2026-06-16)
-**1f-prep: reviewed 3 user-draft files against the real frozen code, then applied provider-neutral doc reconciles + the reactivation deprecation to the planning repo.**
+## 3. What we did last — the 1f BUILD (steps 1–5, 2026-06-16/17)
+Built the full 1f hardening surface **in STUB** via the loop: **audit real frozen code → write build-spec → Lovable builds → validate against the REAL committed code (not prose) → re-tag.** Each step isolated from the frozen master; re-tagged only when green. **All five STUB-validated + tagged — per-step detail is in §2:**
+- **`v1.2` — outbound TextGrid swap** — pure-transport `sendSms`/`sendSmsWithRetry` `{to,from,body,sendingAccountSid,auth,mode}`; D1 universal opt-out enforcement; D2 render self-heal; LIVE-only `send_config_missing`. (`docs/1f-step1-outbound-swap-build-spec.md`)
+- **`v1.3` — inbound webhook layer** — `X-TextGrid-Signature` HMAC-SHA1 + the 4 hardening invariants; inbound→CRM; real-time reply-exit; STOP/sole-word-`pass`/START opt-out CAPTURE (now WRITES `opted_out_at` = D1's writer). (`docs/1f-step2-inbound-webhook-build-spec.md`)
+- **`v1.4` — Turnstile + rate-limiting** — Turnstile on the 3 bare lead forms (fail-closed on bad token / fail-open+alert on infra); DB-backed rate limiter (`rate_limit_hits` + `check_rate_limit` RPC — no KV/DO in the runtime) per-IP+per-client. (`docs/1f-step3-turnstile-ratelimit-build-spec.md`)
+- **`v1.5` — call-forwarding** — net-new `voiceUrl` route → `<Dial>` to `call_forwarding_number` (dynamic) + `<Dial action>`→extended `voice-status` (`DialCallStatus ?? CallStatus`, no double-fire). (`docs/1f-call-forwarding-build-spec.md`)
+- **`v1.6` — reactivation number pool** — net-new AGENCY layer (separate tables + finite runner + `/cron/reactivation`), disjoint from the frozen claim fn; atomic assign RPC; auto-release. Probe-scaffolding migrations were caught + neutralized + cleaned. (`docs/1f-reactivation-pool-build-spec.md` + `docs/reactivation-number-pool-spec.md`)
 
-Review record: `docs/build-log/1f-prep-textgrid-reactivation-review.md` (commit `8394680`). Key findings:
-- TextGrid swap is genuinely isolated — the **3 isolation points hold** (single SEND-ONLY primitive `sendStubSmsWithRetry`, 2 callers only; `twilio_number` single-source; webhooks under `/api/public/*`). **APPROVED as a 1f spec.**
-- **Correction 1:** inbound webhooks + signature are **NET-NEW**, not a "swap" (no inbound route/signature exists in the frozen repo).
-- **Correction 2:** spec §9 "Inbound SMS→CRM [built]" was inaccurate → reframed to 1f net-new.
-- **from-resolution seam:** the send primitive takes `{clientId, contactId, body}` — **no `from`**. At 1f the **CALLER** must resolve+pass `from` (= `clients.twilio_number`) + subaccount auth, keeping the primitive SEND-ONLY. The reactivation pool reuses this exact seam (passes a pool number as `from`).
-- **Reactivation pool placement:** **separate agency-ops layer** — net-new agency-scoped tables (`reactivation_numbers`, `reactivation_campaigns`, **separate** `reactivation_campaign_enrollments` queue), RLS read = `is_admin()` (like `audit_log`/export-client), NOT tenant-RLS. **Separate finite-campaign runner** that reuses only the send primitive. **Do NOT** put pool enrollments in the frozen `enrollments` table (the frozen `claim_due_enrollments` would grab them + send from the wrong number) and **do NOT** add branching to the frozen runner. Buildable as net-new with **ZERO frozen-master modification**.
+**Method that held throughout:** validate against the REAL code at each SHA, not Lovable's report; catch drift (empty auto-commits via tree-diff, the `?ping=1`/`runner_version` deploy-promotion gate, the probe-migration pollution); re-tag only when green. *(Earlier this session also CLOSED the deploy-lag root-cause + shipped the `?ping=1` confirm-gate — see §2 v1.1 + `docs/build-log/1f-prep-deploy-lag-rootcause.md`.)*
 
-**Commits this session (planning repo `lovable-web-design`), in order:**
-- `8394680` — the 1f-prep review record.
-- `02b02e6` — provider-neutral reconciles + reactivation deprecation across spec, LAUNCH.md, launch-check, onboard-from-form, new-client-site, features.
-- `fffb21f` — **self-review fix:** §9.D had residual stale items (header/auth/webhooks/A2P bullets) still in the old "Twilio Option 1 / one shared A2P campaign / parent-level webhooks" model, contradicting the per-client model above them. Reconciled.
-- `8c9aae4` — added this `HANDOFF.md`.
-- `42689fb` — **Bucket-1 provider-neutralize sweep** across all active authoritative docs (spec §0/§9/§9b.D/§10/§12, LAUNCH, scratch-foundation §8 full incl. connector-gateway→direct-API, workspace-knowledge-condensed:47, features, automation-config, admin-view, new-client-site, phase2-build-guide-stage0-1 §1f). Also recovered the silently-lost features:77 reactivation `[DEPRECATED]` header.
-- `029896d` — two Stage-0 stragglers (phase2-build-guide-stage0-1 lines 10/13).
+**Durable skill/doc updates this session (mirror lines handed for each):** committed `textgrid-provider` skill (was an output master); `launch-check` §A/§E; `website-structure` (Turnstile-widget launch prereq); `admin-view` (reactivation-pool agency surface + Upload-Customers deprecation); `scratch-foundation` (test-data-never-in-migrations rule); spec §10 (rate-limiter DB-decided) + §650 (webhook paths); + the build-spec docs. **The 8-gate LIVE-flip carried checklist lives in §2.**
 
-**PARITY CONFIRMED:** the user has mirrored EVERY hand-off byte-for-byte; their masters == planning repo @ `029896d`. The TextGrid provider-neutralize reconcile + reactivation deprecation are **COMPLETE**. No active-doc stale-model `Twilio` prose remains (verified by repo-wide grep both sides).
+*(The prior 1f-PREP doc-reconcile session — provider-neutralize + reactivation deprecation, commits `8394680`…`029896d` — is recorded in `docs/build-log/1f-prep-textgrid-reactivation-review.md` + git history.)*
 
 ---
 
@@ -81,12 +75,14 @@ Review record: `docs/build-log/1f-prep-textgrid-reactivation-review.md` (commit 
 1. ~~Provider-neutralize sweep + §9.D fix~~ **DONE & in full parity (`029896d`).** Nothing outstanding here.
 2. **A2P registration field GAP — parked at 1f step 6 with the FULL field list** (`docs/1f-step6-a2p-registration-field-requirements.md`, recorded 2026-06-16 from the TextGrid 10DLC doc). The gap is **bigger than just `vertical`**: also `entityType` (sole-prop branch = NO EIN + SMS-OTP flow; many local businesses are sole props), `brandRelationship`, and Campaign-required `termsAndConditionsLink` + `privacyPolicyLink`. The "≥15-day-old EIN" assumption is NOT in the TextGrid docs (verify). Onboarding (`onboard-from-form`) must capture these; implied additive `clients` columns at step 6. Not a step-1 blocker.
 3. **3 user-draft files (in the user's "outputs", NOT in this repo — I provide text, the user edits them).** Status: the user reports all three are now folded — `textgrid-provider` SKILL (direct API: `fetch` to `api.textgrid.com`, Bearer auth; Corrections 1+2 in; `from` caller-passed / primitive SEND-ONLY; the two stray "connector gateway" mentions fixed), TextGrid impact map, and `reactivation-number-pool-spec` (supersedes-header added). If revisited, these are the user's files — provide text, don't edit.
-4. **When 1f starts (NOT started yet — the real next phase):** build the 1f scope (§2) + the reactivation pool as a net-new agency layer (§3 of "what we did"). Re-validate + **re-tag** the frozen master after each backend-touching 1f change (post-freeze contract: only 1f hardening + re-validated bug-fixes may touch it). Expect Lovable build reports to validate via the usual loop.
+4. **1f BUILD steps 1–5 — DONE** (STUB-validated + tagged `v1.2`…`v1.6`; see §2/§3). **Remaining 1f:** the **A2P registration flow** (item 2 above — the last build piece; also wires the deferred per-number webhooks `smsUrl`/`statusCallback`/`voiceUrl` + registers the agency PierceWorks campaign + the reactivation pool numbers), then **pg_cron scheduling LAST** (schedules BOTH `/cron/sequences` and `/cron/reactivation`), then the **LIVE flip** gated on the 8-item carried checklist (§2). Post-freeze contract holds: re-validate + re-tag after each backend-touching change. A2P leans more on the TextGrid 10DLC docs + onboarding-field capture than on the frozen code.
 
 ---
 
 ## 5. Key facts about the real frozen code (`C:\Users\Pierc\Desktop\cloud-spark-setup`)
-> **A fresh instance does NOT have this code in context.** Before verifying ANYTHING against the real backend, read from the local clone at `C:\Users\Pierc\Desktop\cloud-spark-setup` (it's tag `golden-master-v1` @ `1266804`). If the clone is missing/stale, re-clone: `git clone https://github.com/MikeyMiami/cloud-spark-setup C:\Users\Pierc\Desktop\cloud-spark-setup` then `git -C ... checkout golden-master-v1`. The real code / live DB / migrations are the highest-trust source — never validate off Lovable's prose summaries (see §6). The facts below are a starting map, not a substitute for reading the code.
+> **A fresh instance does NOT have this code in context.** Before verifying ANYTHING against the real backend, read from the local clone at `C:\Users\Pierc\Desktop\cloud-spark-setup`. **Current frozen master = `golden-master-v1.6` @ `c491623`** (1f steps 1–5 built); the PRE-1f baseline was `golden-master-v1` @ `1266804`. If the clone is missing/stale: `git clone https://github.com/MikeyMiami/cloud-spark-setup C:\Users\Pierc\Desktop\cloud-spark-setup` then `git -C ... checkout golden-master-v1.6` (or `origin/main`). The real code / live DB / migrations are the highest-trust source — never validate off Lovable's prose summaries (see §6).
+>
+> ⚠️ **The §5 facts below describe the PRE-1f baseline (`golden-master-v1`).** The code has since evolved through 1f — for the CURRENT state see §2/§3 + the `docs/1f-*-build-spec.md` files. Notably now: the send primitive is `sendSms`/`sendSmsWithRetry` **with `from`** (pure transport, `send.server.ts`); `RUNNER_VERSION` is `v20260617-5`; the cron route has `?ping=1`; net-new routes exist under `/api/public/` (`sms/inbound`, `sms-status`, `voice-status`, `voice/inbound`, `cron/reactivation`); Turnstile + `rate_limit_hits` + the reactivation pool tables/RPCs are live; per-client provider cols (`provider_subaccount_sid`, `provider_webhook_secret`) added.
 - `src/lib/sms/send.server.ts` — SEND-ONLY stub. `sendStubSms` / `sendStubSmsWithRetry({clientId, contactId, body})` — **NO `from` arg**; `SEND_MAX_ATTEMPTS=2`. **2 callers only:** `runner.server.ts:490`, `reply.functions.ts:41`. No `api.twilio.com`/`Messages.json` anywhere (all "twilio" hits are comments/labels).
 - `src/lib/cron/runner.server.ts` — `RUNNER_VERSION = "v20260615-2"` (line 39); send call passes no `from` (line 490); status-swap comment ~532.
 - `claim_due_enrollments` (migration `20260615211906_*.sql`) — round-robin per-client (`row_number() … PARTITION BY client_id`), `WHERE e.status='active' … AND c.status='active' AND c.deleted_at IS NULL` (archived filter), **NO sequence/campaign filter** (this is why pool enrollments must NOT live in the frozen `enrollments` table).
