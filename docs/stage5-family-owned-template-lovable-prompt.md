@@ -5,13 +5,18 @@
 ## Setup (do before prompting)
 1. **New Lovable project, frontend-only** — decline Cloud/DB/auth. Name it **`Template — Family-Owned`**.
 2. **Import skills** (GitHub subdirectory URLs): `template-builder`, `website-structure`, `opt-in-forms`, `a2p-site-compliance`.
-3. **Attach references:** the Family-Owned design references (screenshots/links) only. **Do NOT attach any real-business logo** — the demo client uses a generic/placeholder logo or the text-render `business_name` fallback (skill #12). *(Mike's Plumbing was only the source the compliance copy + plumbing niche strings were derived from — it must NOT become the baked-in demo identity, since the demo client renders in demo mode / screenshots / the repo whenever there's no live slug.)*
+3. **Attach your design references** (images/links dropped into Lovable). Two kinds — label them so it's obvious what each is for:
+   - **PAGE-LAYOUT references** → `[attach screenshots of site layouts you want the structure to follow — hero, sections, page flow, how content is arranged]`
+   - **ART-STYLE references** → `[attach for color palette / typography / visual feel / imagery treatment]`
+   - **Do NOT attach any real-business logo.** The demo client uses a generic/placeholder logo or the text-render `business_name` fallback (skill #12). *(Mike's Plumbing was only the source the compliance copy + plumbing niche strings were derived from — it must NOT become the baked-in demo identity, since the demo client renders in demo mode / screenshots / the repo whenever there's no live slug.)*
 4. **`.env`:** set `VITE_SUPABASE_URL` + anon key to the shared platform (Project 1) values; leave `VITE_CLIENT_SLUG=` blank (demo mode).
 5. **Turnstile:** use the **Cloudflare test keys** (always-pass site key `1x00000000000000000000AA`) — no real keys in the template.
 
 ## The build prompt (paste into Lovable)
 
 > Build a **frontend-only, data-driven client-site TEMPLATE** per the imported `template-builder` + `website-structure` + `a2p-site-compliance` skills. This is the reusable **Family-Owned STYLE** shell; the **niche is a separate data layer** (we're seeding **plumbing** via the demo client to prove composition — do NOT hardcode anything plumbing-specific into components).
+>
+> **Match the attached references as closely as possible** — replicate their layout, section structure, spacing, typography, and visual style. Treat them as the **design spec to reproduce, not loose inspiration** (this is `website-structure`'s design-generation-inputs model: reference screenshots → mimic the layout/styling, populate with our data). The PAGE-LAYOUT references govern structure/section flow; the ART-STYLE references govern palette/type/visual feel. The ONLY things that change from the references: **(a)** all business content renders from the `client` data object (never hardcoded); **(b)** the baked compliance surface (two-checkbox opt-in / Privacy / ToS / SMS Program / footer links / `/review`) is added per `a2p-site-compliance`; **(c)** the **Family-Owned** copy voice fills the text. Everything structural/visual should faithfully follow the references.
 >
 > **Hard rules (from template-builder):** frontend-only — no Lovable Cloud, no DB, no auth, no service-role. Build the **data loader (`src/lib/client-data.ts`) + demo client (`src/lib/demo-client.ts`) + `useClient()` hook FIRST**, then design everything rendering through `useClient()`. NEVER hardcode business-specific values (name, phone, tagline, services, hours, colors, logo, photos, niche content) — layout/spacing/typography/section-structure are universal; all content is variables. Anon reads only; if `VITE_CLIENT_SLUG` is blank/fetch fails → render the demo client.
 >

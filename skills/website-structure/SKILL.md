@@ -23,7 +23,7 @@ Visual design, fonts, colors, copy, and layout are AI-driven, from combining:
 1. **Site style choice** (`clients.site_style`, §9b — 4 options below) → copy VOICE + styling DIRECTION.
 2. **Onboarding form data** → content + the AI's copy source (About Us, services, areas, differentiators, hours, identity).
 3. **Visual assets from onboarding** → logo (`clients.logo_url`, uploaded or agency-made) + photos of previous work (the `public-assets` / `client-assets` buckets).
-4. **Reference style screenshots** — AGENCY-uploaded at build time (NOT an onboarding field). Lovable mimics the reference layout/styling, populated with the client's real data + assets.
+4. **Reference style screenshots** — AGENCY-uploaded at build time (NOT an onboarding field). **MIMIC CLOSELY:** treat the references as the design spec to FAITHFULLY REPRODUCE (layout, section structure, spacing, typography, visual style) — not loose inspiration. Label them PAGE-LAYOUT (structure/section flow) vs ART-STYLE (palette/type/visual feel). The only things that change from the references: business content renders from the client data object (never hardcoded), the baked compliance surface (`/a2p-site-compliance`) is added, and the chosen style's copy voice fills the text — everything structural/visual follows the references.
 
 This resolves the copy-strategy decision: copy is **AI-GENERATED, steered by the style choice** — templatized STRUCTURE, generated copy (not hardcoded, not manually rewritten per client).
 
