@@ -6,7 +6,7 @@ Multi-tenant Reviews/SMS automation SaaS for local service businesses (white-lab
 - **ONE shared multi-tenant backend** ("golden master") serves ALL clients. Built once, frozen, NEVER regenerated per client. Every tenant row keyed by `client_id`; isolation via RLS.
 - **Per-client launch** = add a client row + config to the shared backend + Remix only that client's marketing site (frontend-only). NOT a backend clone, NOT an AI-regenerate.
 - **Why shared (not per-client backends):** per-client backends reintroduce AI-drift (every fix re-prompted across N projects, diverges). Shared = one codebase, one place to fix. Do not reopen.
-- **Project structure:** Project 1 = shared backend + admin dashboard + tenant app (`app.theirdomain.com`); owns the DB. **N STYLE templates** (one frontend-only Lovable project per style preset — Family-Owned, Owner-Operated, Corporate/Professional, Modern Professional, Local Professional; niche is a decoupled DATA layer, not a separate project). Per-client sites = Remixes of the chosen style template, `.env` → Project 1's Supabase. (Layer model: `/template-builder` + `docs/stage5-template-builder-build-spec.md`.)
+- **Project structure:** Project 1 = shared backend + admin dashboard + tenant app (`app.theirdomain.com`); owns the DB. **N STYLE templates** (one frontend-only Lovable project per style preset — Family-Owned, Owner-Operated, Corporate/Professional, Modern Professional, Local Professional; niche is a decoupled DATA layer, not a separate project). Per-client sites = Remixes of the chosen style template, `.env` → Project 1's Supabase. Each style template **bakes in the a2p compliance surface** (two-checkbox opt-in, named Privacy/ToS, SMS Program page, footer links, `/review`) **+ the Turnstile widget**, so every remix is compliant by construction; niche fills `template_vars.segment` + the two consent-category strings from the `/a2p-site-compliance` library. (Layer model: `/template-builder` + `docs/stage5-template-builder-build-spec.md`.)
 - **Subdomain routing [LOCKED]:** tenant app `app.theirdomain.com`; marketing root `theirdomain.com`.
 
 ## Stack [LOCKED]
@@ -48,16 +48,16 @@ TanStack Start v1 (React 19 + Vite 7), SSR, Cloudflare Workers (pure JS + fetch,
 - **AI chat widget:** Lovable AI Gateway `https://ai.gateway.lovable.dev/v1`, auth `LOVABLE_API_KEY` (ambient server runtime, never browser), model `google/gemini-3-flash-preview`. Streaming chat → `src/routes/api/chat.ts` (AI SDK `streamText`/`toUIMessageStreamResponse`, client `useChat`); one-shot → `createServerFn`. Knowledge = per-request system-prompt injection. Handle 429/402.
 - **Google:** NO OAuth/API — stored strings only (`review_link`, `review_place_id`).
 - **Storage:** Supabase `public-assets` (public-read), `client-assets` (private, client_id-scoped).
-- **Scheduling:** pg_cron + pg_net → `/api/public/cron/sequences`.
-- **Bot protection:** Cloudflare Turnstile (site key public, secret runtime).
-- **Rate-limiter:** Durable Objects / KV / DB (NOT in-memory — Workers isolates).
+- **Scheduling:** pg_cron + pg_net → `/api/public/cron/sequences` (drip runner) AND `/api/public/cron/reactivation` (agency-pool runner). **UNSCHEDULED by design until LAST in 1f** (manual ticks during build); cron route has a `?ping=1` deploy-promotion health-check; schedule only the canonical prod URL, never a `*-preview` alias.
+- **Bot protection:** Cloudflare Turnstile (site key public, secret runtime). Enforced server-side **fail-CLOSED** on the 3 public lead-intake routes (`intake`/`discount`/`chat/optin`); **fail-OPEN+alert** on a siteverify infra failure; `chat/request` = rate-limit-only; webhooks/cron excluded (1f step 3, shipped). The widget is **baked into the marketing template** — no widget = no token = zero leads; add the per-client domain as a Turnstile hostname at launch.
+- **Rate-limiter:** **DB-backed** — `rate_limit_hits` table + atomic `check_rate_limit()` RPC, per-IP (10/10m) + per-client (60/10m) from `CF-Connecting-IP`, 429+`Retry-After` (1f step 3, shipped). **NO KV / Durable Objects in the Lovable/Nitro runtime** — the DB is the store (NOT in-memory; Workers isolates).
 
 ## Terminology [LOCKED]
 - **Review Completed** = clicked review link / rated ≥ threshold → went to Google → enrolls into One-Year drip.
 - **Negative Review** = rated < threshold → private feedback page → does NOT enroll One-Year.
 - **Review funnel:** `/api/public/r/<token>` (tracked) → `/api/public/r/rate` (1–5 stars, threshold default 4 inclusive) → ≥thr Google + Review Completed, <thr `/api/public/r/feedback` + Negative Review.
-- **Drips:** Review Request (4 SMS), One-Year Follow-Up (5 SMS, exit on reply/opt-out), Lead-Form (business-hours branched), Missed-Call Textback, Reactivation (CSV upload, same 4 texts as review).
-- Opt-out keyword **"pass"** + STOP/HELP/START, whole-word, handled at inbound webhook.
+- **Drips:** Review Request (4 SMS), One-Year Follow-Up (5 SMS, exit on reply/opt-out), Lead-Form (business-hours branched), Missed-Call Textback, Reactivation. **Reactivation is now the AGENCY number-POOL model** (separate `reactivation_*` tables + a finite-campaign runner + `/cron/reactivation`; sends from a pool number with agency master creds, auto-releases when the campaign's last follow-up fires). The legacy per-client reactivation drip (sent from `clients.twilio_number`, same 4 texts as review, CSV upload) is **LOGICALLY DEPRECATED** — frozen code intact, routes zero traffic.
+- Opt-out keyword **"pass"** = **SOLE-word** (the whole inbound message must be just "pass"; tightened from whole-word `\bpass\b`, which false-positived "pass this along") + STOP/HELP/START, handled at the **net-new inbound webhook** (1f; verifies `X-TextGrid-Signature` before any DB write).
 - Naming: `{first_name}` customer-facing, `{full_name}` internal notifications.
 
 ## Build discipline [LOCKED]
