@@ -583,7 +583,7 @@ Verbatim from the live client form (light edits for our system):
 - **Return/referral discounts** (e.g. "$500 off your next roof / 15% off your next driveway wash") → `{discount__on_referral}` and `{discount_amount}`.
 - **Logo** (upload; or request one) + "do you need a logo?" flag → branding.
 - **Timezone** (NEW field — pick one: EST / CST / MST / PST / Honolulu) → drives all send windows; also editable in admin.
-- **Site style choice** (NEW field — pick one of 4): **Corporate** (polished, professional, formal, sleek/minimal), **Standard Business** (straightforward, service-focused, balanced), **Local Family-Owned** (warm, community-rooted, personal), **Owner-Operated Local** (owner is the brand, first-person, most personal). Drives the AI's copy voice AND the site's styling direction (§9c).
+- **Site style choice** (NEW field — one of the **6 style presets**): Professional Modern, Artistic Unique, Corporate, Modern Tech, Family Owned / Local Business, Owner Operated / Local Business. Stored as the slug key in `clients.site_style`; voices / slugs / visual directions live in `/website-structure` Site styles (the authoritative list). Drives the AI's copy voice AND the site's styling direction (§9c).
 - **Photos** — 25–60 best photos + a team/owner photo (sent to the agency email) → site.
 - **Consent** — terms & conditions + SMS opt-in language.
 
@@ -629,7 +629,7 @@ Pages are generated FROM the onboarding data, up to the max below. Only build pa
 
 ### Design generation inputs [LOCKED]
 The visual design, fonts, colors, copy, and layout are AI-driven, determined by combining:
-1. **Site style choice** (§9b — 4 options: Corporate / Standard Business / Local Family-Owned / Owner-Operated Local) → copy voice + styling direction.
+1. **Site style choice** (§9b — one of the 6 style presets; see `/website-structure` Site styles for the authoritative list) → copy voice + styling direction.
 2. **Onboarding form data** → content + the AI's copy source (About Us, services, areas, differentiators).
 3. **Visual assets from onboarding** → logo (uploaded or agency-made) + photos of previous work.
 4. **Reference style screenshots** (AGENCY-uploaded at build time, not an onboarding field) → Lovable mimics the reference layout/styling, populated with the client's real data + assets.
