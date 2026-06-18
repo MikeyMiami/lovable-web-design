@@ -10,7 +10,7 @@ The per-client DESIGN layer, applied on the Remixed marketing site (frontend-onl
 ## Page set [LOCKED]
 Pages are generated FROM the onboarding data, up to the max. Build ONLY the pages the onboarding supports — e.g. 5 services + 8 areas → 5 service pages + 8 area pages, NOT the max.
 
-**Always present** (every site): Home/Lander, Contact Us, Gallery, Thank You, Review + Referral Follow-up Form, Discount Funnel, Review Us, Terms & Conditions, Privacy Policy.
+**Always present** (every site): Home/Lander, Contact Us, Gallery, Thank You, Review + Referral Follow-up Form, Discount Funnel, Review Us, Terms of Service, Privacy Policy, SMS Program.
 
 **Data-driven** (one each, up to max):
 - **Service page** per service listed — **max 12**. The AI determines a good, relevant layout describing that service.
