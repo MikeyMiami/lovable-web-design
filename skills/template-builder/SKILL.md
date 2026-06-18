@@ -84,6 +84,8 @@ Create `src/lib/demo-client.ts`: a fake business of the chosen niche (e.g. "Apex
 
 Follow the **website-structure skill** (import it alongside this one) for the locked page set, the site-style copy voices, brand-color theming, fonts, and the two-mode design system. The design REFERENCES the human uploads govern look/feel/typography/layout aesthetics within that structure.
 
+**Fonts:** match the ART-STYLE reference imagery's typography as closely as possible (closest available web fonts); never the generic default — see `/website-structure` Fonts & type.
+
 **Page identity is fixed by the canonical page registry in `/website-structure`** [Approach B]: each page has a stable **canonical id + route** (system-facing — use it for route files, data wiring, and cross-page links) and a set of **`allowed_display_labels`** (visitor-facing). The nav/heading label MAY use any allowed synonym to match the style/reference; the **id/route NEVER varies**, and NEVER invent a label outside the allowed set. Compliance pages (Privacy Policy / Terms of Service / SMS Program) have **FIXED labels** — do not flex them.
 
 ## Platform integration points (wire exactly)
