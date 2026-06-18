@@ -26,8 +26,9 @@
 - **Dependency:** none. This is the keep-momentum-while-TextGrid-verifies track.
 
 ### Phase B-0 — AUTH + audit (DO-FIRST launch-readiness) *(precedes the mobile-app features)*
+- **[DONE — CLOSED 2026-06-18].** B-0 is built + validated end-to-end. `provisionClientOwner` (app-layer, migration-free; `src/lib/auth/provisioning.functions.ts`) + the `audit_log` table are live in `golden-master-v1.6`; the green path (a–e) passed: invite -> `auth.users` (confirmed_at null) -> audited `client_owner` grant (`actor_source='fn'`) -> tenant RLS returns only that client's rows -> `audit_tenant_rls()` = 0. **One open config item carried to Phase B: custom SMTP** (see below). The two bullets below are the original spec, retained for context.
 - **Client auth/login provisioning flow.** Mechanism is specced (`user_roles` enum `app_role`: admin|client|agency_owner|client_owner|client_staff; write the role on signup/invite with the right `client_id`; helpers gate the app/admin) but **the invite/credential flow is not built**. Build: create the auth user + grant `client_owner` (+ `client_staff`) for their `client_id`, and how the client receives credentials. You (agency) = `admin`/`agency_owner`; the client = `client_owner`/`client_staff`.
-- **`audit_log` table** — `[BUILD — TODO]` in the spec; must land **before any real `admin` OR `agency_owner` is granted** (i.e. before you or any real client gets a role). `user_roles` AFTER-trigger is the sole writer (catches direct-SQL grants too). Built in the **v1.7 pass** (§3) but *gating-wise it's do-first*.
+- **`audit_log` table** — `[DONE — live in golden-master-v1.6 (migrations 20260615210212 + 20260615211022)]`; must land **before any real `admin` OR `agency_owner` is granted** (i.e. before you or any real client gets a role). `user_roles` AFTER-trigger is the sole writer (catches direct-SQL grants too). Built in the **v1.7 pass** (§3) but *gating-wise it's do-first*.
 - **Dependency:** Supabase Auth (exists). **This gates Phase B's testability.**
 
 ### Phase B — Mobile-app uniform design + two two-sided features + the payment gate
@@ -38,6 +39,7 @@
   - **Ticket threads = polling** (reuse the existing 15s/10s cadence); **realtime = post-launch backlog**.
   - **Support notifications = in-app + owner-email on reply** (reuse the existing platform owner-email infra) — don't rely on the client happening to open the app.
 - **Payment-access gate** — see §4 (the new feature).
+- **Custom SMTP — prerequisite for real client onboarding.** B-0 invites send via Supabase Auth's **default** SMTP, which is rate-limited and landed in **spam** (from `auth.lovable.cloud`) during validation. Before onboarding any real client, configure **custom SMTP** in Supabase Auth so invite + password-reset emails deliver to inbox reliably. **Config, not code** — does NOT block the build, but blocks real client use; pairs with the client PWA set-password/callback route (the `provisionClientOwner` `redirectTo` target this phase lands).
 - **Dependency:** **the v1.7 additive backend (§3)** for both ticketing features + the gate; **Phase B-0 auth** for testability.
 
 ### Phase C — Admin-view + agency-view + the onboarding wizard *(Project-1 admin builds)*
@@ -160,8 +162,8 @@ NOW ──► TextGrid verification (external, long pole) ───────�
 
 | Prereq | Status / where it lands | Severity |
 |---|---|---|
-| **Client auth/login provisioning** | **Phase B-0 (DO-FIRST)** — specced mechanism, unbuilt flow | BLOCKER for B + E |
-| **`audit_log` table** | v1.7 pass; gates **before any real admin/agency_owner grant** | LAUNCH PREREQ |
+| **Client auth/login provisioning** | **Phase B-0 — DONE + VALIDATED 2026-06-18** (`provisionClientOwner`); custom SMTP carried to Phase B | RESOLVED — unblocks B + E |
+| **`audit_log` table** | **DONE — live in golden-master-v1.6** (migrations 20260615210212 + 211022) | RESOLVED |
 | **Onboarding wizard (capture UI)** | **Phase C** — NOT built (skill overstates) | BLOCKER for E |
 | **Billing / payments** | **DEFERRED — invoice-by-hand for v1**; no Stripe/plans/metering yet; revisit when manual invoicing is the bottleneck. The **payment-access gate IS built now** (§4) and works with manual invoicing + is Stripe-forward-compatible | deferred subsystem |
 | **Agency's own legal** (client services agreement + acceptable-use policy) | **Parallel, NON-CODE** — must exist **before sending SMS on a real client's behalf** (your name is on the A2P filings) | non-code launch prereq |
