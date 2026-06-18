@@ -95,6 +95,9 @@ The live `{site_url}/review` page (Section C); `{review_link}` in the samples mu
 ### 1.6 Footer links
 **Privacy / Terms / SMS Program on every page.** All links working, no typos (Section 4 rule).
 
+### 1.7 Render method [LOCKED — prevents transcription drift]
+The Privacy Policy (§B), Terms of Service (§A), and SMS Program (§D) pages render the appendix copy as **normal JSX / markup — NOT `dangerouslySetInnerHTML`** — reproduced **byte-for-byte from the skill's "Appendix — Canonical Verbatim Copy"**, tokens only, the **WHOLE** policy (every clause/section, not excerpts). The build **self-check MUST verify the rendered pages match the appendix exactly** (full §A / §B / §D text with only `{tokens}` substituted) — not merely "renders with tokens." Any divergence from the appendix = transcription drift = a build failure to fix before handoff.
+
 ---
 
 ## Niche library — the two consent-category strings [STRUCTURED + EXTENSIBLE]

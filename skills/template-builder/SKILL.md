@@ -14,8 +14,9 @@ description: Use when building a client-site TEMPLATE in a NEW frontend-only Lov
 1. **This project is frontend-only.** Do NOT enable Lovable Cloud, do NOT create any database, auth, or backend. The backend already exists (the shared platform project); this template only READS from it.
 2. **NEVER hardcode business-specific values in components.** No literal business name, phone, tagline, services, hours, colors, or photos anywhere in component code. Every business-specific spot renders from the `client` object (contract below). Layout, spacing, typography, section structure, animations = hardcoded and universal. Content = variables. (Mail-merge model: design the letter, `{merge_fields}` for content.)
 3. **Do not invent the data shape.** Use the exact contract in this skill. If a design calls for content the contract doesn't carry, render it from `client.template_vars.<new_key>` with a sensible fallback and FLAG it to the human (it becomes an onboarding-wizard field) — do not silently hardcode it.
-4. **All platform URLs are fixed contracts:** lead form POSTs to `{VITE_SUPABASE_URL's host}/api/public/intake`; any tracked/funnel links use `/api/public/r/...` paths (top-level `/r/*` is auth-gated = dead for logged-out visitors — never use it). The site NEVER writes to the database directly — public writes go only through those `/api/public/*` endpoints.
+4. **All platform URLs are fixed contracts:** lead form POSTs to `{platform API host}/api/public/intake` (the platform API host = the LOCKED env contract in the data loader §below); any tracked/funnel links use `/api/public/r/...` paths (top-level `/r/*` is auth-gated = dead for logged-out visitors — never use it). The site NEVER writes to the database directly — public writes go only through those `/api/public/*` endpoints.
 5. **Anon reads only.** The data loader uses the anon key (RLS-scoped: active clients, public columns). Never request or reference a service-role key in this project.
+6. **FINITE GENERATION — no build-time guessing [LOCKED].** Every page identity, route, env-var name, and the service-area / fonts / compliance-render rules are FIXED by the skills (the **canonical page registry** in `/website-structure` + the contracts in this skill). A template build MUST NOT improvise these — if a needed decision isn't covered, **FLAG it for a skill update rather than guessing**, so all templates stay congruent and per-client data populates predictably. (This is what makes generation finite: any template build resolves these the SAME way.)
 
 ## Layer model — Layout / Style / Niche [LOCKED — v2]
 
@@ -69,6 +70,7 @@ Categorized media the wizard uploaded: `work_examples[]`, `services.{service_slu
 
 One small module, e.g. `src/lib/client-data.ts`:
 - Read `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (or publishable key), `VITE_CLIENT_SLUG` from `.env`.
+- **Platform API host [LOCKED env contract — one name only]:** the host for all `/api/public/*` POSTs **defaults to the origin derived from `VITE_SUPABASE_URL`**; the ONLY override env var is **`VITE_PLATFORM_API_HOST`** (do NOT invent variants like `VITE_PLATFORM_HOST`). Resolve once: `host = VITE_PLATFORM_API_HOST ?? new URL(VITE_SUPABASE_URL).origin`. In **demo mode** (blank `VITE_CLIENT_SLUG`), public-write forms **no-op gracefully with a toast** ("Demo mode — submission disabled") — they do NOT POST and never error.
 - If all present → fetch the client row: `GET {url}/rest/v1/clients?slug=eq.{slug}&select=*` with the anon apikey header. RLS permits anon SELECT on active clients' public columns — this is by design.
 - If absent OR fetch fails → return the **demo client object** (below). The template must always render standalone during design.
 - Expose one hook/provider (`useClient()`); every component renders from it. Components never know demo vs live.
@@ -80,7 +82,9 @@ Create `src/lib/demo-client.ts`: a fake business of the chosen niche (e.g. "Apex
 
 ## Required page/section structure
 
-Follow the **website-structure skill** (import it alongside this one) for the locked page set, the 4 site-style copy voices, brand-color theming, and the two-mode design system. The design REFERENCES the human uploads govern look/feel/typography/layout aesthetics within that structure.
+Follow the **website-structure skill** (import it alongside this one) for the locked page set, the site-style copy voices, brand-color theming, fonts, and the two-mode design system. The design REFERENCES the human uploads govern look/feel/typography/layout aesthetics within that structure.
+
+**Page identity is fixed by the canonical page registry in `/website-structure`** [Approach B]: each page has a stable **canonical id + route** (system-facing — use it for route files, data wiring, and cross-page links) and a set of **`allowed_display_labels`** (visitor-facing). The nav/heading label MAY use any allowed synonym to match the style/reference; the **id/route NEVER varies**, and NEVER invent a label outside the allowed set. Compliance pages (Privacy Policy / Terms of Service / SMS Program) have **FIXED labels** — do not flex them.
 
 ## Platform integration points (wire exactly)
 
