@@ -227,6 +227,14 @@ When a lead-form or discount-form submission fires its in-app notification, ALSO
 
 ---
 
+## Per-client branding [BACKLOG]
+Each client's mobile app is **branded to their business** — their logo shown in-app, and the app's colors match their brand — so the white-label identity is consistent across the marketing site AND the app. **ONE branding source, two consumers** (set once in `/admin-view` branding → flows to both).
+
+- **Source = the same as the marketing site:** the app reads the client's branding from the existing **`get_client_public` projection** — `brand_color` (primary) + `template_vars.brand_secondary` / `template_vars.brand_tertiary` + `logo_url` — the SAME projection the marketing template already consumes. **NO new branding model, NO new backend/schema change** — branding already lives in `clients` + `template_vars` and is already projected.
+- **In-app theming:** reuse the **hex→oklch token injection already proven in the marketing template** — port it, don't reinvent. Primary = `brand_color`; secondary/tertiary = the `template_vars` keys.
+- **Logo:** render in-app with the SAME text-render `business_name` fallback when `logo_url` is empty.
+- **[FLAG — open scope decision, resolve at build time] App icon + store listing:** in-app theming (screen colors, logo on screens) is **dynamic from data and easy**. BUT the **app icon** (home-screen) + the **App Store / Play Store listing** are **baked at submission/build time, NOT dynamic**. So per-client app icons force a choice: **(a)** per-client app builds/submissions (heavy — one app per client in each store) vs **(b)** a single agency-branded app, client-branded INSIDE (light — one store listing, dynamic in-app branding, generic icon). Decide (a) vs (b) when the mobile app is built; **in-app theming is unaffected either way.** (Relates to the Build-notes "client branding on icon/splash" line.)
+
 ## Build notes
 - [BUILD] Notifications table (client_id, type, body, related contact_id, optional action {type, payload}, created_at) + automations writing to it + this UI reading it. No read/unread state.
 - [BUILD] Auto-Enroll action wired to the Review Request enrollment path (with re-enrollment guard).
