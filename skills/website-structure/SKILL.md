@@ -10,13 +10,13 @@ The per-client DESIGN layer, applied on the Remixed marketing site (frontend-onl
 ## Page set [LOCKED]
 Pages are generated FROM the onboarding data, up to the max. Build ONLY the pages the onboarding supports — e.g. 5 services + 8 areas → 5 service pages + 8 area pages, NOT the max.
 
-**Always present** (every site): Home/Lander, Contact Us, Gallery, Thank You, Review + Referral Follow-up Form, Discount Funnel, Review Us, Terms of Service, Privacy Policy, SMS Program.
+**Always present** (every site): Home/Lander, Contact Us, Gallery, Thank You, Discount Funnel, Review Us, Terms of Service, Privacy Policy, SMS Program.
 
 **Data-driven** (one each, up to max):
 - **Service page** per service listed — **max 12**. The AI determines a good, relevant layout describing that service.
 - **Service Area page** per area listed — **max 14**. Essentially the Home/Lander re-focused on serving THAT area (local-SEO play: ranks for "[service] in [city]").
 
-The functional pages (Review+Referral form, Discount Funnel, Review Us, Contact, Thank You) wire to the backend features already specced (§4/§7/§7b) — this skill styles them; their behavior/copy lives in those features.
+The functional pages (Discount Funnel, Review Us, Contact, Thank You) wire to the backend features already specced (§4/§7/§7b) — this skill styles them; their behavior/copy lives in those features.
 
 ## Canonical page registry [LOCKED — Approach B: fixed identity + flexible label]
 
@@ -36,7 +36,6 @@ The functional pages (Review+Referral form, Discount Funnel, Review Us, Contact,
 | `discount` | `/get-your-discount` | Discount-claim funnel (One-Year drip destination; route per `/opt-in-forms`) | Get Your Discount, Special Offer, Claim Your Discount |
 | `review` | `/review` | "Review Us" page — the on-site working review action A2P needs | Reviews, Review Us, Leave a Review |
 | `thank-you` | `/thank-you` | Post-submit confirmation | Thank You, Thanks |
-| `review-referral` | `/review-referral` | Review + Referral Follow-up form (wires to the review-drip referral feature) | Refer a Friend, Review & Referral |
 | `terms` | `/terms` | Terms of Service (verbatim `/a2p-site-compliance` §A) | **Terms of Service** *(FIXED — do not flex)* |
 | `privacy` | `/privacy` | Privacy Policy (verbatim `/a2p-site-compliance` §B) | **Privacy Policy** *(FIXED — do not flex)* |
 | `sms-program` | `/sms-program` | SMS Program page (verbatim `/a2p-site-compliance` §D) | **SMS Program** *(FIXED — do not flex)* |

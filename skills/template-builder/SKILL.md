@@ -35,7 +35,7 @@ Compliance + Turnstile bake into the STYLE shell (this project), so every style 
 - **Two-checkbox opt-in** on every lead form (lead, discount, chat-optin): both **unchecked by default + not a condition of service** (form submits without them); phone optional; fixed consent skeleton + `{customer_care_category}`/`{marketing_category}` from `template_vars`.
 - **Named Privacy Policy + Terms of Service + SMS Program** pages (rendered from the canonical doc via tokens).
 - **Footer** Privacy/Terms/SMS-Program links on EVERY page; all links working, no typos.
-- **Working `/review` page** = the always-present "Review Us" page; loads + presents a working review action (CTA to `client.review_link`, optional comment POST to `/api/public/intake`) — no new backend route.
+- **Working `/review` page** = the always-present "Review Us" page; loads + presents a working review action — a **CTA to `client.review_link`** (Google). **No comment box / no `/api/public/intake` POST** (intake hardcodes `source=web_form` and would create a fake lead enrolled in the lead-form drip). No new backend route. (Matches `/a2p-site-compliance` §C + the build-prompt master.)
 - **Cloudflare Turnstile widget** on all 3 lead forms with the agency PUBLIC site key; submit `turnstile_token` in the POST body. Backend is **fail-closed** → a form WITHOUT the widget = **zero leads.** (Build/test with the Cloudflare test keys; real keys set at launch.)
 
 These render through `useClient()` from `template_vars` like all other content — data-only, **zero frozen-backend change** (`get_client_public` already projects `template_vars`).

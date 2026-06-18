@@ -621,7 +621,7 @@ The per-client DESIGN layer, applied on top of the shared golden-master backend 
 ### Page set [LOCKED]
 Pages are generated FROM the onboarding data, up to the max below. Only build pages the onboarding form supports (e.g. 5 services + 8 areas → 5 service pages + 8 area pages, not the max).
 
-**Always present:** Home/Lander, Contact Us, Gallery, Thank You, Review + Referral Follow-up Form, Discount Funnel, Review Us, Terms & Conditions, Privacy Policy. (+ an SMS Program page; the Terms/Privacy/SMS-Program/opt-in copy is the VERBATIM `/a2p-site-compliance` set — `docs/a2p-compliance-copy-source-of-truth.md`, tokens only.)
+**Always present:** Home/Lander, Contact Us, Gallery, Thank You, Discount Funnel, Review Us, Terms of Service, Privacy Policy. (+ an SMS Program page; the Terms/Privacy/SMS-Program/opt-in copy is the VERBATIM `/a2p-site-compliance` set — `docs/a2p-compliance-copy-source-of-truth.md`, tokens only.)
 **Data-driven (one each, up to max):** Service page per service (**max 12**); Service Area page per area (**max 14**).
 
 - **Service Area pages** = essentially the Home/Lander, re-focused on serving that specific area (local-SEO: ranks for "[service] in [city]").
