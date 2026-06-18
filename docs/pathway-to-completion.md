@@ -106,20 +106,20 @@ NOW ──► TextGrid verification (external, long pole) ───────�
 
 ---
 
-## 4. NEW FEATURE — Payment-access gate *(built in v1.7 + agency-view + the app/admin shells)*
+## 4. NEW FEATURE — Payment-access gate *(built in v1.7 + the agency-view toggle + the client PWA shell)*
 
-**Purpose:** revoke a client's access to their **mobile app AND admin view** when they haven't paid their monthly. An **access switch, not a billing system** — works with invoice-by-hand (you decide who's suspended) and is forward-compatible with built billing later (a future Stripe webhook can flip the same flag).
+**Purpose:** revoke a client's access to their **mobile PWA** (the client's ONLY login surface) when they haven't paid their monthly. An **access switch, not a billing system** — works with invoice-by-hand (you decide who's suspended) and is forward-compatible with built billing later (a future Stripe webhook can flip the same flag).
 
 **Mechanism:**
-- **(a) Flag + gating [v1.7 backend]:** `clients.access_suspended boolean DEFAULT false`. **NOT projected by `get_client_public`** (internal/agency field; the public site must not read or be gated by it). The authed app/admin read it from the RLS-scoped `clients` row.
-- **(b) Gate UI [mobile-app shell + admin-view shell]:** when `access_suspended = true`, the shell **intercepts render** and shows a single full-screen message instead of all normal content/tabs:
+- **(a) Flag + gating [v1.7 backend]:** `clients.access_suspended boolean DEFAULT false`. **NOT projected by `get_client_public`** (internal/agency field; the public site must not read or be gated by it). The authed **client PWA** reads it from the RLS-scoped `clients` row. *(The agency account + per-client admin view do NOT gate on it.)*
+- **(b) Gate UI [client PWA shell ONLY]:** when `access_suspended = true`, the PWA shell **intercepts render** and shows a single full-screen message instead of all normal content/tabs:
   > "There was an issue with your payment method. Please correct to regain access to your mobile app."
   Flip it back to `false` → full access returns immediately.
 - **(c) Agency control [agency-view]:** toggle a client's `access_suspended` (manual, since billing is by-hand) + see suspension status across all clients. **Log every toggle** (who suspended/restored whom) via `audit_log`/`events`.
 
 **Confirmed behaviors [LOCKED in this plan]:**
 - ✅ **Suspension does NOT stop backend automations.** The runner/drips/review/reactivation/A2P key off `status='active' AND deleted_at IS NULL` — NOT `access_suspended`. A suspended client's SMS automations keep running. (Reason: non-payment ≠ stop their customer-facing service mid-cycle; it gates *their* dashboard access, the lever that motivates payment, without harming their end customers or carrier standing.)
-- ✅ **Suspension gates ONLY login-facing surfaces** (the authed PWA + admin). The **public marketing site is unaffected** (anon `get_client_public`, no flag read).
+- ✅ **Suspension gates ONLY the client's mobile PWA.** The **agency account + per-client admin view** (agency-scoped — `admin`/`agency_owner`) are **NEVER** payment-gated — you need them to manage and un-suspend the client. The **public marketing site is unaffected** (anon `get_client_public`, no flag read).
 - ✅ **Distinct from `archive_client`:** suspension = temporary, reversible access hold, automations LIVE, `status` unchanged; archive (existing soft-offboard) = `status='archived'+deleted_at`, drips STOP, data persists (export bundle is the portability artifact). Two separate states — the doc names both.
 
 **Design note (not a blocker):** the shell gate is a **UX access hold**, not a data-security boundary (the client's data is already RLS-theirs). If you later want hard server-side denial (so they can't `curl` their own data while suspended), add an `access_suspended` check in the authed data server-fns. v1 shell-gate is sufficient for "deny the app experience."
@@ -193,5 +193,5 @@ NOW ──► TextGrid verification (external, long pole) ───────�
 - **Kick off TextGrid verification now** (long pole). Run **A (templates), B-0 (auth+audit), B-design, C (admin + agency-view + the missing onboarding wizard)** + the non-code prereqs in parallel.
 - **One additive backend pass → `v1.7`** batches ticketing + `audit_log` + consent persistence + the payment-access flag + A2P columns. Same contract as 1f — not a real unfreeze.
 - **Auth is do-first**; the onboarding wizard is the unbuilt linchpin; billing is invoice-by-hand (gate built, billing deferred); your client legal runs in parallel.
-- **Payment-gate:** gates only the authed app + admin, automations keep running, public site untouched, distinct from `archive_client`.
+- **Payment-gate:** gates only the client's PWA (agency surfaces never gated), automations keep running, public site untouched, distinct from `archive_client`.
 - **D + E wait on TextGrid + per-client A2P approval** — the only thing you truly can't compress.
