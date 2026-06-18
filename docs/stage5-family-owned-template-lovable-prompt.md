@@ -1,5 +1,7 @@
-# Lovable Build Prompt — First STYLE Template: "Family-Owned" (Plumbing seed niche)
+# Lovable Build Prompt — EXAMPLE INSTANCE: "Family-Owned" style (Plumbing seed niche)
 
+> **This is a FILLED, worked EXAMPLE of the reusable build prompt.** The parameterized MASTER — the fill-in-the-blanks prompt to use for EVERY new style template — is **`docs/template-build-prompt-TEMPLATE.md`**. This doc shows that master with the blanks filled for the first build (style = `Family Owned / Local Business` / `family_owned`; demo niche = Plumbing). To build a new style, start from the master and fill its blanks — do NOT hand-edit this filled doc (that's how stale niche/style values carry over).
+>
 > **What this is:** the copy-paste build prompt + setup steps for the FIRST Stage-5 style template. The artifact is the **reusable Family-Owned style shell** (layout + copy voice + photo treatment + baked compliance/Turnstile) — NOT "the plumbing template." Plumbing is only the **demo-client niche data** proving style+niche+branding composition end-to-end. STUB-appropriate; **no A2P submission** (this produces the compliant template only). Sanity-check against `docs/stage5-template-builder-build-spec.md` (v2) before running.
 
 ## Setup (do before prompting)

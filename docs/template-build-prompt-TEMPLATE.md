@@ -1,0 +1,79 @@
+# Reusable Style-Template Build Prompt — PARAMETERIZED MASTER
+
+> **What this is:** the **canonical, reusable** Lovable build prompt for spinning up ANY new style template. It is the proven Family-Owned prompt GENERALIZED — every style-specific and niche-specific value is an explicit `{{blank}}` filled at the top; the body never hardcodes a niche or style. Building a new style template = fill the blanks, paste the body. This prevents stale carryover (e.g. a previous niche bleeding into a new build). A filled, worked example lives at `docs/stage5-family-owned-template-lovable-prompt.md`. Sanity-check a filled prompt against `docs/stage5-template-builder-build-spec.md` (v2) before running.
+>
+> The output is the **reusable STYLE shell** (layout + that style's voice/visual treatment + baked compliance/Turnstile) — NOT "the {{DEMO_NICHE_DISPLAY}} template." The demo niche is only DATA proving style+niche+branding composition. STUB-appropriate; **no A2P submission**.
+
+---
+
+## FILL THESE BEFORE RUNNING — build parameters
+
+Fill every `{{blank}}` from the authoritative sources, then paste the Setup + body below with the values substituted. **Style values come from `/website-structure` → Site styles (the 6-style table) — copy them verbatim. Niche values are the demo vertical you've chosen for THIS build. NEVER hardcode a niche or style into the body; everything specific lives in these blanks.**
+
+| Param | Fill with | Example |
+|---|---|---|
+| `{{STYLE_DISPLAY_NAME}}` | One of the **6** display names in `/website-structure` Site styles (Professional Modern · Artistic Unique · Corporate · Modern Tech · Family Owned / Local Business · Owner Operated / Local Business) | `Professional Modern` |
+| `{{STYLE_SLUG}}` | The matching slug key (`site_style` value) for that style | `professional_modern` |
+| `{{STYLE_VOICE}}` | The **Copy voice** cell for that style, **verbatim** from the Site styles table | *(from the table)* |
+| `{{STYLE_VISUAL}}` | The **Visual / photo direction** cell for that style, **verbatim** from the same table | *(from the table)* |
+| `{{DEMO_NICHE_DISPLAY}}` | The demo business vertical for this build | `Landscaping` |
+| `{{DEMO_NICHE_SEGMENT}}` | The `template_vars.segment` value for that niche | `Home services / Landscaping / Lawn care` |
+| `{{DEMO_BUSINESS_NAME}}` | A **fictional** business name fitting the niche (zero real-business identifiers) | `Evergreen Landscaping` |
+| `{{DEMO_SERVICES}}` | 3–5 realistic services for that niche | `Lawn mowing, Hedge trimming, Mulching, Seasonal cleanup` |
+| `{{NICHE_CONSENT_NOTE}}` | If the niche is a **seeded** `/a2p-site-compliance` niche-library entry → use its `customer_care_category` / `marketing_category` strings; if NOT → use the **DEFAULT** entry (state WHICH) | `DEFAULT entry (Landscaping not yet in the niche library)` |
+
+> **`{{STYLE_DISPLAY_NAME}}` must be one of the 6.** If you need a style that isn't in `/website-structure` Site styles, add it to that table FIRST (with voice + visual + slug), then build — never invent a style here (finite generation).
+
+---
+
+## Setup (do before prompting)
+1. **New Lovable project, frontend-only** — decline Cloud/DB/auth. Name it **`Template — {{STYLE_DISPLAY_NAME}}`**.
+2. **Import skills** (GitHub subdirectory URLs): `template-builder`, `website-structure`, `opt-in-forms`, `a2p-site-compliance`.
+3. **Attach your design references** (images/links dropped into Lovable), labeled:
+   - **PAGE-LAYOUT references** → `[screenshots of site layouts to follow — hero, sections, page flow, arrangement]`
+   - **ART-STYLE references** → `[for color palette / TYPOGRAPHY / visual feel / imagery treatment]`
+   - **Do NOT attach any real-business logo.** The demo client uses a generic/placeholder logo or the text-render `business_name` fallback.
+4. **`.env`:** set `VITE_SUPABASE_URL` + anon key to the shared platform (Project 1) values; leave `VITE_CLIENT_SLUG=` blank (demo mode).
+5. **Turnstile:** use the **Cloudflare test keys** (always-pass site key `1x00000000000000000000AA`) — no real keys in the template.
+
+## The build prompt (paste into Lovable — with the blanks filled)
+
+> Build a **frontend-only, data-driven client-site TEMPLATE** per the imported `template-builder` + `website-structure` + `a2p-site-compliance` skills. This is the reusable **{{STYLE_DISPLAY_NAME}} STYLE** shell (slug `{{STYLE_SLUG}}`); the **niche is a separate data layer** (we're seeding **{{DEMO_NICHE_DISPLAY}}** via the demo client to prove composition — do NOT hardcode anything {{DEMO_NICHE_DISPLAY}}-specific or style-specific into components; style/niche specifics come only from the data + the values below).
+>
+> **FINITE GENERATION — no build-time guessing:** every page identity, route, env-var name, and the service-area / fonts / compliance-render rules are FIXED by the imported skills (the **canonical page registry** in `/website-structure` + the contracts in `/template-builder`). Do NOT improvise these; if a needed decision isn't covered, FLAG it rather than guessing — so all style templates stay congruent and per-client data populates predictably.
+>
+> **Mimic the references for VISUAL / LAYOUT treatment ONLY** — layout, section structure, spacing, typography, the overall look/feel. Treat them as the **design spec to reproduce faithfully, not loose inspiration**. **The PAGE SET and page names/roles come from the `website-structure` canonical page registry, NOT the reference image labels** — use the canonical id/route for every page; the visitor-facing nav/heading label MAY use any value in that page's `allowed_display_labels`, but NEVER change the id/route or invent a label outside the allowed set (compliance pages keep FIXED labels). The ONLY things that change from the references: **(a)** all business content renders from the `client` data object (never hardcoded); **(b)** page identities/routes follow the registry; **(c)** the baked compliance surface is added per `a2p-site-compliance`; **(d)** the **{{STYLE_DISPLAY_NAME}}** copy voice fills the text.
+>
+> **Hard rules (from template-builder):** frontend-only — no Lovable Cloud, no DB, no auth, no service-role. Build the **data loader (`src/lib/client-data.ts`) + demo client (`src/lib/demo-client.ts`) + `useClient()` hook FIRST**, then design everything rendering through `useClient()`. NEVER hardcode business-specific values (name, phone, tagline, services, hours, colors, logo, photos, niche content) — layout/spacing/typography/section-structure are universal; all content is variables. Anon reads only; if `VITE_CLIENT_SLUG` is blank/fetch fails → render the demo client.
+>
+> **Platform API host [LOCKED env contract]:** the host for all `/api/public/*` POSTs **defaults to the origin of `VITE_SUPABASE_URL`**; the ONLY override is **`VITE_PLATFORM_API_HOST`** (do NOT invent variants like `VITE_PLATFORM_HOST`). Resolve once: `host = VITE_PLATFORM_API_HOST ?? new URL(VITE_SUPABASE_URL).origin`. In **demo mode** (blank slug), public-write forms **no-op gracefully with a toast** ("Demo mode — submission disabled") — they do NOT POST and never error.
+>
+> **Style — {{STYLE_DISPLAY_NAME}}:** copy voice = *{{STYLE_VOICE}}*. Visual/photo direction = *{{STYLE_VISUAL}}*. Apply this as the shell's voice + visual feel (universal, not per-client).
+>
+> **Fonts:** there is no preset font for this style — **match the typography shown in the ART-STYLE reference images as closely as possible** (resemble the references' actual fonts — serif vs sans, weight, proportions, character — using the closest available web fonts). **Do NOT default to Inter / Poppins** and do NOT pick "in the spirit of" the style — replicate what the references show, then keep that pairing fixed for this style. (If the references don't clearly show type, pick a distinctive pairing fitting {{STYLE_DISPLAY_NAME}}'s voice/visual — never the generic default.)
+>
+> **Branding from data:** theme from `client.brand_color` (primary; default `#bd703e`) + `client.template_vars.brand_secondary`/`brand_tertiary` if present (convert hex→oklch for theme tokens); logo from `client.logo_url` (fallback: text-render `business_name`).
+>
+> **Page set + routes (website-structure canonical page registry):** build the pages with their **canonical routes**: Home (`/`), About (`/about`), Services index (`/services`), Service detail (`/services/$slug`, data-driven from `template_vars.services`, max 12), Service-Area (`/service-area/$area`, data-driven, max 14), Gallery (`/gallery`), Contact (`/contact`), Discount funnel (`/get-your-discount`), Review Us (`/review`), Thank You (`/thank-you`), Review + Referral Follow-up (`/review-referral`), Terms of Service (`/terms`), Privacy Policy (`/privacy`), SMS Program (`/sms-program`). Nav/heading labels may use the page's `allowed_display_labels` to match {{STYLE_DISPLAY_NAME}}; compliance page labels are FIXED (Terms of Service / Privacy Policy / SMS Program). **Service-area page = the lander re-focused per area** — substitute `{area}` into headline/title/meta/intro (no bespoke per-area body copy in v1).
+>
+> **Compliance surface — use the EMBEDDED copy; do NOT reconstruct or regenerate it.** The full verbatim carrier-tested copy is embedded directly in the imported `a2p-site-compliance` skill, in its **"Appendix — Canonical Verbatim Copy"** (§A Terms of Service, §B Privacy Policy, §C opt-in form, §D SMS Program, §E–§H). Reproduce THAT appendix copy **byte-for-byte**, fill `{tokens}` only — **NEVER paraphrase, regenerate, or write your own ToS / privacy / SMS prose.** **Render method [LOCKED]:** the Privacy/ToS/SMS-Program pages render the appendix copy as **normal JSX / markup — NOT `dangerouslySetInnerHTML`** — the WHOLE policy (every clause/section, not excerpts), tokens only. Specifically:
+> - **Two consent checkboxes** on **the 2 lead-capture forms THIS template builds — the lead form + the discount form** (the chat opt-in is part of the separately-injected chat widget, NOT built here): both **unchecked by default and NOT required** (form submits without them); phone field optional. Use the FIXED skeleton + `client.template_vars.customer_care_category` / `client.template_vars.marketing_category`: *"I consent to receive {customer_care_category} from {business_name}. Message frequency varies, up to 4 messages per month. Message & data rates may apply. Text HELP for assistance, reply STOP to opt out."* (and the marketing variant).
+> - **Privacy Policy page** = verbatim appendix **§B** (whole policy: IMPORTANT NOTICE header + SMS section + SMS Data Protection Statement + all numbered sections 1–10), tokens only.
+> - **Terms of Service page** = verbatim appendix **§A** (whole ToS: SMS clauses 1–8 + TCPA/CTIA line + General Terms), tokens only.
+> - **SMS Program page** = verbatim appendix **§D**.
+> - **Footer on EVERY page** links to Privacy / Terms / SMS Program; no broken links, no typos.
+> - **`/review` page** = the "Review Us" page: loads + presents a working review action (CTA to `client.review_link`; optional comment box POSTing to `/api/public/intake`). No new backend route.
+>
+> **Turnstile (website-structure prereq):** render the Cloudflare Turnstile widget (test site key `1x00000000000000000000AA`) on **both forms built here (lead + discount)** with the token as `turnstile_token` in the POST body. Backend is fail-closed — a form without the widget/token = zero leads. (The chat-optin form's Turnstile ships with the separately-injected widget.)
+>
+> **Platform integration (fixed contracts):** **lead + discount form fields + the intake contract per the `opt-in-forms` skill** (use it for the form fields — do NOT invent them). Lead form → POST `{platform API host}/api/public/intake` (tenant resolved server-side from Origin — do NOT send client_id; consent + terms link from `template_vars`); discount form → the discount route; review CTAs → `client.review_link`; phone → `tel:` from `phone_display`; tracked/funnel links → `/api/public/r/...`. NO direct DB writes. **Do NOT build a chat opt-in form** — leave only the chat-widget mount point (the AI chat widget + its opt-in are injected separately per the chat-widget skill).
+>
+> **Demo client (`demo-client.ts`) — a FULLY FICTIONAL {{DEMO_NICHE_DISPLAY}} business** named **{{DEMO_BUSINESS_NAME}}** (made-up name/phone/address/email; **ZERO real-business identifiers** — the demo client renders in demo mode / screenshots / the repo, so no real business may appear). Shaped EXACTLY like the contract: every `clients` column + all `template_vars` keys including `segment: "{{DEMO_NICHE_SEGMENT}}"`, `customer_care_category` + `marketing_category` (**{{NICHE_CONSENT_NOTE}}** — from the `/a2p-site-compliance` niche library; these contain no real-business identifiers), `privacy_url`/`terms_url`/`optin_url`/`support_email`/`effective_date`/`contact_person`, `brand_secondary`/`brand_tertiary`, a `services` array of **{{DEMO_SERVICES}}** (3–5 realistic {{DEMO_NICHE_DISPLAY}} services), and an asset manifest with some categories filled and **at least one empty** (to exercise niche-default fallback images). **Logo:** a generic/placeholder logo OR `logo_url` empty so the text-render `business_name` fallback is exercised — do NOT use any real-business logo. Realistic (but fictional) copy so the design + compliance pages render real-looking.
+>
+> **Self-check before handoff:** zero hardcoded business/niche literals outside `demo-client.ts` (and `demo-client.ts` itself carries only FICTIONAL values — no real name/phone/address/email/logo, and nothing from a PRIOR build's niche); services section loops (change demo count → adapts); brand color re-themes; logo fallback works; empty asset category → fallback renders; both consent checkboxes unchecked + optional + form submits without them; **Privacy/ToS/SMS-Program render as JSX and match the appendix EXACTLY (whole policy, only `{tokens}` substituted — not excerpts)**; footer links on every page work; pages use the canonical routes (registry) with labels only from `allowed_display_labels`; fonts resemble the ART-STYLE references (not Inter/Poppins); Turnstile on **both built forms (lead + discount)** with `turnstile_token`; no chat-optin form was built (only the mount point); `/review` loads + has a working action; **no literal `{token}` survives to any rendered page**; blank slug → demo renders + forms no-op with a toast; real slug → live data renders.
+
+## Testable on the demo client (no live backend needed)
+Everything in the self-check renders standalone in demo mode. To test LIVE data: set `.env` `VITE_CLIENT_SLUG` to a test client in Project 1 (with the seed `template_vars` keys populated) → every field + compliance page fills from their data; a lead-form submit lands a contact (test client's domain in `allowed_origins`). **No A2P submission** in this build.
+
+## Freeze
+After validation, GitHub-connect for backup; this `Template — {{STYLE_DISPLAY_NAME}}` project is the remixable golden master for the **{{STYLE_DISPLAY_NAME}}** style. New niches need NO change to this project — they're added as data (`template_vars.segment` + an a2p niche-library row) and compose onto this style automatically. To build the NEXT style, copy THIS doc fresh and fill the blanks for that style — never hand-edit a filled prompt (that's how stale niche/style values carry over).

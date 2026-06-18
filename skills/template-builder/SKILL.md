@@ -8,6 +8,8 @@ description: Use when building a client-site TEMPLATE in a NEW frontend-only Lov
 > **PURPOSE:** Import this skill into a NEW, FRONTEND-ONLY Lovable project to build a reusable client-site template. The human supplies design references (screenshots/links/style direction) + a niche; THIS SKILL supplies the data contract and platform wiring. The output is a mail-merge-style template: all visual design is yours to craft from the references; ALL business-specific content renders from a `client` data object — never hardcoded. One template, designed once, then remixed per client with zero AI edits.
 >
 > **The human's role after you build: proofread.** So get the wiring right from this skill, not from guesses.
+>
+> **To build a new style template:** use the parameterized prompt at `docs/template-build-prompt-TEMPLATE.md` — fill the style (from `/website-structure` Site styles) + demo-niche blanks; never hand-edit a previous filled prompt (stale niche/style carryover).
 
 ## Hard rules [LOCKED]
 
