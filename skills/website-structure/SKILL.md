@@ -50,17 +50,20 @@ Visual design, fonts, colors, copy, and layout are AI-driven, from combining:
 
 This resolves the copy-strategy decision: copy is **AI-GENERATED, steered by the style choice** — templatized STRUCTURE, generated copy (not hardcoded, not manually rewritten per client).
 
-## Site styles (copy voice + photo treatment)
+## Site styles (copy voice + photo treatment) [LOCKED — the 6 definitive styles]
 
-> **[v2 — Stage-5 layer model]** Style = a selectable PRESET (copy voice + photo selection/treatment) that fills a layout shell. The current preset set is **Family-Owned, Owner-Operated, Corporate/Professional, Modern Professional, Local Professional** (revised from the original 4 below; `clients.site_style` is free text — no migration). Style is **DECOUPLED from niche**: any niche (a data layer, `template_vars.segment` + the `/a2p-site-compliance` library) composes onto any style. `site_style` is the template/style **SELECTION key** (which `Template — {Style}` project to remix), **NOT a render-time branch**. Authoritative layer model: `/template-builder` + `docs/stage5-template-builder-build-spec.md`. The original 4 voices below remain valid descriptions of tone/direction:
+Style = a selectable PRESET (copy voice + photo/visual treatment) that fills a layout shell — **DECOUPLED from niche** (any niche, a data layer `template_vars.segment` + the `/a2p-site-compliance` library, composes onto any style). `clients.site_style` holds the **slug key** below: the template/style **SELECTION key** (which `Template — {Style}` project to remix) — **free text, no migration, NOT a render-time branch**. Each style = a display name + slug key + copy voice + visual/photo direction. Authoritative layer model: `/template-builder` + `docs/stage5-template-builder-build-spec.md`.
 
-### The original 4 site styles (copy voice + visual direction)
-- **Corporate** — polished, professional, formal; sleek/minimal visual.
-- **Standard Business** — straightforward, service-focused, balanced.
-- **Local Family-Owned** — warm, community-rooted, personal.
-- **Owner-Operated Local** — the owner IS the brand; first-person, most personal.
+| Display name | Slug key (`site_style`) | Copy voice | Visual / photo direction |
+|---|---|---|---|
+| **Professional Modern** | `professional_modern` | Professional, high-quality, polished; typography-forward and credible; elevated but not cold. | High-quality imagery, refined type hierarchy, clean modern layout. |
+| **Artistic Unique** | `artistic_unique` | Artist/brand-led, retro-artistic, highly minimalistic; **lowest copy density of the set** — image + branding carry the site, minimal copy, visual-first. | The brand identity + imagery create the aesthetic; sparse text, generous visual space. |
+| **Corporate** | `corporate` | Franchise / big-business feel; polished, presentable, uniform, formal. | Structured, consistent, credentials/scale-forward. |
+| **Modern Tech** | `modern_tech` | SaaS look; minimalistic, clean, contemporary. | Lots of whitespace, product/design-forward. |
+| **Family Owned / Local Business** | `family_owned` | Classic family-owned business — not fancy; a standard-classic look "that just works," friendly local identity; warm, approachable, trust-through-familiarity. | Standard-classic local look; warm, approachable. |
+| **Owner Operated / Local Business** | `owner_operated` | Same local/approachable feel as Family Owned but centered on a single person/entity; simple, straight-to-the-point on services; the owner is the brand. | Local/approachable; person-centered. |
 
-The style choice steers BOTH the AI's copy tone and the layout/visual feel. All four use the client's real onboarding content and assets — the style changes the voice and look, not the facts.
+The style steers BOTH the copy tone and the layout/visual feel. All six use the client's real onboarding content + assets — the style changes the voice and look, not the facts. Fonts are chosen per-style from the ART-STYLE references (see **Fonts & type**) — distinct per style, never the generic default.
 
 ## Brand-color theming
 `clients.brand_color` (hex, default `#bd703e`) is the per-client brand color. Per-client theming = convert the hex to an oklch value and inject it into the theme tokens / shell head, so the site picks up the client's brand color. (This is the theming job admin-view points here for.)
