@@ -53,7 +53,7 @@ These render through `useClient()` from `template_vars` like all other content �
 | license_number | text | Footer trust line (render only if present) |
 | hours | jsonb | Hours section ({mon:["09:00","17:00"],...}) |
 | logo_url | text | Header/footer logo (fallback: text-render business_name) |
-| brand_color | text | THE theme color — apply as CSS var `--brand` site-wide (default #bd703e) |
+| brand_color | text | THE primary theme color — apply as CSS var `--brand` site-wide. **When unset, DERIVE the palette from the ART-STYLE references** (dominant + accent); `#bd703e` is a **last-resort fallback only** (no references + no client colors). NOT a build-prompt parameter — comes from references (demo) or client data (live), never hand-entered. See `/website-structure` Brand-color theming. |
 | service_area | text[] | "Serving X, Y, Z" section/strip |
 | social_links | jsonb | Footer/contact icons ({instagram, facebook, bbb, tiktok, yelp} — render only the present ones) |
 | site_style | text | The **template/style SELECTION key** = the slug key of the remixed `Template — {Style}` project, one of: `professional_modern` / `artistic_unique` / `corporate` / `modern_tech` / `family_owned` / `owner_operated`. A label, **not a render-time branch** — this project already embodies one style. (Free text, not enum — voices/directions in website-structure.) |

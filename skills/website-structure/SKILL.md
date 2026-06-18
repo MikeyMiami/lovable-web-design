@@ -22,6 +22,8 @@ The functional pages (Review+Referral form, Discount Funnel, Review Us, Contact,
 
 **FINITE GENERATION.** Every page's IDENTITY — its canonical `id` + `route` — is FIXED and system-facing: data, skills, and cross-template congruence always key off it, so it NEVER varies across builds. The visitor-facing **display label** MAY flex to any value in `allowed_display_labels` to match the chosen style/reference. **The rule:** the canonical id/route is fixed and system-facing; the nav/heading label may use any value in `allowed_display_labels` to match the style/reference; **never invent a label outside the allowed set, and never change the id/route.** (e.g. a shell may show "Projects" in the nav, but the page is canonically `gallery` at `/gallery` — content, data, and cross-template congruence stay fixed while the label mimics the reference.) Compliance/legal pages keep a **FIXED label** (do NOT flex) for carrier/legal recognizability.
 
+**Label precedence [LOCKED]:** the reference may guide WHICH `allowed_display_labels` value you choose, but the label MUST come from that set. If the reference shows wording NOT in `allowed_display_labels` (e.g. a reference says "Firm" but `about` only allows About / About Us / Our Story), you MUST use an allowed value — **the reference NEVER overrides the allowed set or the canonical id/route.** Picking a label outside the allowed set is a finite-generation violation.
+
 | Canonical id | Route | Purpose | Allowed display labels |
 |---|---|---|---|
 | `home` | `/` | Lander — primary conversion page (hero + services overview + CTAs) | Home, Welcome |
@@ -66,7 +68,15 @@ Style = a selectable PRESET (copy voice + photo/visual treatment) that fills a l
 The style steers BOTH the copy tone and the layout/visual feel. All six use the client's real onboarding content + assets — the style changes the voice and look, not the facts. Fonts are chosen per-style from the ART-STYLE references (see **Fonts & type**) — distinct per style, never the generic default.
 
 ## Brand-color theming
-`clients.brand_color` (hex, default `#bd703e`) is the per-client brand color. Per-client theming = convert the hex to an oklch value and inject it into the theme tokens / shell head, so the site picks up the client's brand color. (This is the theming job admin-view points here for.)
+`clients.brand_color` (primary) + `template_vars.brand_secondary`/`brand_tertiary` are the per-client brand colors. Per-client theming = convert each hex to an oklch value and inject it into the theme tokens / shell head, so the site picks up the client's brand colors. (This is the theming job admin-view points here for.)
+
+**When brand colors are NOT provided [LOCKED]:** DERIVE the palette from the uploaded design / ART-STYLE references — take the **dominant + accent colors** from the reference imagery so the theme MATCHES the intended look. **`#bd703e` (terracotta) is only a last-resort fallback** when there is nothing to derive from (no references AND no client colors). **Never apply the arbitrary default over a palette the references clearly imply.**
+
+**Demo vs live split:**
+- **Style-template build (demo client):** the demo client's colors should **match the ART-STYLE references** (derive dominant + accent) so the demo is coherent with the style.
+- **Real client launch:** colors come from the **client's provided brand**, or are **derived from their references / brand imagery** if not given.
+
+So **brand color is NOT a build-prompt parameter** — it comes from the references (demo) or client data (live), **never hand-entered into the prompt**.
 
 ## Fonts & type [LOCKED — per-style, from the ART-STYLE references]
 Fonts are a per-STYLE decision driven by the ART-STYLE references — there is no preset font per style, so the build must **match the typography shown in the attached reference images as closely as possible** (resemble the reference's actual fonts — serif vs sans, weight, proportions, overall character — using the closest available web fonts). Do NOT default to Inter / Poppins (the generic defaults) and do NOT pick a pairing merely "in the spirit of" the style — **replicate what the references actually show**. Then record the chosen pairing in that style's template so it's stable across all of that style's remixes. Each style gets its OWN pairing (no universal pairing); the invariant rule: **resemble the reference imagery's typography as closely as possible, never the generic default, then LOCK it for that style**. If the references don't clearly show typography, pick a distinctive pairing that fits the style's voice/visual direction (per the Site styles table) — never the generic default.
