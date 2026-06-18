@@ -61,6 +61,8 @@ Two SEPARATE checkboxes, **UNCHECKED by default**, **NOT a condition of service*
 
 The "I consent to receive … Message frequency varies … Message & data rates may apply … Text HELP … reply STOP to opt out" wording is the **FIXED compliance skeleton** — never varies. Only `{customer_care_category}` / `{marketing_category}` vary (Niche library below). *(Layout per the uploaded opt-in form screenshot; the COPY is now the canonical-doc verbatim.)*
 
+**Scope — this is the LEAD / contact opt-in model.** Two checkboxes, both unchecked + **NOT a condition of service** (carrier-correct), phone optional; the frozen `intake` route has **no consent field**, so consent here is **display-only**. **The DISCOUNT form is intentionally different:** it uses a **single REQUIRED** consent checkbox — a **transactional value-exchange opt-in** (claim the discount in return for texts) that **gates submission** and sends `consent: true` (the frozen `discount` route requires `consent: z.literal(true)`). The discount form does **NOT** use this two-checkbox optional surface. (See `/opt-in-forms` §3.)
+
 ### 1.2 Privacy Policy page (canonical doc §B — verbatim; NOT generic, names the company)
 Reproduce the full Privacy Policy from canonical §B byte-for-byte (tokens only). The **carrier-load-bearing** parts that must appear exactly:
 > **IMPORTANT NOTICE REGARDING TEXT MESSAGING DATA** — {business_name} ("we," "us," or "our") DOES NOT share customer opt-in information, including phone numbers and consent records, with any affiliates or third parties for marketing, promotional, or any other purposes unrelated to providing our direct services. All text messaging originator opt-in data is kept strictly confidential.
@@ -148,7 +150,7 @@ Per-client panel that **PRE-GENERATES the business-customized registration copy 
 - **Privacy Policy MUST state** mobile opt-in data is not shared with third parties for marketing (the SMS Data Protection Statement — §1.2).
 - **ToS MUST carry the SMS disclosure** (message types, "message frequency may vary," "message & data rates may apply," privacy link, "Text STOP to opt out") — §1.3 clauses 1–8.
 - **All links work + no typos** (both are decline triggers — validate links + spellcheck the generated site).
-- **Opt-in checkboxes:** two separate, **unchecked by default**, **optional** (not a condition of service), exact consent language.
+- **Opt-in checkboxes (lead/contact opt-in form):** two separate, **unchecked by default**, **optional** (not a condition of service), exact consent language. *(The discount form uses a single REQUIRED consent instead — transactional opt-in; see §1.1.)*
 - **Sample messages:** real values (no generic curly fields), ≥2 with STOP, consistent with the campaign description; if a sample contains a URL/phone, flag it in the campaign's "Campaign Attributes."
 - **`{review_link}` resolves to a LIVE working page** at submission (the on-site dummy review page) — carriers may click it.
 
