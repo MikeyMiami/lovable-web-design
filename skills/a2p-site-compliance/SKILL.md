@@ -100,6 +100,8 @@ The live `{site_url}/review` page (Section C); `{review_link}` in the samples mu
 ### 1.7 Render method [LOCKED — prevents transcription drift]
 The Privacy Policy (§B), Terms of Service (§A), and SMS Program (§D) pages render the appendix copy as **normal JSX / markup — NOT `dangerouslySetInnerHTML`** — reproduced **byte-for-byte from the skill's "Appendix — Canonical Verbatim Copy"**, tokens only, the **WHOLE** policy (every clause/section, not excerpts). The build **self-check MUST verify the rendered pages match the appendix exactly** (full §A / §B / §D text with only `{tokens}` substituted) — not merely "renders with tokens." Any divergence from the appendix = transcription drift = a build failure to fix before handoff.
 
+**Quote characters [LOCKED — byte-for-byte means the exact characters]:** reproduce using **straight ASCII quotes** (`"` U+0022 and `'` U+0027) exactly as in the appendix — do **NOT** substitute curly/smart quotes or their HTML entities (`“ ” ‘ ’` / `&ldquo; &rdquo; &lsquo; &rsquo;`). The appendix uses straight ASCII quotes throughout; "byte-for-byte" means the exact characters, not a typographically "nicer" equivalent. (Apostrophes too: `you've`, not `you’ve`.)
+
 ---
 
 ## Niche library — the two consent-category strings [STRUCTURED + EXTENSIBLE]
