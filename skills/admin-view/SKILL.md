@@ -7,6 +7,8 @@ description: Use when building, modifying, or reviewing the admin dashboard on a
 
 The admin dashboard lives at `/admin` on the client website, gated to `admin` / `agency_owner` roles (RLS-scoped). It is where the agency manages this client. Build/maintain these tabs.
 
+**Role model + access gate.** This is an agency-scoped surface (`admin`/`agency_owner` — `is_admin` covers both). It is NEVER payment-gated: the payment-access gate suspends only the client's mobile PWA (`client_owner`/`client_staff` surface), never the agency's per-client admin view or agency account. Client logins are minted by `provisionClientOwner` (scratch-foundation §5), not here.
+
 ## Tabs
 - **Dashboard** (`/admin`) — KPIs (contacts in/out, sends, reviews) for the active client.
 - **Contacts** (`/admin/contacts`) — CRM list + detail.

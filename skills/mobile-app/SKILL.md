@@ -7,6 +7,8 @@ description: Use when building, modifying, or reviewing the client-facing mobile
 
 Mobile-first installable PWA, scoped to the logged-in client's `client_id` via RLS. The business owner / staff (`client_owner`, `client_staff`) log in here; they see only their own client's data. Build four tabs.
 
+**Role model + access gate.** The client logs in as `client_owner` (provisioned via `provisionClientOwner` — see scratch-foundation §5; `client_staff` is owner-invited later). This PWA is the ONLY surface the payment-access gate suspends: a non-paying client's `access_suspended` flag blocks the client PWA shell only — it never touches `status`/`deleted_at`, so automations keep running. The agency surfaces (agency account + per-client admin view) are agency-scoped (`admin`/`agency_owner`) and are NEVER payment-gated.
+
 **Bottom-nav DISPLAY labels (shorter, for mobile UX) ↔ canonical concept:** Inbox = Conversations (Tab 1) · Review = Review Request (Tab 2) · Alerts = Notifications (Tab 3) · Stats = Dashboard (Tab 4). The display labels are canonical for the UI; this doc uses the concept names below.
 
 Formatting standard (applies to every notification + email here): stack details on separate lines — never cram "Name: X Phone: Y Message: Z" onto one line.
