@@ -5,7 +5,16 @@ description: Use when building, modifying, or reviewing any FORM on a client sit
 
 # Opt-In Forms — forms → automations map
 
-Every form, its fields, and exactly what it triggers. Phones normalized to E.164. Public forms insert contacts with a constrained `source` (per the tightened RLS — no wide-open anon inserts). Naming: `first_name`, `last_name`, `phone`, `email`, `your_message`, `full_name` (derived first+last for internal notifications).
+Every form, its fields, and exactly what it triggers. Phones normalized to E.164. Public forms insert contacts with a constrained `source` (per the tightened RLS — no wide-open anon inserts). Display field names: First Name, Last Name, Phone, Email, Your Message; `full_name` = derived first+last for internal notifications. **The exact WIRE payload each public route accepts — verified against the frozen backend — is in "Wire payloads" below; POST those keys, NOT the display names.**
+
+## Wire payloads [LOCKED — verified against the frozen backend]
+The public-write routes accept these EXACT keys (Zod-validated). **Never send `client_id`** — tenant is resolved server-side from Origin → `allowed_origins` (optional `slug` fallback). **Never send `source`** — it is server-set (`web_form`). **Phone is normalized CLIENT-SIDE to E.164 and sent as `phone_e164`** (regex `^\+[1-9]\d{6,14}$`).
+
+- **Lead form → `POST /api/public/intake`:** `{ first_name, last_name?, phone_e164?, email?, notes?, turnstile_token }` — requires **`phone_e164` OR `email`**; the lead **message field is `notes`** (NOT `your_message`).
+- **Discount form → `POST /api/public/discount`:** `{ first_name, last_name?, phone_e164, your_message?, turnstile_token }` — **`phone_e164` is REQUIRED**; the discount **message field is `your_message`** (stored to `contacts.notes` server-side).
+- Both: `turnstile_token` (the Cloudflare token) is REQUIRED.
+
+**[boundary] Field set vs consent copy:** `opt-in-forms` + the real route govern the **form field set + wire payload keys** (above); **`/a2p-site-compliance` §1.1/§C governs the consent COPY + two-checkbox structure**. Don't mix them — the a2p §C "Request Information" block shows consent copy, NOT the authoritative field set.
 
 ---
 
@@ -18,15 +27,16 @@ Every form, its fields, and exactly what it triggers. Phones normalized to E.164
 
 ## 2. Public website Lead Form (customer-facing)
 - **Location:** the main client website (quote/contact request).
-- **Fields:** First Name, Last Name, Phone, Email, Your Message.
+- **Fields:** First Name, Last Name, Phone, Email, Your Message. (Wire payload → `/api/public/intake` per **Wire payloads** above: `phone_e164`, message = `notes`.)
+- **Consent [see `/a2p-site-compliance` §1.1]:** the **two-checkbox** SMS opt-in surface (customer_care + marketing), both **unchecked + NOT required**.
 - **Source:** `web_form`.
 - **Enrolls into:** the Website Lead-Form Drip. Branches on **Business Hours** (separate setting from the SMS Send Window): in-hours → single SMS#1 (correctly spelled); after-hours → single after-hours text. Plus the day-10 owner reminder (with Auto-Enroll button) on both branches.
 
 ## 3. Public Discount-Claim form (customer-facing)
 - **Location:** `{company_website_link}/get-your-discount` (destination of One-Year drip links).
 - **Banner:** company name + logo; headline **"Get {discount_amount} with us!"**
-- **Fields:** First Name, Last Name, Phone, Your Message.
-- **Consent checkbox (required):** "I agree to [terms & conditions]({website_terms_page_link}) provided by the company. By providing my phone number, I agree to receive text messages from the business." The terms link points to the CLIENT's own terms page — never an external/leadconnector URL.
+- **Fields:** First Name, Last Name, Phone, Your Message. (Wire payload → `/api/public/discount` per **Wire payloads** above: `phone_e164` REQUIRED, message = `your_message`.)
+- **Consent [LOCKED — see `/a2p-site-compliance` §1.1]:** the **two-checkbox** SMS opt-in surface (customer_care + marketing), both **unchecked by default + NOT required** (the form submits without them), with the FIXED consent skeleton filled from `template_vars.customer_care_category`/`marketing_category`. Consent copy + checkbox structure are authoritative (verbatim) in `/a2p-site-compliance` §1.1/§C; the terms/privacy links point to the CLIENT's own on-site pages (`/terms` / `/privacy`), never an external/leadconnector URL. *(Supersedes the old single "I agree to terms" checkbox.)*
 - **Button:** "Get My Discount!"
 - **Source:** `web_form`.
 - **Enrolls into:** the Discount-Claim Drip (immediate internal notification → 2-min wait → one SMS to lead → end).
@@ -51,6 +61,6 @@ Destination of BOTH the review-drip tracked link and the reactivation link. Land
 
 ## Build rules
 - Public forms (2, 3, 4) POST to server functions (`supabaseAdmin` + Zod; `client_id` from the public slug; `source` set server-side). Routes return CORS headers (per-client domain allowlist + OPTIONS) and apply rate-limiting + Turnstile/hCaptcha. NO anon INSERT policies; anon is SELECT-only on `clients` public columns. (CORS/allowlist/bot-protection mechanism lives in `/scratch-foundation`.)
-- Consent: every form that collects a phone for texting must carry the SMS opt-in + terms language (discount form + website lead form). `/api/public/r/feedback` needs no SMS consent (feedback only, not a texting opt-in). `/api/public/r/enroll` is removed.
+- Consent: every form that collects a phone for texting carries the **two-checkbox** SMS opt-in surface (customer_care + marketing) — copy + structure authoritative in `/a2p-site-compliance` §1.1 (discount form + website lead form). `/api/public/r/feedback` needs no SMS consent (feedback only, not a texting opt-in). `/api/public/r/enroll` is removed.
 - Each form writes the contact scoped to the correct `client_id` and enrolls into the named sequence; nothing enrolls into a sequence the form isn't mapped to here.
 - The mobile Review Request enrollment and the lead-form day-10 Auto-Enroll button share the same re-enrollment guard.

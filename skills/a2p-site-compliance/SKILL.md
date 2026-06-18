@@ -168,7 +168,7 @@ Stored verbatim in **`docs/a2p-compliance-copy-source-of-truth.md`**; the genera
 - **The ONLY free generation:** the **business-description text** + the **contextual noun in sample scenarios** (e.g. plumbing vs roofing), from the onboarding description + segment, **anchored to the §0 approved structure.** Sample-message **STRUCTURE stays fixed** (named brand, ≥2 STOP, real values, link token).
 
 ### C. The dummy review page [BUILD into the generated site]
-- **v1 [frontend-only]:** the `/review` page = the always-present "Review Us" page (`/website-structure`); it must **load + present a working review action** — a CTA to `client.review_link` (Google) and/or an optional comment box POSTing to the **existing** `/api/public/intake` route. `review_link_url` = that page's URL, **prefilled into the sample-message link token.** No new backend route (a brand-new public review route would touch the frozen backend — not v1).
+- **v1 [frontend-only]:** the `/review` page = the always-present "Review Us" page (`/website-structure`); it must **load + present a working review action** — a **CTA to `client.review_link`** (Google). **No comment box** — `/api/public/intake` hardcodes `source=web_form` and has no review-comment path, so a comment box POSTing there would create a fake lead enrolled in the lead-form drip. `review_link_url` = that page's URL, **prefilled into the sample-message link token.** No new backend route.
 - **[BACKLOG]** a real on-site review-capture pipeline (new public route) when the review system is built; when it lands, the URL **matches or gets swapped — note the swap in the handoff.**
 - The page **must actually load + accept the review action** (carriers may click it) — not a placeholder/404.
 
