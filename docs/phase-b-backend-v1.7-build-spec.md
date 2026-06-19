@@ -1,6 +1,9 @@
 # Phase B-backend Build Spec — additive v1.7 pass (`golden-master-v1.7`)
 
-> **Status:** SPEC FOR APPROVAL — **Revision 2** (2026-06-18, post-audit). From `main` @ this commit; target backend = `cloud-spark-setup` @ `golden-master-v1.6`. **Nothing opens the backend until the migration SQL below is signed off.** Part of `docs/pathway-to-completion.md` Phase B-backend.
+> **Status:** APPLIED + VALIDATED — **Revision 3** (2026-06-18). Target backend = `cloud-spark-setup`; landed as migration `20260618225557` + the REVOKE hardening (§3b) → **`golden-master-v1.7`**. §5 validation all green (audit_tenant_rls=0, tenant read-isolation, live write-denial, consent immutability, suspend tamper-guard). Part of `docs/pathway-to-completion.md` Phase B-backend.
+>
+> **R3 changelog (post-validation):**
+> - **Grant-layer hardening (§3b):** after live validation confirmed RLS default-deny already blocks `authenticated` writes (proven: `new row violates row-level security policy`), added a REVOKE migration so write-denial is ALSO true at the GRANT layer — `has_table_privilege('authenticated', …, 'INSERT'/'UPDATE'/'DELETE') = false`; `authenticated` keeps SELECT, `service_role` keeps ALL. Belt-and-suspenders, not a hole-fix (the system was already secure via RLS). Reconciled the `information_schema` (visibility-filtered → showed zero) vs `pg_class.relacl` (raw → showed Supabase's standard wide default-priv grants) discrepancy: writes were gated by RLS regardless; the REVOKE removes the ambiguity.
 >
 > **R2 changelog (audit findings A–E applied):**
 > - **A (security):** ticket tables (`tickets`/`ticket_messages`/`ticket_attachments`) are now **SELECT-only for `authenticated`**; ALL writes go through role-verified **service-role server fns** (§4c) that set `sender_side`/`status`/`resolution`/`created_by`/`assigned_to` authoritatively. A client can no longer self-approve or spoof an agency reply via direct PostgREST. Same tenant membership expression on the read policy → still passes `audit_tenant_rls()`.
@@ -247,6 +250,24 @@ COMMIT;
 ```
 
 **Design note (consent ledger immutability vs. FKs):** the immutable trigger blocks ALL `UPDATE`/`DELETE`. Real FKs with cascade would let a client/contact delete trigger a cascade `DELETE`/`SET NULL` on `consent_records` → blocked → the parent delete fails. Mirroring `audit_log` (FK-free), the columns are plain `uuid`; the service-role write supplies real ids. Consent records are permanent (correct for opt-in proof).
+
+## 3b. REVOKE write-grant hardening (R3 — second migration, applied after §5 validation)
+
+> Live validation proved RLS already denies `authenticated` writes (default-deny; `new row violates row-level security policy`). This second additive migration makes write-denial true at the **GRANT** layer too, so it no longer relies solely on the RLS argument and is immune to a future accidental RLS-disable or a stray default-privilege grant. Additive/corrective (only removes privileges on the 4 new tables); idempotent (REVOKE of an absent privilege is a no-op); apply in a transaction.
+
+```sql
+BEGIN;
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER
+  ON public.tickets, public.ticket_messages, public.ticket_attachments, public.consent_records
+  FROM authenticated;
+REVOKE ALL
+  ON public.tickets, public.ticket_messages, public.ticket_attachments, public.consent_records
+  FROM anon;
+-- authenticated KEEPS SELECT (reads via the _tenant_read policies); service_role KEEPS ALL (server-fn write path).
+COMMIT;
+```
+
+**Post-apply re-confirm:** `has_table_privilege('authenticated', t, 'INSERT'/'UPDATE'/'DELETE') = false`, `'SELECT' = true`; `has_table_privilege('anon', t, 'SELECT') = false`. Reads + the service-role write path are unaffected; client-facing writes are now denied at both the GRANT and RLS gates.
 
 ---
 
