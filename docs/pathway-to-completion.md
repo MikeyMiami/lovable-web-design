@@ -79,8 +79,8 @@
 NOW ──► TextGrid verification (external, long pole) ───────────────────────────────►  per-client A2P approval ─► LIVE FLIP
         │
         ├─ Phase A  (templates) ───────────────────────────────────────────────► done & frozen, waiting
-        ├─ Phase B-0 (AUTH + audit_log)  ─► gates ─►  Phase B (mobile app + features + gate)
-        ├─ Phase B-backend  (one additive pass → v1.7) ─► unblocks B features + gate + D's A2P columns
+        ├─ Phase B-0 (AUTH + audit_log)  ─► DONE 2026-06-18 (provisionClientOwner validated)
+        ├─ Phase B-backend  (one additive pass → v1.7) ─► DONE 2026-06-18, tagged golden-master-v1.7 ─► unblocks B-design + gate + D's A2P columns
         ├─ Phase C  (admin + agency-view + ONBOARDING WIZARD) ──────────────────► done, waiting
         └─ Non-code prereqs (legal, domains, sender domain, billing-by-hand) ───► done, waiting
                                                                                     │
@@ -93,15 +93,15 @@ NOW ──► TextGrid verification (external, long pole) ───────�
 
 **Recommendation (approved): additive-only, one open/one tag. Not a destructive unfreeze.** Same contract as 1f (`v1.2→v1.6`): new objects only, zero ALTER of existing logic; re-run the **4 isolation guardrails** (esp. `audit_tenant_rls()=0`) → tag **`v1.7`**.
 
-**Batch ALL pending additive backend into this single pass:**
-| Item | New objects |
+**Batch ALL pending additive backend into this single pass — ✅ DONE 2026-06-18 (`golden-master-v1.7`); as-built below (differs from the original plan where the pre-build audit improved it):**
+| Item | As-built (v1.7) |
 |---|---|
-| Ticketing (Features A+B) | `edit_requests`, `support_tickets`, `ticket_messages`, `ticket_attachments` tables + RLS + status enums |
-| Upload storage | dedicated `edit-request-uploads` bucket (RLS, `client_id`-scoped paths) |
-| `audit_log` | table + `user_roles` AFTER-trigger (sole writer) — gates real role grants |
-| Consent persistence | a consent-storage column/field so the Privacy Policy's "timestamped opt-in records" claim is true — **before first real A2P submission** |
-| Payment-access gate | `clients.access_suspended boolean DEFAULT false` (§4) |
-| 1f A2P additive columns | `a2p_brand_id`/`a2p_campaign_id`/`a2p_status` (+ any per-client provider cols not yet present) |
+| Ticketing (Features A+B) | ✅ **unified 3-table model** `tickets` (`kind` enum), `ticket_messages`, `ticket_attachments` (NOT the split edit_requests/support_tickets — shared children avoid a polymorphic FK). **Read-only RLS + service-role write fns** (trust fields set authoritatively). Enums `ticket_kind`/`ticket_status`. |
+| Upload storage | ✅ **reused the existing `client-assets` bucket** at `<client_id>/tickets/<ticket_id>/<file>` (NOT a new bucket — existing `client_assets_rw` policy already scopes by folder[1]=client_id). Bucket 25 MB/MIME caps → Phase-B-design with `recordTicketAttachment`. |
+| `audit_log` | ✅ was **already DONE in v1.6** (migrations 20260615…) — not part of this pass. |
+| Consent persistence | ✅ **`consent_records` append-only ledger** (FK-free + immutability trigger); `discount.ts` writes both branches. |
+| Payment-access gate | ✅ `clients.access_suspended boolean DEFAULT false` + admin/service-role-only guard trigger (§4). |
+| 1f A2P additive columns | ✅ `a2p_brand_id`/`a2p_campaign_id`/`a2p_status` (enum). Provider cols already present from 1f. Extended A2P field set → Phase D (v1.8). |
 
 **Rejected:** touching existing objects (no reason; reintroduces drift) and a separate backend project (breaks single-shared-backend + RLS/auth sharing).
 
@@ -183,7 +183,7 @@ NOW ──► TextGrid verification (external, long pole) ───────�
 | D-3 (template_vars enumeration in master) | A (before styles 2–6) | tiny |
 | E-1 (seeded-segment fill note) | A | tiny |
 | Landscaping niche-library row | A/E | at real-landscaper onboarding; DEFAULT fine for demo |
-| Consent persistence (A-3) | **v1.7 pass** | **must precede first real A2P submission** |
+| Consent persistence (A-3) | ✅ **DONE — v1.7** (`consent_records` ledger + `discount.ts` writes both branches) | satisfied; was the A2P-submission prereq |
 | Terms-token canonicalization (C-3/G-4) | A/C (skills) | `website_terms_page_link` vs `{terms_url}`/`{privacy_url}`/`{optin_url}` → on-site routes, before real onboarding |
 | admin-view BUILD items (logo upload, pre-gen console, A2P panel, submission record) | C | onboarding-readiness UI |
 | mobile-app per-client-branding BACKLOG | B | promote to BUILD |
