@@ -696,6 +696,7 @@ The per-client **Remixed marketing site is frontend-only** (anon reads + CORS-gu
 ## 12. Backlog / Work Queue (ordered)
 
 ### DONE
+- ~~v1.7 additive backend~~ ✓ DONE 2026-06-18 (`golden-master-v1.7`) — ticketing (`tickets`/`ticket_messages`/`ticket_attachments`; read-only RLS + service-role write fns, trust fields set authoritatively), `consent_records` append-only ledger (`discount.ts` writes both branches), `clients.access_suspended` payment-gate (admin/service-role-only guard trigger; never stops automations), A2P core columns (`a2p_brand_id`/`a2p_campaign_id`/`a2p_status` enum). Migration `20260618225557` + a REVOKE write-grant hardening. Validated live: `audit_tenant_rls()=0`, tenant read-isolation, **write-denial empirically confirmed** (RLS default-deny: "new row violates row-level security policy"), consent immutability, suspend tamper-guard. **Carved out → Phase-B-design/D:** the 5 ticket write fns, the `client-assets` 25 MB/MIME bucket caps, and the extended A2P field set.
 - ~~SMS automation formatting pass~~ ✓ COMPLETE — all customer-facing SMS finalized with intended line breaks (proofread/approved); all internal notifications + emails reformatted to stacked form (§4/§5/§7/§7b + `/automation-config` + `/mobile-app`); owner-email copy added to `/automation-config`. `/features` is mechanics-only (no inline copy). Customer SMS remain editable on-site.
 
 ### >>> NEXT UP — PHASE 2: BUILD & PROVE THE GOLDEN MASTER <<<
