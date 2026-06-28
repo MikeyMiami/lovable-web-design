@@ -77,6 +77,27 @@ The style steers BOTH the copy tone and the layout/visual feel. All six use the 
 
 So **brand color is NOT a build-prompt parameter** — it comes from the references (demo) or client data (live), **never hand-entered into the prompt**.
 
+## Onboarding data contracts — hours + site_assets [LOCKED]
+The onboarding wizard CAPTURES these into the shared backend; the per-client Remix READS them at build time to render hours + place images. **Fixed shapes (finite-generation).**
+
+**Business hours** — `clients.hours` (public display) AND `send_settings.business_hours` (lead-reply timing) both use: `{ "mon": ["09:00","17:00"], "tue": [...], ... }` — keys = 3-letter lowercase day (`sun mon tue wed thu fri sat`); value = `[open, close]` zero-padded 24h `"HH:mm"`; **a missing day = CLOSED**. The marketing site renders `clients.hours` (render absent days as "Closed"); the lead-form branch reads `send_settings.business_hours` (derived equal at onboarding; the agency may diverge it later in admin).
+
+**Site images** — manifest at `template_vars.site_assets` (anon-public) + the logo at `clients.logo_url`. Images live in the **`public-assets`** bucket (public URLs via `getPublicUrl`). Manifest shape:
+```json
+{
+  "work":     [{ "url": "…", "path": "<id>/site/work/…" }],
+  "gallery":  [{ "url": "…", "path": "…" }],
+  "about":    [{ "url": "…", "path": "…" }],
+  "services": [{ "url": "…", "path": "…" }],
+  "staff":    [
+    { "url": "…", "path": "…", "type": "individual", "name": "Jane Doe", "position": "Lead Designer" },
+    { "url": "…", "path": "…", "type": "group", "label": "Our Team" }
+  ]
+}
+```
+**Staff entries carry a `type` [⚠️ data-shape PENDING SQL CONFIRMATION — UI/code-confirmed on `cloud-spark-setup` `origin/main` @ `10a8d40`, not yet introspected in the live DB; verify on the next test pass].** Each staff entry is one of: **individual** = `{ url, path, type:"individual", name, position }` (a person — render as a headshot with name + position); **group** = `{ url, path, type:"group", label }` (a single team/group photo — render with the label, no per-person name/position). The wizard sets `type` via a per-entry individual/group toggle.
+**Placement at build [LOCKED]:** the template reads each category and drops it into its section — `work`/`gallery` → Gallery; `about` → About; `services` → the Service pages; `staff` → About/Team — for staff, place **individual** entries as team headshots (name + position) and **group** entries as a single team/group photo (label). The **logo comes from `clients.logo_url`** (projected), NOT `site_assets`. A category with no images → the template uses the niche-default fallback (or, if the owner chose "design this section for me" — `submission.photo_request.designForMe` — the agency designs it). **The wizard only CAPTURES + ORGANISES; the template PLACES.**
+
 ## Fonts & type [LOCKED — per-style, from the ART-STYLE references]
 Fonts are a per-STYLE decision driven by the ART-STYLE references — there is no preset font per style, so the build must **match the typography shown in the attached reference images as closely as possible** (resemble the reference's actual fonts — serif vs sans, weight, proportions, overall character — using the closest available web fonts). Do NOT default to Inter / Poppins (the generic defaults) and do NOT pick a pairing merely "in the spirit of" the style — **replicate what the references actually show**. Then record the chosen pairing in that style's template so it's stable across all of that style's remixes. Each style gets its OWN pairing (no universal pairing); the invariant rule: **resemble the reference imagery's typography as closely as possible, never the generic default, then LOCK it for that style**. If the references don't clearly show typography, pick a distinctive pairing that fits the style's voice/visual direction (per the Site styles table) — never the generic default.
 
