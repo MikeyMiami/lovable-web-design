@@ -16,6 +16,7 @@ Launches one client on top of the proven golden-master backend. This is an ORCHE
 - Capture all §9b data → run **`/onboard-from-form`** (owner fields → clients columns / template_vars / send_settings; agency config; assets → buckets; assemble the AI knowledge bundle).
 - Set `allowed_origins` to the client's marketing domain(s) (so CORS will pass for their site's form POSTs).
 - Validate template_vars required keys are all populated.
+- **[BUILT — C-3c-1] Finalize & Invite (per-client `/admin` → Settings):** once config is set, mint the client login via **`provisionClientOwner`** (invite → the business notification email = `notification_email ?? email`; audited `client_owner` grant) and read the **Remix handoff checklist** there (slug, `VITE_CLIENT_SLUG`, `allowed_origins`, matched `site_style`) — which feeds step 3 (Remix). Manual + idempotent. Detail: `/admin-view` → Finalize & Invite; spec `docs/phase-c-3c1-build-spec.md`.
 
 ### 2. Messaging provider + per-client A2P registration (TextGrid)
 - Create the client's **subaccount** under the agency master account; store `provider_subaccount_sid` / `provider_webhook_secret` on the clients row.
