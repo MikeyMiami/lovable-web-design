@@ -5,11 +5,11 @@ description: Use when building, modifying, or reviewing the client-facing mobile
 
 # Mobile App — client PWA at `app.theirdomain.com`
 
-Mobile-first installable PWA, scoped to the logged-in client's `client_id` via RLS. The business owner / staff (`client_owner`, `client_staff`) log in here; they see only their own client's data. Build four tabs.
+Mobile-first installable PWA, scoped to the logged-in client's `client_id` via RLS. The business owner / staff (`client_owner`, `client_staff`) log in here; they see only their own client's data. Surfaces are arranged per the **B-design nav model** (see *Navigation shell + payment gate* below).
 
 **Role model + access gate.** The client logs in as `client_owner` (provisioned via `provisionClientOwner` — see scratch-foundation §5; `client_staff` is owner-invited later). This PWA is the ONLY surface the payment-access gate suspends: a non-paying client's `access_suspended` flag blocks the client PWA shell only — it never touches `status`/`deleted_at`, so automations keep running. The agency surfaces (agency account + per-client admin view) are agency-scoped (`admin`/`agency_owner`) and are NEVER payment-gated.
 
-**Bottom-nav DISPLAY labels (shorter, for mobile UX) ↔ canonical concept:** Inbox = Conversations (Tab 1) · Review = Review Request (Tab 2) · Alerts = Notifications (Tab 3) · Stats = Dashboard (Tab 4). The display labels are canonical for the UI; this doc uses the concept names below.
+**Navigation model [BUILT — B-design Slice 2a, 2026-06-20]:** **Stats (Dashboard) = Home** — the app lands on Stats at `/app`; Stats is NOT a bottom-nav tab. **Bottom nav = 3 tabs:** Inbox (Conversations) · Review (Review Request) · Alerts (Notifications). **Top-right hamburger (☰) menu:** Account (read-only) · Request an Edit · Support. **Top-left back arrow** on every non-Home view → returns to Stats Home. (The concept names — Conversations / Review Request / Notifications / Dashboard — are used throughout this doc; the nav labels above are canonical for the UI.)
 
 Formatting standard (applies to every notification + email here): stack details on separate lines — never cram "Name: X Phone: Y Message: Z" onto one line.
 
@@ -176,6 +176,16 @@ Stat counters scoped to this client (RLS), each shown week + month, computed in 
 - *(Not counted as lead channels: `mobile_enroll` (owner-entered review requests) + `reactivation` (bulk uploads) — not inbound website/chat leads. Discount-form submissions currently fold into Website Leads via `web_form`; splitting them out would need a distinct `discount_form` source — decided 2026-06-14: fold into Website Leads; revisit only on client demand.)*
 
 ---
+
+## Navigation shell + payment gate [BUILT — B-design Slice 2a, 2026-06-20]
+- **Shell** (`src/routes/_authenticated/app.tsx`): Stats=Home, 3-tab bottom nav, ☰ menu (Sheet) with Account/Edit/Support, back-arrow on non-Home views. Dashboard relocated to `app.index.tsx` (Home); Conversations relocated to `app.inbox.tsx`; the Notifications `open_conversation` deep-link repointed → `/app/inbox`.
+- **Payment-gate intercept** (in the shell): reads `access_suspended` from the RLS-scoped `clients` row; when `true`, renders ONLY a full-screen message ("There was an issue with your payment method. Please correct to regain access to your mobile app.") — bottom nav + ☰ hidden — instead of the app. Verified **TOTAL** (toggling `clients.access_suspended` flips access; agency/admin surfaces never gated). Fixed string for v1.
+
+## Account · Request an Edit · Support [BUILT — B-design Slice 2b, 2026-06-20]
+- **Account (☰, READ-ONLY):** `app.account.tsx` — read-friendly display of the client's identity/branding from their own `clients` row + `template_vars` (the same source the agency's admin-view shows; no schema change). No edit; a **"Request a change"** action deep-links to Request-an-Edit. *(Cosmetic: empty `hours` renders as `{}` — fix to em-dash; logged, non-blocking.)*
+- **Request an Edit (Feature A) + Support (Feature B):** a shared **`TicketSurface`** component (exported from `app.support.tsx`, consumed by `app.edit.tsx` with `kind='edit_request'`): ticket list (status badge, 15s poll) + composer + bubble thread (10s poll, `sender_side` alignment) + resolution banner + a `resolved`/`closed` history filter. Reads via the RLS-scoped browser `supabase`; **writes via the Slice-1 service-role fns** (`openTicket` / `postClientMessage` / `recordTicketAttachment`). Attachments: client uploads to `client-assets` at `<client_id>/tickets/<ticket_id>/<uuid>-<file>` via **`src/lib/tickets/ticket-upload.ts`** (NOT `*.client.*` — Lovable's SSR build strips `*.client.*` files from the server bundle), then registers via `recordTicketAttachment`; downloads via **signed URL** (the bucket is private). **Storage caps [set 2026-06-20]:** bucket `file_size_limit = 25 MB`; **MIME enforced at the app layer** (the helper + `recordTicketAttachment`), NOT a bucket-wide MIME list (which would break existing logo uploads).
+- **`open_ticket` notification action:** the Notifications/Alerts feed renders an "Open" deep-link for `action.open_ticket` (→ the Edit/Support thread by `kind`), alongside the existing `auto_enroll` / `open_conversation` actions. Written by `notify.server.ts` on agency reply / status change (in-app notification + owner-email stub).
+- **Agency side** (admin reply / approve / deny via `postAgencyReply` / `setTicketStatus`) = the per-client **admin-view** surfaces (see `admin-view`; B-design Prompt 3). The client surfaces here consume what the agency writes.
 
 ## Owner Email Notifications (accompany the in-app notifications)
 When a lead-form or discount-form submission fires its in-app notification, ALSO send the owner an email pointing them to the app. The in-app notification still fires — the email is additive. **One email per lead** (after-hours is a body variant of the website-lead email, not a second email).
