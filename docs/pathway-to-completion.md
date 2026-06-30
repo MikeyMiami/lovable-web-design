@@ -23,6 +23,7 @@
 - Build the other 5 by re-filling `docs/template-build-prompt-TEMPLATE.md` per style: **Corporate, Modern Tech, Artistic Unique, Family Owned / Local Business, Owner Operated / Local Business**.
 - Close **D-3** (full required-`template_vars` enumeration in the master demo bullet) + **E-1** (seeded-segment fill note) **before styles 2–6** — tiny, but they stop each new build re-guessing the contract.
 - Add the **Landscaping niche-library row** to `a2p-site-compliance` only when onboarding a real landscaper (the demo correctly used DEFAULT).
+- **[BACKLOG — SEO build standard]** author a comprehensive **`seo-build`** skill (on-page/technical + **local (priority)** + performance/CWV + a per-page-type checklist + a data-mapping table) the template build follows so every client site is set up to rank in local search. **Develop alongside/before styles 2–6** (styles should be SEO-correct from the start). Most inputs already captured at onboarding (business name, service areas, hours, GBP link, services, address, social links, photos). Referenced by `website-structure`/`template-builder`/`new-client-site` + an SEO gate in `launch-check`. Full scope: `docs/seo-build-skill-backlog-scope.md`.
 - **Dependency:** none. This is the keep-momentum-while-TextGrid-verifies track.
 
 ### Phase B-0 — AUTH + audit (DO-FIRST launch-readiness) *(precedes the mobile-app features)*
@@ -197,6 +198,7 @@ NOW ──► TextGrid verification (external, long pole) ───────�
 | mobile-app per-client-branding BACKLOG | B | promote to BUILD |
 | `audit_log` [BUILD — TODO] | **v1.7 pass** | before real role grants (do-first gating) |
 | mobile-app realtime (vs polling) | post-launch | backlog |
+| **SEO build standard** (`seo-build` skill — on-page + local + performance) | A (alongside/before styles 2–6) | scoped `docs/seo-build-skill-backlog-scope.md`; rec. ONE `seo-build` skill (split `seo-local` later); pulls from already-captured onboarding data; geo-coords = only real data gap |
 
 ---
 
