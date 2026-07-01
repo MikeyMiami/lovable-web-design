@@ -23,7 +23,7 @@
 - Build the other 5 by re-filling `docs/template-build-prompt-TEMPLATE.md` per style: **Corporate, Modern Tech, Artistic Unique, Family Owned / Local Business, Owner Operated / Local Business**.
 - Close **D-3** (full required-`template_vars` enumeration in the master demo bullet) + **E-1** (seeded-segment fill note) **before styles 2–6** — tiny, but they stop each new build re-guessing the contract.
 - Add the **Landscaping niche-library row** to `a2p-site-compliance` only when onboarding a real landscaper (the demo correctly used DEFAULT).
-- **[BACKLOG — SEO build standard]** author a comprehensive **`seo-build`** skill (on-page/technical + **local (priority)** + performance/CWV + a per-page-type checklist + a data-mapping table) the template build follows so every client site is set up to rank in local search. **Develop alongside/before styles 2–6** (styles should be SEO-correct from the start). Most inputs already captured at onboarding (business name, service areas, hours, GBP link, services, address, social links, photos). Referenced by `website-structure`/`template-builder`/`new-client-site` + an SEO gate in `launch-check`. Full scope: `docs/seo-build-skill-backlog-scope.md`.
+- **[PLAN LOCKED 2026-06-30 — SEO system]** author **`seo-build`** (site/template structure + technical + GBP-consistency + the **Core 30** + dynamic content-render routes) **+** **`seo-content`** (content-production standard — 8-pass quality, local specificity, per-page-type patterns, the topical-vs-geographic decision + monthly loop) **BEFORE styles 2–6** so every style template bakes the SEO scaffolding in once. Then (later module) the **content store** (`content_pages` additive table — the CMS-backed endpoint) + the **content-automation tool** (Core-30-Agent equivalent) + rank-map input. Reconciles `website-structure` to the Core 30 (supersedes the generic service-area-lander model). Adopts the expert local-SEO system (GBP↔website mirror, entity-based, editorial internal linking). **Full analysis + signed-off master plan: `docs/seo-system-analysis-and-skill-plan.md`.**
 - **Dependency:** none. This is the keep-momentum-while-TextGrid-verifies track.
 
 ### Phase B-0 — AUTH + audit (DO-FIRST launch-readiness) *(precedes the mobile-app features)*
@@ -198,7 +198,7 @@ NOW ──► TextGrid verification (external, long pole) ───────�
 | mobile-app per-client-branding BACKLOG | B | promote to BUILD |
 | `audit_log` [BUILD — TODO] | **v1.7 pass** | before real role grants (do-first gating) |
 | mobile-app realtime (vs polling) | post-launch | backlog |
-| **SEO build standard** (`seo-build` skill — on-page + local + performance) | A (alongside/before styles 2–6) | scoped `docs/seo-build-skill-backlog-scope.md`; rec. ONE `seo-build` skill (split `seo-local` later); pulls from already-captured onboarding data; geo-coords = only real data gap |
+| **SEO system** (`seo-build` + `seo-content` skills → content store + content-automation tool) | A (skills/templates before styles 2–6); tool = later module | **PLAN LOCKED** — `docs/seo-system-analysis-and-skill-plan.md` (expert-transcript analysis + master plan). Core-30 structure, GBP↔website mirror, CMS-backed content store (`content_pages` additive migration) as the ongoing-article endpoint; admin SEO panel; pulls from already-captured data (geo-coords + agency-set categories the only gaps) |
 
 ---
 

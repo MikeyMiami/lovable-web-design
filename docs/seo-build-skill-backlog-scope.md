@@ -1,5 +1,7 @@
 # BACKLOG SCOPE — Comprehensive SEO build skill(s) for the marketing-site template build
 
+> ⚠️ **SUPERSEDED 2026-06-30 by `docs/seo-system-analysis-and-skill-plan.md`** — the full 5-transcript expert analysis + the SIGNED-OFF master plan (Core-30 structure, GBP↔website mirror, `seo-build` + `seo-content` split, the CMS-backed `content_pages` content store + content-automation tool for ongoing articles). This doc was the pre-transcript first-pass scope; kept for history. Use the new doc.
+
 > **Status: BACKLOG — scoped 2026-06-30, NOT built.** A Phase-A (template-build) concern: encode the SEO standards EVERY page / section / header in the Lovable-generated client sites must follow, so each client's site is set up to rank in **local** search. Develop alongside/before Phase A style-building (styles should be SEO-correct from the start). This doc is the scope to develop from later.
 
 ## 1. Recommended skill structure
