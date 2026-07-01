@@ -53,4 +53,21 @@
 **How you'll know Lovable is "using the skill":** if Layer A passes (I confirm the built template matches `seo-build`) and Layer B checks pass on the live site (schema detected, 8 signals present, Core-30 structure, sitemap, fast) — it's using it. If a build misses something, my drift check catches it and we re-prompt Lovable, exactly like the onboarding arc.
 
 ---
-*I hold the full SEO mental model (from the 5 expert transcripts). You hold this operator view. As we build `seo-build` → `seo-content` → the content store → the tool, each section above gets concrete + testable, and I'll validate every build against the skills before it's called done.*
+## What `seo-content` adds (the content half — the ongoing engine)
+> **`seo-build` = the site's structure + technical setup (built once per site). `seo-content` = the WORDS on every page + the monthly "what to build next" decision (ongoing forever).** Here's what the content half changes for you:
+
+**Collect (new):** still nothing new from the client. The content engine needs ONE agency-side input, and only **after launch**: a **rank-map export (CSV from Lead Snap)** — it tells the system whether to write topical or geographic pages next. (Optional until you're running the monthly loop.)
+
+**Admin actionables (new):** the "SEO" area gains a **content side** — a **content queue** (pages drafted → you review → publish), an **AI-detection score** per page (low = fine, high = needs a human pass), a **rank-map upload** (drop the CSV → it recommends the next batch: topical vs geographic), and per-page **edit-before-publish**. Early on the build writes the first-pass Core-30 copy automatically; the queue + tool arrive with the content module.
+
+**What it creates (new):** the actual page COPY — **genuinely local** (neighborhoods, local conditions, driving routes), formatted with images/FAQs, meta + schema, and **published straight into the site as content rows — no rebuild.** Ongoing: **~12+ articles/month** (supporting FAQ pages when coverage is weak, neighborhood pages when it's strong — decided by the rank map). Plus optional **GBP assets** (52 posts, the 750-char description) as paste-ready agency material.
+
+**How to test (new, content-specific):**
+- **Local-ness** — read a service/neighborhood page: real local specifics or generic filler? Generic = failing the standard.
+- **Human-passing** — paste a page into an AI-detector; a **low** score is the goal (the 8-pass pipeline is built to pass).
+- **Right decision** — does the batch match the rank map? Weak coverage → topical/FAQ; strong → neighborhood. (Location pages while still weak = the classic mistake.)
+- **Auto-publish** — add/flip a content row in admin → the page appears on the live site with correct title/schema/links (proves the CMS pipeline).
+- **Layer A (me)** — I check each generated page follows the standard (local specificity, structure, schema, linking, formatting) before it's called done.
+
+---
+*I hold the full SEO mental model (from the 5 expert transcripts). You hold this operator view. Both `seo-build` (structure/technical) and `seo-content` (words + monthly decision) are now drafted; the content store + the content-automation tool come next. I validate every build against the skills before it's called done. **After each new SEO skill is finalized, this guide is updated with its collect / admin / create / test impact — so this file always tells you what it all affects for you.***
