@@ -7,16 +7,22 @@ description: Use when building or designing a client's marketing site — the pe
 
 The per-client DESIGN layer, applied on the Remixed marketing site (frontend-only) that points at the shared golden-master backend (§0). Defines the page set, the copy/visual direction, and how design is generated and (eventually) templated. This is the per-client CREATIVE layer — the counterpart to the frozen backend. Absorbs the retired `/theme-to-brand`. Consumes `/onboard-from-form` data.
 
-## Page set [LOCKED]
-Pages are generated FROM the onboarding data, up to the max. Build ONLY the pages the onboarding supports — e.g. 5 services + 8 areas → 5 service pages + 8 area pages, NOT the max.
+## SEO structure + content [LOCKED — reconciled to `/seo-build` + `/seo-content`, 2026-06-30]
+For local-business clients the **site structure = the Core 30** (`/seo-build`) and the **page copy = `/seo-content`** — those two skills are the AUTHORITY for structure, on-page/technical (titles, meta, one-H1, schema JSON-LD, semantic HTML, canonical, OG, sitemap/robots) and content. This skill's page set + styling reconcile TO them: the site **mirrors the client's Google Business Profile** (categories + services); pages are **DATA** in the `content_pages` store rendered by dynamic routes (`/seo-build` §4); internal linking is **editorial in-content** (not nav/footer); the homepage is the **GBP landing page** with the 8 consistency signals (`/seo-build` §1). **Where anything below conflicts with `/seo-build`/`/seo-content`, THEY win.**
 
-**Always present** (every site): Home/Lander, Contact Us, Gallery, Thank You, Discount Funnel, Review Us, Terms of Service, Privacy Policy, SMS Program.
+## Page set [LOCKED — the Core 30 + functional/compliance pages]
+Built as the **Core 30** (`/seo-build` §2), mirroring the client's GBP:
+- **Home** — the GBP landing page (hero + services overview + CTAs + all 8 GBP-consistency signals; `/seo-build` §1).
+- **Category pages** — one per GBP **secondary category** (~3–4). Target keyword = category + city.
+- **Service pages** — one per GBP **service** (~25–30). Target keyword = service + city. **No max-12 cap — mirror the GBP.**
+- **Geo / neighborhood pages** — **genuinely-local** landmark/neighborhood pages (`/seo-content`), built diagnostic-driven (rank-map positions 4–6), mostly post-launch. **NOT** re-targeted city-swap landers.
+- **Supporting pages** — FAQ/topical deep pages (`/seo-content`), editorial-linked from the Core 30.
 
-**Data-driven** (one each, up to max):
-- **Service page** per service listed — **max 12**. The AI determines a good, relevant layout describing that service.
-- **Service Area page** per area listed — **max 14**. Essentially the Home/Lander re-focused on serving THAT area (local-SEO play: ranks for "[service] in [city]").
+Internal linking mirrors the GBP hierarchy via **editorial in-content links** (home→category→service) — NOT nav/footer (`/seo-build` §2).
 
-The functional pages (Discount Funnel, Review Us, Contact, Thank You) wire to the backend features already specced (§4/§7/§7b) — this skill styles them; their behavior/copy lives in those features.
+**Always present** (every site, in addition to the Core 30): About, Contact Us, Gallery, Thank You, Discount Funnel, Review Us, Terms of Service, Privacy Policy, SMS Program. The functional pages (Discount Funnel, Review Us, Contact, Thank You) wire to the backend features (§4/§7/§7b) — this skill styles them; their behavior/copy lives in those features.
+
+Pages are **DATA** (`content_pages` store, `/seo-build` §4) rendered by dynamic routes: the per-client build writes the first-pass Core-30 rows; ongoing supporting/geo rows come from the content-automation tool. **Build what the client's categories/services support** (mirror the GBP — no fixed page cap).
 
 ## Canonical page registry [LOCKED — Approach B: fixed identity + flexible label]
 
@@ -26,11 +32,13 @@ The functional pages (Discount Funnel, Review Us, Contact, Thank You) wire to th
 
 | Canonical id | Route | Purpose | Allowed display labels |
 |---|---|---|---|
-| `home` | `/` | Lander — primary conversion page (hero + services overview + CTAs) | Home, Welcome |
+| `home` | `/` | GBP landing page — primary conversion (hero + services overview + CTAs) + the **8 GBP-consistency signals** (`/seo-build` §1) | Home, Welcome |
 | `about` | `/about` | Business story / owner / differentiators | About, About Us, Our Story |
-| `services` | `/services` | Services index — links to each Service detail | Services, Our Services, What We Do |
-| `service` | `/services/$slug` | Per-service detail; data-driven, one per `template_vars.services` (max 12) | *(label = the service name)* |
-| `service-area` | `/service-area/$area` | Lander re-focused on one area; data-driven (max 14) | *(label = the area name)* |
+| `services` | `/services` | Services index — links to the **category** pages → **service** pages | Services, Our Services, What We Do |
+| `category` | `/services/$slug` | **Per GBP secondary category** (~3–4); Core 30; target kw = category + city; editorial-links to its service pages (`/seo-build` §2) | *(label = the category name)* |
+| `service` | `/services/$slug` | Per-service detail; **one per GBP service (~25–30 — mirror the GBP, no cap)**; target kw = service + city | *(label = the service name)* |
+| `service-area` | `/service-area/$slug` | **Geo/neighborhood page — GENUINELY LOCAL** (landmark/neighborhood + service + city per `/seo-content`); diagnostic-driven; **NOT a re-targeted lander** | *(label = the neighborhood/landmark name)* |
+| `supporting` | `/$slug` | FAQ/topical deep page (`/seo-content`); editorial-linked from a Core-30 page | *(label = the topic)* |
 | `gallery` | `/gallery` | Photos of previous work | Gallery, Projects, Our Work |
 | `contact` | `/contact` | Lead form + business contact info | Contact, Contact Us, Get in Touch |
 | `discount` | `/get-your-discount` | Discount-claim funnel (One-Year drip destination; route per `/opt-in-forms`) | Get Your Discount, Special Offer, Claim Your Discount |
@@ -112,8 +120,8 @@ This is the design analog of the backend's golden-master logic: generate while d
 - Runs on the per-client Remixed marketing site (frontend-only): reads public client data via anon SELECT; lead/discount/funnel forms POST to the shared backend's CORS-guarded public routes (foundation §6). No service-role key on this project.
 - **[LAUNCH PREREQUISITE — 1f step 3 dependency] Every public lead-intake form (website lead form, discount-claim, AND the chat-widget opt-in) MUST render the Cloudflare Turnstile widget with the agency's PUBLIC site key, and submit the resulting token as `turnstile_token` in the POST body.** The backend enforces Turnstile on `intake`/`discount`/`chat/optin` (fail-closed on an invalid token), so a form WITHOUT the widget → no token → **every legit submission is rejected → zero leads.** Add the client's marketing domain as a Turnstile hostname at launch. Site key is public (safe in the frontend); the secret stays a backend runtime secret. (Spec §10 Bot-protection; build-spec `docs/1f-step3-turnstile-ratelimit-build-spec.md`; gated in `/launch-check` §E.)
 - **[A2P-PREP — compliance pages] Every site carries the carrier-compliance surface from `/a2p-site-compliance`:** the two-checkbox opt-in (unchecked/optional; fixed consent skeleton + per-niche category strings keyed by `{segment}`), the named (not generic) Privacy Policy + Terms of Service, the SMS Program page, footer Privacy/Terms/SMS-Program links on every page, and the working `{site_url}/review` page. **Copy is reproduced VERBATIM from the `/a2p-site-compliance` skill's "Appendix — Canonical Verbatim Copy" — tokens only, never paraphrased** (the same copy is also kept at `docs/a2p-compliance-copy-source-of-truth.md` for human reference + parity). (Carrier 10DLC review reads the live site.) These pages + the Turnstile widget are **baked into the STYLE template** (`/template-builder`) once, so every per-client remix inherits them — not authored per client.
-- Generate exactly the pages the onboarding supports (count services/areas; cap at 12/14).
-- **Service-area page depth [v1 LOCKED]:** a service-area page = the lander re-focused per area — substitute `{area}` into the **headline, page title, meta description, and intro** (and any "serving {area}" strips); **NO bespoke per-area body copy in v1** (don't author each from scratch — re-target the lander). **[BACKLOG]** richer per-area body copy (local landmarks, per-area testimonials).
+- Generate the pages the client's **GBP categories/services** support (the Core 30 — `/seo-build` §2); **no fixed cap** (mirror the GBP). Geo/supporting pages are added over time by the content-automation tool (`/seo-content`).
+- **Service-area / geo pages [LOCKED — SUPERSEDED by `/seo-content`]:** the old v1 rule ("re-targeted lander, NO bespoke per-area copy, city-swap") is **RETIRED** — it's exactly the city-swap anti-pattern `/seo-content` forbids. Geo/neighborhood pages MUST be **genuinely local** (real neighborhoods + their conditions, driving routes, landmarks from Google Maps/Places API), targeting rank-map positions 4–6, built diagnostic-driven. Structure/route = `/seo-build`; copy standard = `/seo-content`.
 - Assets come from the storage buckets; copy is generated from onboarding data steered by `site_style`.
 - As the template library matures, prefer Mode 2 (apply a proven template) over Mode 1 (regenerate) for reliability.
 - **FINITE GENERATION [LOCKED — mirror]:** page identities/routes (the canonical page registry above), env-var names, and the service-area / fonts / compliance-render rules are FIXED by the skills — a template build MUST NOT improvise them; if a needed decision isn't covered, **FLAG it for a skill update rather than guessing** (authoritative rule: `/template-builder` → FINITE GENERATION).
