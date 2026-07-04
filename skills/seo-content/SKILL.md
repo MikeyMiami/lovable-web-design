@@ -20,6 +20,11 @@ Google doesn't care AI vs human — it cares that content is **helpful, distinct
 - **Genuinely local** — see §2.
 - **Well-formatted** — client photos (best) or AI images, callouts, tables, headers, bullets, **short paragraphs**, internal links. Judged on the latest mobile Chrome. **No walls of "AI slop."**
 
+## 1b. AI-generation accuracy & casing [LOCKED — proven in SEO-STORE-3c-2]
+When content is AI-generated (the per-page writer + the content tool), two guards are non-negotiable:
+- **Only-provided-facts (anti-hallucination).** An LLM writing marketing copy WILL invent business names, founding years / "since YYYY", warranties + guarantee terms, awards / certifications / licenses / BBB ratings, team size, job counts, testimonials, and pricing — **a real liability for real clients.** The prompt MUST carry an explicit **PROVIDED CONTEXT** block (the only business facts it may state — name, city, service, about-us, differentiators) + a **STRICT ACCURACY RULES** list forbidding each fabrication class, with the fallback: **if a fact isn't provided, write around it — describe the service/process/benefit generally instead of inventing a specific claim.** Never let the model substitute or shorten the business name.
+- **Proper casing.** Headings/service/business/city names in **Title Case** ("Hardscaping in Columbus", "What's Included"); **acronyms preserved exactly** (HVAC/AC/LLC — never "Hvac"/"llc"). Title-case is normalized **at the source** (the map names via `titleCase()`), not per-render, so titles/H1/keyword/meta/headings all agree; **slugs stay lowercase-hyphen.**
+
 ## 2. Local specificity [LOCKED — the differentiator]
 Not "we serve the {area} area" — **actually local**: neighborhoods and their conditions (older homes with cast-iron pipes vs new construction with PEX; coastal weather; historic-downtown building types), driving routes techs/customers take, nearby landmarks and businesses. This is what convinces Google + AI you're genuinely local even without a physical presence there. **Never** city-name-swap ("plumber in {city}" pages that only change the city) or "{landmark}" repeated 50×.
 
