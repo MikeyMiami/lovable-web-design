@@ -61,6 +61,7 @@ If a site has many indexed pages but ranks ~20th *standing in the lobby*, Google
 ## Output + where it goes
 - Every page written per §1–§6 → saved as a **`content_pages` row** (seo-build §4, `status='published'`) → the site renders it. **Publishing = writing/flipping a row; no site rebuild.**
 - **Initial Core-30 copy** at per-client build = a lighter first pass of this standard (structure-correct, locally-seeded). **Ongoing articles** = the full 8-pass via the content-automation tool.
+- **[BUILT — SEO Slice 1, 2026-07-04]** the per-page writer (`aiWritePage`) **implements §3 per-type patterns** — it branches the prompt by page type (home = searcher-focused overview hub, an H2+50-100 words per category with an editorial link out; category = mid-level router, an H2+50-100 words per service with an editorial link out; service = deep single-service: why-needed / **What's Included** bullets / process-timeline / local specifics; default = deep single-topic) — plus **§1 well-formatted structure** (≥3 `<h2>`, `<h3>` where useful, short paragraphs, a bulleted list, a §4 conversion **CTA** using the client's public phone) and **§1b accuracy**. It remains **one AI call (the lighter first pass)** — **§5 research inputs, the §4 8-pass refinement, and the §7-8 rank-map/monthly loop stay deferred to the content-automation tool.** (Boundary of record: `docs/seo-completion-roadmap.md`.)
 
 ## Out of scope [LOCKED]
 - **The external links themselves** (chambers, sponsorships, "not-AI-slop" links, "best of" round-ups) → agency / link tool.

@@ -11,8 +11,8 @@
 - **Change type:** **prompt-only** (inside `aiWritePage`) + one read-addition (the client phone for the CTA). **ZERO schema.**
 - **What it does:** branches the content prompt by `type` — **home** (talk-to-searcher + category H2s/links), **category** (explain category + service H2s/links), **service** (deep single-service: why / what's-included bullets / process / local) — mapped 1:1 to §3; adds ≥3 `<h2>` sections, short paragraphs, a bulleted list, and a CTA with the real business phone. Preserves all locked guards (anti-hallucination, one-H1, inline editorial `<a>`, Title Case, `<!-- ai-written -->` marker).
 - **Sets up:** the ≥3-section structure enables Slice 2's image interleaving.
-- **Spec:** `docs/phase-seo-slice1-content-quality-build-spec.md`.
-- **Status:** IN PROGRESS (prompt written, held for review).
+- **Spec:** `docs/phase-seo-slice1-content-quality-build-spec.md`. Validation: `docs/build-log/stage-seo-slice1-content-quality-validation.md`.
+- **Status:** ✅ **DONE — validated 2026-07-04** (`cloud-spark-setup` @ `e5e7278`; prompt-only, zero schema; home/category/service read distinctly per §3).
 
 ### Slice 2 — Images v2 (`images jsonb`, 2-3/page, template interleave) — PLANNED
 - **Gap closed:** pages have no images (or one `og_image`); `seo-content` §1 wants client photos, well-placed. Makes published pages look like real local-business pages.
@@ -42,7 +42,7 @@ This line defines where we "follow the full method" vs run "the lighter first pa
 ## Status ledger (update on each validation)
 | Slice | Scope | Schema | Status |
 |---|---|---|---|
-| 1 | content-quality (per-type §3 + structure) | prompt-only (+1 read) | **IN PROGRESS** |
+| 1 | content-quality (per-type §3 + structure) | prompt-only (+1 read) | ✅ **DONE** (2026-07-04) |
 | 2 | images v2 (`images jsonb`, 2-3/page, interleave) | additive (1 column) | PLANNED |
 | 3 | multi-location (LOC-1/2/3 + geo/supporting creation) | mixed (LOC-2 additive) | PLANNED |
 | 4 | ongoing content-automation tool (8-pass + research + rank-map loop) | its own module | PLANNED |
