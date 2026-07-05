@@ -92,6 +92,9 @@ This line defines where we "follow the full method" vs run "the lighter first pa
 | SVC-1 | structured services (`services_structured` shape + `updateClientServices` merge fn + `proposeSeoMap` fallback + derived string + minimal Settings Services&Pricing editor) | additive JSON | ✅ **DONE** (2026-07-05) |
 | SVC-3 | per-service pricing → `aiWritePage` PROVIDED CONTEXT (service pages; provided range only, never invented) | prompt-only | ✅ **DONE** (2026-07-05) |
 | SVC-2a | onboarding structured services (name + price rows) + shared `normalizeServices` (onboarding+Settings identical) | additive JSON | ✅ **DONE** (2026-07-05) |
-| SVC-2b/4/5 | onboarding per-service photos (`site_assets.by_service` + upload-route relax) · Photo-Board pre-fill · Assets tab | additive JSON + upload-route | PLANNED (SVC-2b next). Scope: `docs/phase-structured-services-scope.md` |
+| SVC-2b-rev | onboarding per-service photos in Photos step → `site_assets.by_service[slug]` (removed `work`, per-service `services`, relabel gallery, upload-route relax) | additive JSON + upload-route | ✅ **DONE** (2026-07-05) |
+| SVC-2b-template / -board / 4 / 5 | ⚠️ **LIVE-BUG FIX** template render (`work`→`gallery` + service-images→`by_service[slug]`; wizard photos never reached the template) · Photo-Board reads `by_service` · Assets tab | frontend + additive JSON | PLANNED (SVC-2b-template next). Scope: `docs/phase-svc-2b-photos-rework-scope.md` |
+
+> **⚠️ Live-bug note (2026-07-05):** the `site_assets.work` (wizard) vs `work_examples` (template) key mismatch + the broad-`services`-array vs slug-keyed-map shape mismatch meant **real clients' onboarding photos never rendered on their live sites** (silent fallback to stock defaults). SVC-2b-rev fixed the capture side (`by_service[slug]`); **SVC-2b-template** fixes the render side. Documented as a fix, not a feature.
 
 > **Source of truth.** Build in this order (template synergy + universal lift first). Prior SEO arc: `docs/build-log/stage-seo-store-*`. Audit basis: `docs/seo-system-audit-2026-07-03.md`.
