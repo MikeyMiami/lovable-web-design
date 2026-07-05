@@ -78,7 +78,7 @@ This line defines where we "follow the full method" vs run "the lighter first pa
 | — | onboarding per-service photo capture (data feeder) | additive JSON (template_vars) | PLANNED (parallel) |
 | 3 | multi-location (LOC-1/2/3 + geo/supporting creation) | mixed (LOC-2 additive) | PLANNED |
 | 4 | ongoing content-automation tool (8-pass + research + rank-map loop) | its own module | PLANNED |
-| — | **outbound** authority link (in-content, AI-woven) | zero schema (reuses `external_link`) | HELD (spec) |
+| — | **outbound** authority link (in-content, AI-woven) | zero schema (reuses `external_link`) | ✅ **DONE** (2026-07-04, on-page) |
 | — | Agency Link-Building Tracker (**inbound** backlinks, OFF-SITE) | agency-ops (not a page slice) | PLANNED |
 
 > **Source of truth.** Build in this order (template synergy + universal lift first). Prior SEO arc: `docs/build-log/stage-seo-store-*`. Audit basis: `docs/seo-system-audit-2026-07-03.md`.
