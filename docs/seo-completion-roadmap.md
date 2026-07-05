@@ -54,6 +54,14 @@
 - **What it does:** the `seo-content` **§4 8-pass pipeline** (research→brief → outline → section-by-section → burstiness → perplexity/de-AI → human-bookends → conversion → QC + AI-detection scoring), **§5 research inputs** (People-Also-Ask / Reddit / competitor / local research), the **§7 rank-map topical-vs-geographic decision** (ingest the Lead-Snap CSV → top-3% vs threshold → build topical or geographic), and the **§8 monthly production loop** (batch of ~12-20 pages/mo, published per cadence). Writes `content_pages` rows (supporting/geo) — never edits the frontend.
 - **Status:** PLANNED.
 
+## Agency-ops (OFF-SITE — not a page-builder slice) [LOCKED distinction]
+### Agency Link-Building Tracker — PLANNED [agency-owned, off-site]
+- **Gap closed:** the method makes **inbound backlinks MANDATORY** — every page needs ≥1 quality external link *pointing to it* (`40-page:195-204`; `ZKZnDORR0ds:228-232`), a hard prerequisite for ranking. These links live on **OTHER websites** — nothing is stored on our `content_pages` row, and the AI writes nothing.
+- **Why it's NOT a page slice:** it's **off-site acquisition**, not on-page content. Building a page input for it would be a category error (there's nothing on our page to store).
+- **What it tracks (per client, recurring):** **chamber-of-commerce membership(s)** (~$200–300/yr each; the chamber links their directory back to the site), **paid "not-AI-slop" links** (~$25–35 each — **one per Core-30 page + per supporting + per geo page**), **local sponsorships / org links**. A per-client **cost ledger + per-page acquisition checklist** (which pages have their inbound link yet).
+- **Distinct from** the **outbound** in-content authority link (that IS a page feature — `content_pages.external_link`, AI-woven; `docs/phase-seo-outbound-link-build-spec.md`).
+- **Status:** PLANNED — a future **agency-ops tool**, separate from the SEO page-builder slices.
+
 ## The boundary — per-page writer vs content-automation tool [LOCKED]
 This line defines where we "follow the full method" vs run "the lighter first pass":
 - **The per-page writer (`aiWritePage`, built + Slice 1) DOES:** one `generateText` call; per-type §3 patterns; §1 well-formatted structure; §1b anti-hallucination (only-provided-facts); §6 editorial in-content links; Title Case; deterministic titles/H1/meta from the map. A **structure-correct, factually-safe first pass** — for the Core-30 at build + on-demand per-page rewrite.
@@ -70,5 +78,7 @@ This line defines where we "follow the full method" vs run "the lighter first pa
 | — | onboarding per-service photo capture (data feeder) | additive JSON (template_vars) | PLANNED (parallel) |
 | 3 | multi-location (LOC-1/2/3 + geo/supporting creation) | mixed (LOC-2 additive) | PLANNED |
 | 4 | ongoing content-automation tool (8-pass + research + rank-map loop) | its own module | PLANNED |
+| — | **outbound** authority link (in-content, AI-woven) | zero schema (reuses `external_link`) | HELD (spec) |
+| — | Agency Link-Building Tracker (**inbound** backlinks, OFF-SITE) | agency-ops (not a page slice) | PLANNED |
 
 > **Source of truth.** Build in this order (template synergy + universal lift first). Prior SEO arc: `docs/build-log/stage-seo-store-*`. Audit basis: `docs/seo-system-audit-2026-07-03.md`.
