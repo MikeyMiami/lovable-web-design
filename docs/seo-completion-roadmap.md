@@ -25,8 +25,9 @@
 ### Slice 2.5 — Operator Photo-Board (assignment UX) — PLANNED
 - **Gap closed:** clients dump photos into broad buckets and don't tag which photo is which service, so photo→page mapping is a HUMAN (operator) decision. The per-page dropdown `ImagesManager` (Slice 2) works but is slow for bulk curation. The board makes assignment fast + visual, and works for every client (existing dumped-photo + future).
 - **Change type:** **UI/UX only — ZERO schema.** Layered on the shipped `images jsonb` storage; reuses `updatePage({images, og_image})`, `allAssetsFlat` (pool), `readImageDims`, `buildAlt`, `PageImage`.
-- **What it does:** a **pool** of all `site_assets` merged (dedup'd, category chips/filter) → **drag-and-drop** onto per-page **3-slot drop-zones** (hero/inline-1/inline-2) → reuses the existing **auto-suggest** as a first pass + per-slot clear + an **"empty slots: N"** per-row indicator. **Augments** (does not replace) the per-page dialog manager. Writes the same `images` jsonb via the same fn.
-- **Status:** PLANNED (next build).
+- **What it does:** a **pool** of all `site_assets` merged (dedup'd, category chips/filter) → **drag-and-drop** onto per-page **3-slot drop-zones** (hero/inline-1/inline-2) → reuses the existing **auto-suggest** as a first pass + per-slot clear + an **"empty slots: N"** per-row indicator. **Augments** (does not replace) the per-page dialog manager. Writes the same `images` jsonb via the same fn. Plus a preview **"Assigned images"** strip (hero/inline thumbnails + alt) above the body iframe.
+- **Spec:** `docs/phase-seo-slice2p5-photo-board-build-spec.md`. Validation: `docs/build-log/stage-seo-slice2p5-photo-board-validation.md`.
+- **Status:** ✅ **DONE — validated 2026-07-04** (`cloud-spark-setup` @ `044b865`; UI-only, HTML5 DnD no-dep, `{images, og_image}`-only patch, zero schema; on-site display still needs Slice 2 **Part B**).
 
 ### Slice 2.6 — AI-fill (gap-filler) — PLANNED [needs an image-gen spike]
 - **Gap closed:** pages/slots with no suitable real photo. Per `seo-content` §1 "client photos best, AI images the fallback."
@@ -73,7 +74,7 @@ This line defines where we "follow the full method" vs run "the lighter first pa
 |---|---|---|---|
 | 1 | content-quality (per-type §3 + structure) | prompt-only (+1 read) | ✅ **DONE** (2026-07-04) |
 | 2 | images v2 (`images jsonb`, storage + per-page panel) | additive (1 column) | ⚠️ **Part A DONE** (2026-07-04) · **Part B (template render) PENDING** |
-| 2.5 | operator Photo-Board (pool + drag-drop assignment) | UI-only (reuses storage) | PLANNED (next) |
+| 2.5 | operator Photo-Board (pool + drag-drop assignment) + preview strip | UI-only (reuses storage) | ✅ **DONE** (2026-07-04) |
 | 2.6 | AI-fill (gap-filler for empty slots) | new infra (image-gen spike) | PLANNED (post-spike) |
 | — | onboarding per-service photo capture (data feeder) | additive JSON (template_vars) | PLANNED (parallel) |
 | 3 | multi-location (LOC-1/2/3 + geo/supporting creation) | mixed (LOC-2 additive) | PLANNED |
