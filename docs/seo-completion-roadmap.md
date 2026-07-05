@@ -19,7 +19,28 @@
 - **Change type:** **schema-additive** — one migration `alter table public.content_pages add column images jsonb;` (nullable). Passes `audit_tenant_rls()` (adds no policy; anon RPCs return `cp.*` so `images` is auto-included; no new grant). Plus panel + template work.
 - **What it does:** `images jsonb` = `[{ url, alt, position:'hero'|'inline-1'|'inline-2', width, height }]`, assigned from `site_assets` (auto-suggest + manual picker), **never touched by `aiWritePage`** (AI-write-safe by construction — same principle that made `og_image` safe, generalized to N). Template **interleaves by position** (hero above/below H1; inline-1 after 1st `<h2>`; inline-2 after 3rd) with alt/dims/lazy (`seo-build` §5). `og_image` derived from the hero. Photo-thin → assign what exists; Option B AI-gen is a later gap-filler (separate spike).
 - **Supersedes:** the earlier IMAGES-1 (og_image-only, zero-schema) MVP — replaced by this because the model needs 2-3 images + professional layout.
-- **Status:** PLANNED.
+- **Spec:** `docs/phase-seo-slice2-images-v2-build-spec.md`. Validation: `docs/build-log/stage-seo-slice2-images-v2-validation.md`. Assignment reconcile: `docs/phase-seo-image-assignment-reconcile.md`.
+- **Status:** ⚠️ **Part A (storage + per-page panel) DONE — validated 2026-07-04** (`cloud-spark-setup` @ `ad33789`; migration `images jsonb`, `audit_tenant_rls()=0`, `updatePage.images`, `deleteAllClientPages`/Reset Core-30, per-page `ImagesManager`). **Part B (template interleave render) PENDING** — images are STORED but do NOT render on published pages until Prompt B ships to the marketing template (hero + inline interleave, `og:image` from hero). Send after snapshotting the template.
+
+### Slice 2.5 — Operator Photo-Board (assignment UX) — PLANNED
+- **Gap closed:** clients dump photos into broad buckets and don't tag which photo is which service, so photo→page mapping is a HUMAN (operator) decision. The per-page dropdown `ImagesManager` (Slice 2) works but is slow for bulk curation. The board makes assignment fast + visual, and works for every client (existing dumped-photo + future).
+- **Change type:** **UI/UX only — ZERO schema.** Layered on the shipped `images jsonb` storage; reuses `updatePage({images, og_image})`, `allAssetsFlat` (pool), `readImageDims`, `buildAlt`, `PageImage`.
+- **What it does:** a **pool** of all `site_assets` merged (dedup'd, category chips/filter) → **drag-and-drop** onto per-page **3-slot drop-zones** (hero/inline-1/inline-2) → reuses the existing **auto-suggest** as a first pass + per-slot clear + an **"empty slots: N"** per-row indicator. **Augments** (does not replace) the per-page dialog manager. Writes the same `images` jsonb via the same fn.
+- **Status:** PLANNED (next build).
+
+### Slice 2.6 — AI-fill (gap-filler) — PLANNED [needs an image-gen spike]
+- **Gap closed:** pages/slots with no suitable real photo. Per `seo-content` §1 "client photos best, AI images the fallback."
+- **Change type:** **new infra** (image-gen model/endpoint + likely a new runtime secret + a `fetch` integration + storage-to-`public-assets`). NOT a schema change to `content_pages` (writes the same `images` jsonb).
+- **What it does:** an agency-triggered **"Fill empty slots with AI"** (per-page + global) that touches **only** slots still empty after human placement; **one gen call per empty slot**, sequential Worker-safe batch; generate → **persist bytes to `public-assets`** (`{client_id}/ai/{page-slug}-{position}-{uuid}.png`, never hotlink) → write into `images` jsonb; guarded prompt (**no text/logos/signage/faces/storefronts/awards** — anti-hallucination for imagery); deterministic alt.
+- **Gating unknown [SPIKE FIRST]:** the Lovable AI gateway is **text-only** today (`createLovableAiGatewayProvider` → OpenAI-compatible text). Confirm a gateway image model exists, else pick a provider (OpenAI `gpt-image-1` / Google Imagen / Replicate-Flux) + secret + cost ceiling. Spike one image end-to-end into `public-assets` before building.
+- **Status:** PLANNED (after Slice 2.5 + the spike).
+
+### Onboarding per-service photo capture (data-quality feeder) — PLANNED [independent, parallel-OK]
+- **Gap closed:** photos arrive untagged; the operator sorts everything. Capturing photos **per service at intake** pre-maps them to service pages AND flags AI-gen needs early.
+- **Change type:** **additive JSON only** — after the client lists services, onboarding renders **per-service upload categories** (from their listed services) + an **"I don't have photos of this service"** option → stored as `template_vars.site_assets.by_service[serviceName] = [{url,path}]` (additive to the jsonb; **no DB schema change**). Touches `OnboardWizard` + the submit path + a seed/board **name→slug match** step.
+- **Interacts with:** the board (pre-places tagged photos into matching service pages' slots) + AI-fill (no-photo services become AI-gen candidates).
+- **Caveats:** future clients only; friction if the service list is long (mitigated by "I don't have this"); onboarding free-text services vs AI-derived Core-30 map services need a name match (operator reconciles in the board).
+- **Status:** PLANNED (most valuable once Slice 2.5 exists; can run parallel).
 
 ### Slice 3 — Multi-location (LOC-1 → LOC-2 → LOC-3) — PLANNED [biggest gap]
 - **Gap closed:** the business model is multi-location (`service_area[]` = up to 14 towns) but the whole Core-30 is single-city (`service_area[1..n]` unused; **no geo pages exist or can be created**). Closes the entire geographic-relevance half (`seo-content` §7-8, `seo-build` §2). **Also delivers geo/supporting page CREATION** (render routes exist; no writer today).
@@ -43,7 +64,10 @@ This line defines where we "follow the full method" vs run "the lighter first pa
 | Slice | Scope | Schema | Status |
 |---|---|---|---|
 | 1 | content-quality (per-type §3 + structure) | prompt-only (+1 read) | ✅ **DONE** (2026-07-04) |
-| 2 | images v2 (`images jsonb`, 2-3/page, interleave) | additive (1 column) | PLANNED |
+| 2 | images v2 (`images jsonb`, storage + per-page panel) | additive (1 column) | ⚠️ **Part A DONE** (2026-07-04) · **Part B (template render) PENDING** |
+| 2.5 | operator Photo-Board (pool + drag-drop assignment) | UI-only (reuses storage) | PLANNED (next) |
+| 2.6 | AI-fill (gap-filler for empty slots) | new infra (image-gen spike) | PLANNED (post-spike) |
+| — | onboarding per-service photo capture (data feeder) | additive JSON (template_vars) | PLANNED (parallel) |
 | 3 | multi-location (LOC-1/2/3 + geo/supporting creation) | mixed (LOC-2 additive) | PLANNED |
 | 4 | ongoing content-automation tool (8-pass + research + rank-map loop) | its own module | PLANNED |
 
