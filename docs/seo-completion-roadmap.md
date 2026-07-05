@@ -91,6 +91,7 @@ This line defines where we "follow the full method" vs run "the lighter first pa
 | CE-1 | CONTENT-EDIT-1 — Settings editors for AI/SEO `template_vars` (differentiators/about_us/services/segment) via `updateClientContent` server-side-merge + admin.seo preview | zero schema | ✅ **DONE** (2026-07-05) |
 | SVC-1 | structured services (`services_structured` shape + `updateClientServices` merge fn + `proposeSeoMap` fallback + derived string + minimal Settings Services&Pricing editor) | additive JSON | ✅ **DONE** (2026-07-05) |
 | SVC-3 | per-service pricing → `aiWritePage` PROVIDED CONTEXT (service pages; provided range only, never invented) | prompt-only | ✅ **DONE** (2026-07-05) |
-| SVC-2/4/5 | onboarding structured capture · Photo-Board pre-fill · Assets tab | additive JSON | PLANNED (SVC-2 next). Scope: `docs/phase-structured-services-scope.md` |
+| SVC-2a | onboarding structured services (name + price rows) + shared `normalizeServices` (onboarding+Settings identical) | additive JSON | ✅ **DONE** (2026-07-05) |
+| SVC-2b/4/5 | onboarding per-service photos (`site_assets.by_service` + upload-route relax) · Photo-Board pre-fill · Assets tab | additive JSON + upload-route | PLANNED (SVC-2b next). Scope: `docs/phase-structured-services-scope.md` |
 
 > **Source of truth.** Build in this order (template synergy + universal lift first). Prior SEO arc: `docs/build-log/stage-seo-store-*`. Audit basis: `docs/seo-system-audit-2026-07-03.md`.
