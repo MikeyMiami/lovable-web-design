@@ -89,6 +89,7 @@ This line defines where we "follow the full method" vs run "the lighter first pa
 | — | **outbound** authority link (in-content, AI-woven) | zero schema (reuses `external_link`) | ✅ **DONE** (2026-07-04, on-page) |
 | — | Agency Link-Building Tracker (**inbound** backlinks, OFF-SITE) | agency-ops (not a page slice) | PLANNED |
 | CE-1 | CONTENT-EDIT-1 — Settings editors for AI/SEO `template_vars` (differentiators/about_us/services/segment) via `updateClientContent` server-side-merge + admin.seo preview | zero schema | ✅ **DONE** (2026-07-05) |
-| SVC-1..5 | structured per-service records (`services_structured` + `site_assets.by_service`): shape+merge fn → onboarding capture → pricing into aiWritePage → Photo-Board pre-fill → Assets tab | additive JSON | PLANNED (SVC-1 next). Scope: `docs/phase-structured-services-scope.md` |
+| SVC-1 | structured services (`services_structured` shape + `updateClientServices` merge fn + `proposeSeoMap` fallback + derived string + minimal Settings Services&Pricing editor) | additive JSON | ✅ **DONE** (2026-07-05) |
+| SVC-2/3/4/5 | onboarding structured capture · pricing→aiWritePage · Photo-Board pre-fill · Assets tab | additive JSON | PLANNED (SVC-3 next). Scope: `docs/phase-structured-services-scope.md` |
 
 > **Source of truth.** Build in this order (template synergy + universal lift first). Prior SEO arc: `docs/build-log/stage-seo-store-*`. Audit basis: `docs/seo-system-audit-2026-07-03.md`.
