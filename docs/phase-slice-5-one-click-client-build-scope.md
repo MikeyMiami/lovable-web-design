@@ -45,3 +45,23 @@ Instead of clicking every button one-by-one for every page — now that we have 
 
 ---
 **Status: HELD SPEC — not built.** Faithful source for a future "Slice 5 — one-click client build." Build sequence: finish the deep-writer scope-hardening + S4-D5 first, then orchestrate these three flows over the proven per-page steps.
+
+---
+
+## BUILD PLAN — decomposition (approved 2026-07-07)
+Orchestration over finalized steps, **no new writing logic.** Infra-first.
+
+**Architecture:** a durable "flow run" that sequences **research → deep-write → [human gate] → publish** across a batch of pages, resumable, pausing at gate checkpoints. Reuses `content_jobs` (per-page deep-write), `gatherPageResearch`, `seedCoreThirty`/`seedGeoPages`/`addSupportingPage`, `setPageStatus`/`publishGeoWave`, the photo UI, `entitlements` (497). Each flow is a thin config of the orchestrator.
+
+**Decisions:**
+1. **Flow-state = additive `content_flows` TABLE** (option a) — a flow run is first-class/queryable (which clients have active runs, at what stage, paused where); RLS mirrors `content_jobs`; audit-safe. Per-page deep-write still reuses `content_jobs`.
+2. **Photo AI-gen deferred** — Flow 1 v1 = provided images + auto-suggest only; "AI-generate empty spots" stubbed/disabled until the Slice-2.6 image-gen spike.
+3. **"Matches GMB" = a pre-flow confirmation** — the operator confirms the SEO map (unified editor) is correct before Flow 1 batch-builds.
+
+**Sub-steps (dependency order):**
+- **S5-0 — Flow-run infra [FIRST]:** `content_flows` table + the client-poll batch runner (per page: `gatherPageResearch` → deep-write `content_job` → mark written; all written → gate/publish), resumable from the checkpoint, with batch progress UI (page X/N + current page's pass X/8) + pause/resume/cancel. **Validate on a TRIVIAL batch (1-2 page / no-op flow) proving orchestrator + resume before the real flows.**
+- **S5-1 — Flow 1 "Build All Core Pages" (Day 0):** confirm map → `seedCoreThirty` → batch(research→deep-write) → GATE 1 photos (provided+auto-suggest; AI-gen stubbed) → GATE 2 authority links → publish all Core-30.
+- **S5-2 — Flow 2 "Build Geo" (established branch):** curated wave (matrix/`close_towns`) → `seedGeoPages` → batch(research→deep-write) → `publishGeoWave` (~10-20).
+- **S5-3 — Flow 3 "Build Supporting" (building branch):** selected core pages → `addSupportingPage` → batch(research→deep-write) → auto FAQ+link → publish.
+
+**497-gated throughout. Timeline alignment:** Flow 1 = Day 0 (all Core-30 published together); Flows 2/3 = per the 30-day rank-check signal (`topical_status`/`close_towns`, cadence board). **Open (build-time):** batch failure handling (skip/retry/pause); photo gate per-page vs batched.
