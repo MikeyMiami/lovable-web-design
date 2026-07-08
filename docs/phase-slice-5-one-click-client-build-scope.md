@@ -1,6 +1,8 @@
-# SLICE 5 — One-click client build (automation of the proven order-of-operations) — HELD SPEC
+# SLICE 5 — One-click client build (automation of the proven order-of-operations) — ✅ COMPLETE
 
-> **DO NOT BUILD YET.** Faithful capture of the operator's "one-button automation" vision, for a future slice. Build AFTER: (a) the 8-pass **scope-drift hardening** (`docs/` Part-1 analysis), and (b) **S4-D5** (deep-write UI) land. These flows ORCHESTRATE already-proven, already-built steps (research, deep-write/`content_jobs` runner, image auto-suggest, S4-C supporting, publish) — the automation is a **queue/orchestration layer**, NOT new writing logic.
+> **STATUS: DONE (2026-07-08).** All three flows (Core / Geo / Supporting) built + validated end-to-end against `cloud-spark-setup` `origin/main`. Validation record: `docs/build-log/stage-slice-5-flows-complete-validation.md` (+ `stage-s5-0-flow-orchestrator-validation.md` for the orchestrator infra). The scope below is the original held spec, preserved as the source of intent; see the build-log for what actually shipped (shared N=3 fan-out + town cache; Core photos→publish-all; Geo/Supporting single review gate; expert authority-link correction → backlink-tracker future slice; CTA→/contact). The remaining SEO work is the per-page **backlink tracker** (`docs/phase-slice-backlink-tracker-scope.md`).
+>
+> _(Original held-spec note, for history:)_ Faithful capture of the operator's "one-button automation" vision. Built AFTER the 8-pass scope-drift hardening + S4-D5 landed. These flows ORCHESTRATE already-proven steps (research, deep-write/`content_jobs` runner, image auto-suggest, S4-C supporting, publish) — a **queue/orchestration layer**, NOT new writing logic.
 
 ## The vision (operator's words, preserved)
 Instead of clicking every button one-by-one for every page — now that we have a **finite, proven order of operations** and proven per-page buttons (research → deep-write → images → publish) — collapse it into **THREE one-click flows** that mirror the expert's build sequence, with **human intervention ONLY at the gates that genuinely need it** (photo placement, inbound links).
