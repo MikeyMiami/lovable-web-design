@@ -22,7 +22,7 @@ Run in-app via a temporary agency-admin action (`phase1ValidationStep`) that see
 
 ## Notes
 - pg_cron cadence intentionally left **UNSCHEDULED** (flip to `* * * * *` at SMS go-live, post-A2P — the "unscheduled until last" convention).
-- The temporary validation action (`phase1-validation.functions.ts` + the marked `/admin/health` TEMP card) is a one-time proof — **removal spec'd as a follow-up** so it doesn't ship.
+- The temporary validation action (`phase1-validation.functions.ts` + the marked `/admin/health` TEMP card) was a one-time proof — **REMOVED 2026-07-09** (commit `768918f`); `/admin/health` still renders the real dashboard; permanent Phase-1 objects untouched. **`golden-master-v1.8` re-pointed to the clean post-removal tree** (`768918f` == `origin/main`; frozen send-path identical to the validated baseline).
 
 ## Roadmap
 Phase 1 DONE + frozen at `golden-master-v1.8`. Phases 2 (DB hygiene) / 3 (site hosting) remain dashboard-triggered (`backlogDue` amber/red, `rate_limit_hits` estimate, etc.). Next action: remove the temp validation scaffolding.
