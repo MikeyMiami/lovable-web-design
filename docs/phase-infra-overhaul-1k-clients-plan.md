@@ -39,4 +39,5 @@ Self-contained agency-admin panel; touches no frozen logic (reads only). Ships f
 
 ## Status
 - **Phase 0 — DONE (2026-07-08).** `/admin/health` live (backlog + send rate + failure rate + big-table planner estimates, 45s refresh); `estimate_table_rows` RPC additive; `audit_tenant_rls()=0`; read-only. Validation: `docs/build-log/stage-infra-phase0-health-dashboard-validation.md`.
-- **Phases 1–3 — PARKED (dashboard-triggered).** Trigger = `backlogDue` going amber/red under real load → then Phase 1 (1a cadence → 1b parallel sends + runner instrumentation). Phase 2a on `rate_limit_hits` amber; 2c near ~10M rows; 2b on QPS climb. Phase 3 only if per-client deploy limits bind.
+- **Phase 1 — DONE (2026-07-09, built at zero clients).** Parallel sends + 4 guardrails (reserve-before-send / batch reservation / `send_attempts` idempotency + unique `twilio_sid` / crash-safe advance) + `runner_ticks`. **Runtime-validated in-app against the real `runDripTick()` — all 6 checks PASS** (`docs/build-log/stage-infra-phase1-sms-runner-validation.md`). Frozen master re-tagged **`golden-master-v1.8`**. Cadence left UNSCHEDULED (flip at SMS go-live). Follow-up: remove the temp validation scaffolding.
+- **Phases 2–3 — PARKED (dashboard-triggered).** Phase 2a on `rate_limit_hits` estimate amber; 2c near ~10M rows; 2b on QPS climb. Phase 3 only if per-client deploy limits bind.
