@@ -10,7 +10,7 @@ Every form, its fields, and exactly what it triggers. Phones normalized to E.164
 ## Wire payloads [LOCKED — verified against the frozen backend]
 The public-write routes accept these EXACT keys (Zod-validated). **Never send `client_id`** — tenant is resolved server-side from Origin → `allowed_origins` (optional `slug` fallback). **Never send `source`** — it is server-set (`web_form`). **Phone is normalized CLIENT-SIDE to E.164 and sent as `phone_e164`** (regex `^\+[1-9]\d{6,14}$`).
 
-- **Lead form → `POST /api/public/intake`:** `{ first_name, last_name?, phone_e164?, email?, notes?, turnstile_token }` — requires **`phone_e164` OR `email`**; the lead **message field is `notes`** (NOT `your_message`).
+- **Lead form → `POST /api/public/intake`:** `{ first_name, last_name?, phone_e164?, email?, notes?, turnstile_token }` — the ROUTE accepts **`phone_e164` OR `email`** (frozen backend, unchanged), but the FORM (2026-07-22) requires **`phone_e164`** (label "Mobile phone", E.164) and treats **email as OPTIONAL** — SMS is the only lead channel; a phone-less lead would enroll in the drip but be untextable. The lead **message field is `notes`** (NOT `your_message`).
 - **Discount form → `POST /api/public/discount`:** `{ first_name, last_name?, phone_e164, your_message?, consent, turnstile_token }` — **`phone_e164` is REQUIRED**; **`consent` is REQUIRED and must be `true`** (`discount.ts`: `consent: z.literal(true)`) — the **single required consent checkbox** (the lead-form/intake route has NO consent field; the discount route AND the chat-widget optin route — §3b — both require `consent: true`); the discount **message field is `your_message`** (stored to `contacts.notes` server-side).
 - Both: `turnstile_token` (the Cloudflare token) is REQUIRED.
 
@@ -27,7 +27,8 @@ The public-write routes accept these EXACT keys (Zod-validated). **Never send `c
 
 ## 2. Public website Lead Form (customer-facing)
 - **Location:** the main client website (quote/contact request).
-- **Fields:** First Name, Last Name, Phone, Email, Your Message. (Wire payload → `/api/public/intake` per **Wire payloads** above: `phone_e164`, message = `notes`.)
+- **Fields (requirements finalized 2026-07-22):** First Name (required), Last Name (optional), **Mobile Phone (REQUIRED — E.164; the platform reaches leads by TEXT only)**, Email (**optional** — stored to `contacts.email` + shown in admin CRM only; nothing ever sends to it and no lead-drip template merges it), Your Message (optional). (Wire payload → `/api/public/intake` per **Wire payloads** above: `phone_e164`, message = `notes`.)
+- **Placement + copy (2026-07-22):** ONE shared form component renders in BOTH spots — an elevated card INSIDE the homepage hero (visible without scrolling; desktop right column, mobile stacked within the hero) AND on `/contact`. Copy from `template_vars.lead_form_headline` (default "Request a Quote") / `lead_form_subhead` (optional) / `lead_form_cta` (default "Get a Quote"), agency-editable in admin Settings → Lead Form. Quote-CTAs: on the homepage scroll/focus the hero card; elsewhere route to `/contact`.
 - **Consent [see `/a2p-site-compliance` §1.1]:** the **two-checkbox** a2p opt-in surface (customer_care + marketing), both **unchecked + NOT required** (form submits without them) — **display-only** (`intake.ts` has NO consent field).
 - **Source:** `web_form`.
 - **Enrolls into:** the Website Lead-Form Drip. Branches on **Business Hours** (separate setting from the SMS Send Window): in-hours → single SMS#1 (correctly spelled); after-hours → single after-hours text. Plus the day-10 owner reminder (with Auto-Enroll button) on both branches.
