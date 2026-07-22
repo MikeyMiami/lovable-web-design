@@ -32,7 +32,7 @@ Pages are **DATA** (`content_pages` store, `/seo-build` §4) rendered by dynamic
 
 | Canonical id | Route | Purpose | Allowed display labels |
 |---|---|---|---|
-| `home` | `/` | GBP landing page — primary conversion (hero + services overview + CTAs) + the **8 GBP-consistency signals** (`/seo-build` §1) | Home, Welcome |
+| `home` | `/` | GBP landing page — primary conversion (hero + services overview + CTAs) + the **8 GBP-consistency signals** (`/seo-build` §1). **Hero-embedded lead form (2026-07-22):** the shared lead-form card renders IN the hero (desktop right column / mobile stacked in-hero) and must fit FULLY in the hero viewport — sizing/fit rules in `/opt-in-forms` §2 | Home, Welcome |
 | `about` | `/about` | Business story / owner / differentiators | About, About Us, Our Story |
 | `services` | `/services` | Services index — links to the **category** pages → **service** pages | Services, Our Services, What We Do |
 | `category` | `/services/$slug` | **Per GBP secondary category** (~3–4); Core 30; target kw = category + city; editorial-links to its service pages (`/seo-build` §2) | *(label = the category name)* |
