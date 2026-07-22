@@ -30,7 +30,7 @@ Sources: `docs/client-onboarding-process.md`, `docs/1f-*`, `skills/launch-check/
 8. **Phase F — Verify + launch.** `/launch-check` §E (data QA) → end-to-end smoke test (lead → contact → drip → SMS → owner notified) → **Live.**
 9. **(Pro clients) SEO program** runs continuously post-launch (see §5).
 
-**Ordering couplings that bite if violated:** `allowed_origins` set *before* the lead form works · `status='active'` (Finalize) *before* the site renders live data · compliance pages (E.2) *before* Campaign registration (C.3, it consumes the T&C/privacy URLs) · Turnstile widget on all forms *or zero leads* (fail-closed).
+**Ordering couplings that bite if violated:** `allowed_origins` set *before* the lead form works · `status='active'` (Finalize) *before* the site renders live data · compliance pages (E.2) *before* Campaign registration (C.3, it consumes the T&C/privacy URLs) · the native bot-shield on all forms *or zero leads* (fail-closed; `POW_SECRET` set).
 
 ---
 
