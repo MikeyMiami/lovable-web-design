@@ -45,11 +45,14 @@ async function mint(slug = SLUG) {
   return await post("/api/public/challenge", { slug });
 }
 
+// Fresh test number per run — a repeated phone on the same client hits the
+// per-client uniqueness and returns 500 insert_failed on the valid-submit test.
+const TEST_PHONE = "+1500555" + String(Math.floor(1000 + Math.random() * 9000));
 const lead = (extra) => ({
   slug: SLUG,
   first_name: "PoW",
   last_name: "ShieldTest",
-  phone_e164: "+15005550199",
+  phone_e164: TEST_PHONE,
   notes: "AUTOMATED bot-shield verification 2026-07-22 - safe to delete",
   ...extra,
 });

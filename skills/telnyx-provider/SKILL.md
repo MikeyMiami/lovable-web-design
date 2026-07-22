@@ -102,5 +102,5 @@ The registration pack (brand fields, campaign description, CTA, samples, T&C/pri
 3. **QUIET PERIOD (Gap 1):** all four TextGrid edge functions + the TextGrid numbers stay alive AS A UNIT until **60 days after the last TextGrid send to any real contact** (recipients can STOP weeks later) — then delete the functions + `getTextGridConfig` + `TEXTGRID_*` secrets and release numbers together.
 4. Remove the TextGrid admin card + provider select (or keep the select for a 3rd provider). **[PARTIALLY DONE 2026-07: the select no longer offers TextGrid for new clients and the TextGrid card is hidden unless the client is already on `'textgrid'`; the card + columns remain for legacy clients until they migrate.]**
 5. ~~Migrate the reactivation pool to Telnyx numbers.~~ **[OBSOLETE 2026-07-21 — the agency number pool was REMOVED; reactivation already runs per-client from `clients.telnyx_number` via the normal runner, so there is no pool to migrate.]**
-6. Columns `provider_subaccount_*`/`provider_webhook_secret` left in place, null (no renames/drops).
+6. Per-client TextGrid creds moved to the server-only `client_provider_secrets` table (the `provider_subaccount_*`/`provider_webhook_secret` clients columns were DROPPED in the 2026-07-22 security hardening); unused on the Telnyx path either way.
 7. textgrid-provider skill → ARCHIVED banner.
