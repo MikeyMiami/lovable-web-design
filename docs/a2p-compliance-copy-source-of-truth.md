@@ -109,15 +109,14 @@ By using our website and services, you consent to this Privacy Policy.
 
 ## SECTION C — OPT-IN FORM (verbatim template)
 
-> Two SEPARATE checkboxes, UNCHECKED by default, NOT a condition of service. Phone field optional. The consent text below is the carrier-load-bearing language. Modeled on the approved Review Harvest consent language + the uploaded form screenshot.
+> ONE consent checkbox (the marketing skeleton — single-checkbox model 2026-07-22; the former customer-care box was removed), UNCHECKED by default, NOT a condition of service. Mobile phone REQUIRED; email optional. The consent text below is the carrier-load-bearing language. Modeled on the approved Review Harvest consent language + the uploaded form screenshot.
 
 **Request Information** — Contact us to learn more about our services and how we can assist with your needs.
 
-- Full Name * (text field)
-- Email Address * (text field)
-- Mobile Phone Number (Optional) (text field)
-
-**☐ (unchecked)** I consent to receive **{customer_care_category}** from {business_name}. Message frequency varies, up to 4 messages per month. Message & data rates may apply. Text HELP for assistance, reply STOP to opt out.
+- First Name * (text field)
+- Last Name (Optional) (text field)
+- Mobile Phone Number * (text field)
+- Email Address (Optional) (text field)
 
 **☐ (unchecked)** I consent to receive **{marketing_category}** from {business_name} at the phone number provided. Message frequency varies, up to 4 messages per month. Message & data rates may apply. Text HELP for assistance, reply STOP to opt out.
 
@@ -125,7 +124,7 @@ By using our website and services, you consent to this Privacy Policy.
 
 **[Submit]**
 
-> **NICHE-LIBRARY MODEL (critical structure).** The consent checkbox = a FIXED compliance skeleton (the "I consent to receive … from {business_name} … message frequency varies … message & data rates may apply … Text HELP … reply STOP to opt out" wording is carrier-load-bearing and NEVER varies) + two niche-variable slots: `{customer_care_category}` and `{marketing_category}`. These two slots are filled from a PER-NICHE COPY LIBRARY keyed by `{segment}` (the business vertical). Only the category DESCRIPTION is niche-relevant; the compliance mechanics around it are fixed. The same two category strings also fill the campaign Call-to-Action paragraph (Section F) so the form and the A2P submission stay byte-consistent.
+> **NICHE-LIBRARY MODEL (critical structure).** The consent checkbox = a FIXED compliance skeleton (the "I consent to receive … from {business_name} … message frequency varies … message & data rates may apply … Text HELP … reply STOP to opt out" wording is carrier-load-bearing and NEVER varies) + two niche-variable slots: `{customer_care_category}` and `{marketing_category}`. These two slots are filled from a PER-NICHE COPY LIBRARY keyed by `{segment}` (the business vertical). Only the category DESCRIPTION is niche-relevant; the compliance mechanics around it are fixed. The same two category strings also fill the campaign Call-to-Action paragraph (Section F) so the form and the A2P submission stay byte-consistent. (Single-checkbox model 2026-07-22: the FORM renders only the {marketing_category} line; {customer_care_category} remains a library slot used in the campaign copy.)
 >
 > **Per-niche copy library (seed entries — grows over time as more niches are approved; add new approved niche blocks here):**
 > - **DEFAULT / generic** (any niche not yet in the library): `{customer_care_category}` = "messages regarding account issues and customer care", `{marketing_category}` = "promotional messages about new offers"
@@ -184,9 +183,9 @@ Clients will be able to sign up to receive SMS notifications by checking their p
 {business_name} sends text messages to users who consent to receive promotional and customer care SMS messages. After the transaction, we request feedback from the user and direct them to Google to leave a review. We only ask for reviews we do not filter these reviews or send any other sort of marketing message. We will follow up via SMS if a user has not left a review. We also may contact our customers via SMS if they have submitted a support request. Msg volume may vary
 
 **Call to Action / Message Flow (template):**
-Clients will be able to sign up to receive SMS notifications by checking their preference (customer care, marketing, or both) by clicking on {optin_url} at {site_url} at the very bottom of the website in the footer. Where they'll see a form to fill out information, and can click a specific box for marketing, and a specific box for customer care. The text for each reads: [ ] By providing a telephone number, clicking this button, and submitting the form, you are consenting to be contacted by SMS text message from {business_name}, regarding {customer_care_category}, (our message frequency may vary). Message & data rates apply. Reply STOP to unsubscribe from further messaging from {business_name}. Reply HELP for more information. See our Privacy Policy (containing our SMS Terms) at the bottom of the page for more information. [ ] By providing a telephone number, clicking this button, and submitting the form, you are consenting to be contacted by SMS text message from {business_name}, regarding {marketing_category}, (our message frequency may vary). Message & data rates apply. Reply STOP to unsubscribe from further messaging from {business_name}. Reply HELP for more information. See our Privacy Policy (containing our SMS Terms) at the bottom of the form for more information. Consent is provided exclusively for {business_name} to contact the user based on the selection, not any other third parties mentioned on the site. SMS opt-in data is not shared/sold to third parties for promotional/marketing purposes. Privacy Policy URL: {privacy_url}
+Clients will be able to sign up to receive SMS notifications by clicking on {optin_url} at {site_url} (the lead form, also embedded on the homepage). Where they'll see a form to fill out information, and can click a single consent box. The text reads: [ ] I consent to receive {marketing_category} from {business_name} at the phone number provided. Message frequency varies, up to 4 messages per month. Message & data rates may apply. Text HELP for assistance, reply STOP to opt out. Links to our Privacy Policy (containing our SMS Terms) and Terms of Service appear directly beneath the checkbox. Customers who submit a service or support request may also receive {customer_care_category} related to their request. Consent is provided exclusively for {business_name} to contact the user, not any other third parties mentioned on the site. SMS opt-in data is not shared/sold to third parties for promotional/marketing purposes. Privacy Policy URL: {privacy_url}
 
-> The `{customer_care_category}` / `{marketing_category}` here MUST be the same niche-library strings used in the form checkboxes (Section C) — single source, so what the campaign paragraph claims matches what the form actually renders (a carrier consistency requirement).
+> The `{customer_care_category}` / `{marketing_category}` here MUST be the same niche-library strings used on the form (Section C — the form renders the single {marketing_category} checkbox) — single source, so what the campaign paragraph claims matches what the form actually renders (a carrier consistency requirement).
 
 **Sample Messages (template — fixed structure, ≥2 with STOP, real values not generic fields):**
 1. Hi {contact_person}! Could you take a second to leave a review for {business_name}? It only takes a few clicks, and it helps us out tremendously! Here's the link: {review_link} Reply STOP to opt out. Powered By {business_name}
@@ -224,6 +223,6 @@ Clients will be able to sign up to receive SMS notifications by checking their p
 - Privacy Policy MUST state mobile opt-in data is not shared with third parties for marketing (the SMS Data Protection Statement — Section B).
 - ToS MUST carry the SMS disclosure (message types, "message frequency may vary," "message & data rates may apply," privacy link, "Text STOP to opt out").
 - **All links must work; no typos** (both are decline triggers — validate links + spellcheck the generated site).
-- Opt-in checkboxes: **two separate, unchecked by default, optional (not a condition of service)**, with the exact consent language.
+- Opt-in checkbox: **ONE (marketing skeleton), unchecked by default, optional (not a condition of service)**, with the exact consent language.
 - Sample messages: **real values (no generic `{Name}`/`{Company}` curly fields), ≥2 with STOP language, consistent with the campaign description.** If samples contain URLs/phone numbers, flag that in the campaign's "Campaign Attributes."
 - `{review_link}` must resolve to a LIVE working page at submission (the on-site dummy review page) — carriers may click it.

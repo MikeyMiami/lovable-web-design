@@ -33,7 +33,7 @@ A client site composes THREE decoupled layers (+ branding + business data):
 ## Baked-in compliance surface [LOCKED — from `/a2p-site-compliance`]
 
 Compliance + Turnstile bake into the STYLE shell (this project), so every style × niche × client combination is compliant by construction. Reproduce VERBATIM from `docs/a2p-compliance-copy-source-of-truth.md` (tokens only — never paraphrase the compliance language):
-- **Two-checkbox opt-in** on every lead form (lead, discount, chat-optin): both **unchecked by default + not a condition of service** (form submits without them); phone optional; fixed consent skeleton + `{customer_care_category}`/`{marketing_category}` from `template_vars`.
+- **Single-checkbox consent** on all three public forms (lead, discount, chat-optin) — the fixed MARKETING skeleton + `{marketing_category}` from `template_vars` (single-checkbox model 2026-07-22; the customer-care checkbox is gone). Lead form: **unchecked + not a condition of service** (submits without it, display-only) + **mobile phone REQUIRED / email optional**. Discount + chat-optin: the same skeleton as a **REQUIRED** checkbox (`consent: true`).
 - **Named Privacy Policy + Terms of Service + SMS Program** pages (rendered from the canonical doc via tokens).
 - **Footer** Privacy/Terms/SMS-Program links on EVERY page; all links working, no typos.
 - **Working `/review` page** = the always-present "Review Us" page; loads + presents a working review action — a **CTA to `client.review_link`** (Google). **No comment box / no `/api/public/intake` POST** (intake hardcodes `source=web_form` and would create a fake lead enrolled in the lead-form drip). No new backend route. (Matches `/a2p-site-compliance` §C + the build-prompt master.)

@@ -26,7 +26,7 @@ Sources: `docs/client-onboarding-process.md`, `docs/1f-*`, `skills/launch-check/
 4. **Phase B — Agency config.** Review link/Place ID/threshold; messaging + `call_forwarding_number`; `allowed_origins`; discount/quote/caps/timezone.
 5. **Phase C — Telephony/A2P finish.** subaccount → Brand (EIN) → Campaign (compliance copy from `/a2p-site-compliance`) → buy+attach number → wire `smsUrl`/`voiceUrl`/`statusCallback` + forwarding → write `clients.twilio_number` → place on site + GBP.
 6. **Phase D — Remix the site.** Remix template → rename → set `VITE_CLIENT_SLUG` → connect domain → add domain to `allowed_origins` + Turnstile hostname.
-7. **Phase E — Design + compliance.** `/website-structure` page generation → generate ToS/Privacy/SMS-Program + two-checkbox opt-in (verbatim) → Turnstile on all 3 forms.
+7. **Phase E — Design + compliance.** `/website-structure` page generation → generate ToS/Privacy/SMS-Program + single-checkbox opt-in (verbatim) → Turnstile on all 3 forms.
 8. **Phase F — Verify + launch.** `/launch-check` §E (data QA) → end-to-end smoke test (lead → contact → drip → SMS → owner notified) → **Live.**
 9. **(Pro clients) SEO program** runs continuously post-launch (see §5).
 
@@ -79,7 +79,7 @@ Writes to existing `clients` columns / `template_vars` / `send_settings` / `publ
 
 ### Phase E — Design layer + compliance pages
 - **E.1** `/website-structure`: generate pages from onboarding — the **Core-30 / GBP-mirror** service page set (~25–30 service pages mirroring the Google Business Profile — **no max-12 cap**), service-area page per area (max 14), plus always-present pages (Home, Contact, Gallery, Thank You, Discount Funnel, Review Us, ToS, Privacy, SMS Program). Steer by the agency-chosen style preset, theme the brand color, mimic agency-uploaded reference screenshots. *Only build pages the onboarding supports.*
-- **E.2** Generate ToS/Privacy/SMS-Program + two-checkbox opt-in — copy **VERBATIM** from `docs/a2p-compliance-copy-source-of-truth.md`. Store terms URL in `template_vars.website_terms_page_link`. *These URLs feed C.3.* Two-checkbox opt-in must be unchecked + optional; contact email domain == site domain.
+- **E.2** Generate ToS/Privacy/SMS-Program + single-checkbox opt-in — copy **VERBATIM** from `docs/a2p-compliance-copy-source-of-truth.md`. Store terms URL in `template_vars.website_terms_page_link`. *These URLs feed C.3.* The lead form's single consent checkbox (marketing skeleton) must be unchecked + optional; contact email domain == site domain.
 - **E.3** Turnstile widget on ALL 3 forms (lead/discount/chat-optin). *Missing widget = zero leads (fail-closed).*
 
 ### Phase F — Verify + go live (`/launch-check` §E — data QA)

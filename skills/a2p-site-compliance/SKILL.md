@@ -1,6 +1,6 @@
 ---
 name: a2p-site-compliance
-description: Use when preparing a client site and copy pack for A2P 10DLC Campaign registration (TextGrid or Telnyx — same TCR registry) — the compliance layer baked into the main marketing site (two-checkbox opt-in consent, Privacy/Terms/SMS-Program pages, the per-client copy-paste Brand+Campaign pack, the working review page, and the verbatim compliance templates filled by deterministic token substitution + a per-niche category library). PREPARES everything A2P registration consumes; the A2P submission itself is deferred and gated (provider go-forward gate — EIN → 10DLC approval + real Telnyx keys). Folds into website-structure, onboard-from-form, admin-view, new-client-site, launch-check, textgrid-provider, telnyx-provider. NOT the backend (scratch-foundation) and NOT the per-client orchestration (new-client-site).
+description: Use when preparing a client site and copy pack for A2P 10DLC Campaign registration (TextGrid or Telnyx — same TCR registry) — the compliance layer baked into the main marketing site (single-checkbox opt-in consent, Privacy/Terms/SMS-Program pages, the per-client copy-paste Brand+Campaign pack, the working review page, and the verbatim compliance templates filled by deterministic token substitution + a per-niche category library). PREPARES everything A2P registration consumes; the A2P submission itself is deferred and gated (provider go-forward gate — EIN → 10DLC approval + real Telnyx keys). Folds into website-structure, onboard-from-form, admin-view, new-client-site, launch-check, textgrid-provider, telnyx-provider. NOT the backend (scratch-foundation) and NOT the per-client orchestration (new-client-site).
 ---
 
 # A2P Site Compliance — carrier-ready site + copy-paste registration pack (Stage-5 / A2P-prep)
@@ -50,20 +50,18 @@ A **real, carrier-APPROVED** A2P campaign (canonical doc §E). It anchors BOTH (
 The generated client site carries ALL of the following on the **main marketing site**. `/website-structure` builds them; `/launch-check` §E verifies they shipped. **The copy is the verbatim canonical-doc templates — reproduce byte-for-byte, tokens only.**
 
 ### 1.1 Opt-in form (canonical doc §C — verbatim)
-Two SEPARATE checkboxes, **UNCHECKED by default**, **NOT a condition of service** (form submits without them); phone field **optional**:
+ONE consent checkbox (the MARKETING skeleton — **single-checkbox model 2026-07-22**; the former customer-care box was REMOVED), **UNCHECKED by default**, **NOT a condition of service** (form submits without it); **mobile phone REQUIRED, email optional** (form-level):
 
 > **Request Information** — Contact us to learn more about our services and how we can assist with your needs.
-> - Full Name * · Email Address * · Mobile Phone Number (Optional)
->
-> **☐ (unchecked)** I consent to receive **{customer_care_category}** from {business_name}. Message frequency varies, up to 4 messages per month. Message & data rates may apply. Text HELP for assistance, reply STOP to opt out.
+> - First Name * · Last Name (Optional) · Mobile Phone Number * · Email Address (Optional)
 >
 > **☐ (unchecked)** I consent to receive **{marketing_category}** from {business_name} at the phone number provided. Message frequency varies, up to 4 messages per month. Message & data rates may apply. Text HELP for assistance, reply STOP to opt out.
 >
 > [ Privacy Policy ]({privacy_url}) · [ Terms of Service ]({terms_url}) — **[Submit]**
 
-The "I consent to receive … Message frequency varies … Message & data rates may apply … Text HELP … reply STOP to opt out" wording is the **FIXED compliance skeleton** — never varies. Only `{customer_care_category}` / `{marketing_category}` vary (Niche library below). *(Layout per the uploaded opt-in form screenshot; the COPY is now the canonical-doc verbatim.)*
+The "I consent to receive … Message frequency varies … Message & data rates may apply … Text HELP … reply STOP to opt out" wording is the **FIXED compliance skeleton** — never varies. Only the `{marketing_category}` slot varies on the form (Niche library below; `{customer_care_category}` remains a library slot used in the §3 campaign Description/CTA + support samples). *(Layout per the uploaded opt-in form screenshot; the COPY is now the canonical-doc verbatim.)*
 
-**Scope — this is the LEAD / contact opt-in model.** Two checkboxes, both unchecked + **NOT a condition of service** (carrier-correct), phone optional; the frozen `intake` route has **no consent field**, so consent here is **display-only**. **The DISCOUNT form is intentionally different:** it uses a **single REQUIRED** consent checkbox — a **transactional value-exchange opt-in** (claim the discount in return for texts) that **gates submission** and sends `consent: true` (the frozen `discount` route requires `consent: z.literal(true)`). The discount form does **NOT** use this two-checkbox optional surface — instead its single required checkbox **reuses the MARKETING skeleton line above (verbatim, `{marketing_category}` + `{business_name}`), made REQUIRED** (the discount is a promotional offer). (See `/opt-in-forms` §3.)
+**Scope — this is the LEAD / contact opt-in model.** ONE optional checkbox (the marketing skeleton), unchecked + **NOT a condition of service** (carrier-correct), mobile phone REQUIRED + email optional; the frozen `intake` route has **no consent field**, so consent here is **display-only**. **The DISCOUNT form is intentionally different:** it uses a **single REQUIRED** consent checkbox — a **transactional value-exchange opt-in** (claim the discount in return for texts) that **gates submission** and sends `consent: true` (the frozen `discount` route requires `consent: z.literal(true)`). The discount form does **NOT** use this optional surface — instead its single required checkbox **reuses the MARKETING skeleton line above (verbatim, `{marketing_category}` + `{business_name}`), made REQUIRED** (the discount is a promotional offer). (See `/opt-in-forms` §3.)
 
 ### 1.2 Privacy Policy page (canonical doc §B — verbatim; NOT generic, names the company)
 Reproduce the full Privacy Policy from canonical §B byte-for-byte (tokens only). The **carrier-load-bearing** parts that must appear exactly:
@@ -108,7 +106,7 @@ The Privacy Policy (§B), Terms of Service (§A), and SMS Program (§D) pages re
 
 ## Niche library — the two consent-category strings [STRUCTURED + EXTENSIBLE]
 
-The consent checkbox (Section 1.1) and the campaign Call-to-Action paragraph (Section 3) share a **FIXED compliance skeleton** + two niche-variable slots: `{customer_care_category}` and `{marketing_category}`. **Only the category DESCRIPTION is niche-relevant; the compliance mechanics around it are fixed.** The two slots are filled from this per-niche library keyed by `{segment}`. The **same two strings** fill the form AND the A2P submission so they stay byte-consistent.
+The consent checkbox (Section 1.1) and the campaign Call-to-Action paragraph (Section 3) share a **FIXED compliance skeleton** + two niche-variable slots: `{customer_care_category}` and `{marketing_category}`. **Only the category DESCRIPTION is niche-relevant; the compliance mechanics around it are fixed.** The two slots are filled from this per-niche library keyed by `{segment}`. The **same two strings** fill the form AND the A2P submission so they stay byte-consistent. **Single-checkbox model 2026-07-22:** the FORM renders only the `{marketing_category}` line; `{customer_care_category}` still fills the campaign Description/CTA support sentence.
 
 **Seed entries** (grows over time as more niches are approved — append new approved niche blocks here; each entry is JUST the two category-description strings):
 
@@ -140,7 +138,7 @@ Per-client panel that **PRE-GENERATES the business-customized registration copy 
 
 - **Brand fields (canonical §G):** legal name, DBA, entity type (default Private Profit), segment/vertical, EIN + issuer, DUNS/GIIN/LEI, **legal business address** (from IRS documents; `clients.legal_address`; **MAY DIFFER from the public site address**), **website (= site URL)**, **contact email (= on-site-domain, match-enforced)**, E.164 phone.
 - **Campaign Description** — filled template (canonical §F, anchored to §0).
-- **Call-to-Action / consent paragraph** — filled template (canonical §F); its `{customer_care_category}`/`{marketing_category}` **MUST be the same niche-library strings rendered on the form** (Section 1.1) — single source, so what the campaign claims matches what the form shows.
+- **Call-to-Action / consent paragraph** — filled template (canonical §F); its `{customer_care_category}`/`{marketing_category}` **MUST be the same niche-library strings** (the form renders the single `{marketing_category}` checkbox — Section 1.1) — single source, so what the campaign claims matches what the form shows.
 - **5 sample messages** — canonical §F templates filled with **REAL distinct first names + real values** (NOT literal `{contact_person}`, NOT generic `{Name}`/`{Company}` — carrier reject); **≥ 2 contain STOP**; niche context may reflect `{segment}` but the **structure stays fixed.**
 - **Privacy Policy URL + Terms URL** boxes.
 - **Side-by-side toggle:** generated per-client copy vs the verbatim §0 Review Harvest approved example, to eyeball structural match before pasting into TextGrid.
@@ -154,7 +152,7 @@ Per-client panel that **PRE-GENERATES the business-customized registration copy 
 - **Privacy Policy MUST state** mobile opt-in data is not shared with third parties for marketing (the SMS Data Protection Statement — §1.2).
 - **ToS MUST carry the SMS disclosure** (message types, "message frequency may vary," "message & data rates may apply," privacy link, "Text STOP to opt out") — §1.3 clauses 1–8.
 - **All links work + no typos** (both are decline triggers — validate links + spellcheck the generated site).
-- **Opt-in checkboxes (lead/contact opt-in form):** two separate, **unchecked by default**, **optional** (not a condition of service), exact consent language. *(The discount form uses a single REQUIRED consent instead — transactional opt-in; see §1.1.)*
+- **Opt-in checkbox (lead/contact opt-in form):** ONE (the marketing skeleton — single-checkbox model 2026-07-22), **unchecked by default**, **optional** (not a condition of service), exact consent language. *(The discount form uses a single REQUIRED consent instead — transactional opt-in; see §1.1.)*
 - **Sample messages:** real values (no generic curly fields), ≥2 with STOP, consistent with the campaign description; if a sample contains a URL/phone, flag it in the campaign's "Campaign Attributes."
 - **`{review_link}` resolves to a LIVE working page** at submission (the on-site dummy review page) — carriers may click it.
 
@@ -185,7 +183,7 @@ Stored verbatim in **`docs/a2p-compliance-copy-source-of-truth.md`**; the genera
 Skills/specs that need a pointer at `/a2p-site-compliance`. Anchor points + suggested mirror text (exact placement confirmed with the user at commit):
 
 - **`/onboard-from-form`** — extend the §9b field set + the "A2P field coverage (FLAG)" note with the Section 2 fields (legal name/DBA/entity type/segment→niche-key/EIN+issuer/alt-id/address/website/contact-email domain-match/phone/description/logo/attestation/business-domain-email). *Mirror: "A2P-prep field capture + compliance copy generation → `/a2p-site-compliance` (canonical copy `docs/a2p-compliance-copy-source-of-truth.md`)."*
-- **`/website-structure`** — the page set + §9b.C terms/privacy generation produce the Section 1 compliant pages (two-checkbox opt-in, named Privacy/ToS, SMS Program page, footer links, `/review` page), copy verbatim from the canonical doc. *Mirror beside the Turnstile launch-prereq note.*
+- **`/website-structure`** — the page set + §9b.C terms/privacy generation produce the Section 1 compliant pages (single-checkbox opt-in, named Privacy/ToS, SMS Program page, footer links, `/review` page), copy verbatim from the canonical doc. *Mirror beside the Turnstile launch-prereq note.*
 - **`/admin-view`** — new per-client **A2P-prep panel** (Section 3) with the side-by-side approved-example toggle; sits with the Settings surfacing of all onboarding values. *Mirror in the Tabs list + Settings notes.*
 - **`/new-client-site`** — step 2 (A2P registration) + step 4 (design) reference `/a2p-site-compliance` for the pre-generated pack + compliant pages registration consumes. *Mirror in the launch sequence steps 2 & 4.*
 - **`/launch-check`** — §E gains the compliance go-live rows (Section 4 rules: domain-match, named policies, working links, samples real-values + ≥2 STOP, unchecked/optional opt-in, "not shared for marketing" clause, live `/review` page). *Mirror as a new §E checklist block.*
@@ -317,15 +315,14 @@ By using our website and services, you consent to this Privacy Policy.
 
 ## SECTION C — OPT-IN FORM (verbatim template)
 
-> Two SEPARATE checkboxes, UNCHECKED by default, NOT a condition of service. Phone field optional. The consent text below is the carrier-load-bearing language. Modeled on the approved Review Harvest consent language + the uploaded form screenshot.
+> ONE consent checkbox (the marketing skeleton — single-checkbox model 2026-07-22; the former customer-care box was removed), UNCHECKED by default, NOT a condition of service. Mobile phone REQUIRED; email optional. The consent text below is the carrier-load-bearing language. Modeled on the approved Review Harvest consent language + the uploaded form screenshot.
 
 **Request Information** — Contact us to learn more about our services and how we can assist with your needs.
 
-- Full Name * (text field)
-- Email Address * (text field)
-- Mobile Phone Number (Optional) (text field)
-
-**☐ (unchecked)** I consent to receive **{customer_care_category}** from {business_name}. Message frequency varies, up to 4 messages per month. Message & data rates may apply. Text HELP for assistance, reply STOP to opt out.
+- First Name * (text field)
+- Last Name (Optional) (text field)
+- Mobile Phone Number * (text field)
+- Email Address (Optional) (text field)
 
 **☐ (unchecked)** I consent to receive **{marketing_category}** from {business_name} at the phone number provided. Message frequency varies, up to 4 messages per month. Message & data rates may apply. Text HELP for assistance, reply STOP to opt out.
 
@@ -333,7 +330,7 @@ By using our website and services, you consent to this Privacy Policy.
 
 **[Submit]**
 
-> **NICHE-LIBRARY MODEL (critical structure).** The consent checkbox = a FIXED compliance skeleton (the "I consent to receive … from {business_name} … message frequency varies … message & data rates may apply … Text HELP … reply STOP to opt out" wording is carrier-load-bearing and NEVER varies) + two niche-variable slots: `{customer_care_category}` and `{marketing_category}`. These two slots are filled from a PER-NICHE COPY LIBRARY keyed by `{segment}` (the business vertical). Only the category DESCRIPTION is niche-relevant; the compliance mechanics around it are fixed. The same two category strings also fill the campaign Call-to-Action paragraph (Section F) so the form and the A2P submission stay byte-consistent.
+> **NICHE-LIBRARY MODEL (critical structure).** The consent checkbox = a FIXED compliance skeleton (the "I consent to receive … from {business_name} … message frequency varies … message & data rates may apply … Text HELP … reply STOP to opt out" wording is carrier-load-bearing and NEVER varies) + two niche-variable slots: `{customer_care_category}` and `{marketing_category}`. These two slots are filled from a PER-NICHE COPY LIBRARY keyed by `{segment}` (the business vertical). Only the category DESCRIPTION is niche-relevant; the compliance mechanics around it are fixed. The same two category strings also fill the campaign Call-to-Action paragraph (Section F) so the form and the A2P submission stay byte-consistent. (Single-checkbox model 2026-07-22: the FORM renders only the {marketing_category} line; {customer_care_category} remains a library slot used in the campaign copy.)
 >
 > **Per-niche copy library (seed entries — grows over time as more niches are approved; add new approved niche blocks here):**
 > - **DEFAULT / generic** (any niche not yet in the library): `{customer_care_category}` = "messages regarding account issues and customer care", `{marketing_category}` = "promotional messages about new offers"
@@ -392,9 +389,9 @@ Clients will be able to sign up to receive SMS notifications by checking their p
 {business_name} sends text messages to users who consent to receive promotional and customer care SMS messages. After the transaction, we request feedback from the user and direct them to Google to leave a review. We only ask for reviews we do not filter these reviews or send any other sort of marketing message. We will follow up via SMS if a user has not left a review. We also may contact our customers via SMS if they have submitted a support request. Msg volume may vary
 
 **Call to Action / Message Flow (template):**
-Clients will be able to sign up to receive SMS notifications by checking their preference (customer care, marketing, or both) by clicking on {optin_url} at {site_url} at the very bottom of the website in the footer. Where they'll see a form to fill out information, and can click a specific box for marketing, and a specific box for customer care. The text for each reads: [ ] By providing a telephone number, clicking this button, and submitting the form, you are consenting to be contacted by SMS text message from {business_name}, regarding {customer_care_category}, (our message frequency may vary). Message & data rates apply. Reply STOP to unsubscribe from further messaging from {business_name}. Reply HELP for more information. See our Privacy Policy (containing our SMS Terms) at the bottom of the page for more information. [ ] By providing a telephone number, clicking this button, and submitting the form, you are consenting to be contacted by SMS text message from {business_name}, regarding {marketing_category}, (our message frequency may vary). Message & data rates apply. Reply STOP to unsubscribe from further messaging from {business_name}. Reply HELP for more information. See our Privacy Policy (containing our SMS Terms) at the bottom of the form for more information. Consent is provided exclusively for {business_name} to contact the user based on the selection, not any other third parties mentioned on the site. SMS opt-in data is not shared/sold to third parties for promotional/marketing purposes. Privacy Policy URL: {privacy_url}
+Clients will be able to sign up to receive SMS notifications by clicking on {optin_url} at {site_url} (the lead form, also embedded on the homepage). Where they'll see a form to fill out information, and can click a single consent box. The text reads: [ ] I consent to receive {marketing_category} from {business_name} at the phone number provided. Message frequency varies, up to 4 messages per month. Message & data rates may apply. Text HELP for assistance, reply STOP to opt out. Links to our Privacy Policy (containing our SMS Terms) and Terms of Service appear directly beneath the checkbox. Customers who submit a service or support request may also receive {customer_care_category} related to their request. Consent is provided exclusively for {business_name} to contact the user, not any other third parties mentioned on the site. SMS opt-in data is not shared/sold to third parties for promotional/marketing purposes. Privacy Policy URL: {privacy_url}
 
-> The `{customer_care_category}` / `{marketing_category}` here MUST be the same niche-library strings used in the form checkboxes (Section C) — single source, so what the campaign paragraph claims matches what the form actually renders (a carrier consistency requirement).
+> The `{customer_care_category}` / `{marketing_category}` here MUST be the same niche-library strings used on the form (Section C — the form renders the single {marketing_category} checkbox) — single source, so what the campaign paragraph claims matches what the form actually renders (a carrier consistency requirement).
 
 **Sample Messages (template — fixed structure, ≥2 with STOP, real values not generic fields):**
 1. Hi {contact_person}! Could you take a second to leave a review for {business_name}? It only takes a few clicks, and it helps us out tremendously! Here's the link: {review_link} Reply STOP to opt out. Powered By {business_name}
@@ -432,6 +429,6 @@ Clients will be able to sign up to receive SMS notifications by checking their p
 - Privacy Policy MUST state mobile opt-in data is not shared with third parties for marketing (the SMS Data Protection Statement — Section B).
 - ToS MUST carry the SMS disclosure (message types, "message frequency may vary," "message & data rates may apply," privacy link, "Text STOP to opt out").
 - **All links must work; no typos** (both are decline triggers — validate links + spellcheck the generated site).
-- Opt-in checkboxes: **two separate, unchecked by default, optional (not a condition of service)**, with the exact consent language.
+- Opt-in checkbox: **ONE (marketing skeleton), unchecked by default, optional (not a condition of service)**, with the exact consent language.
 - Sample messages: **real values (no generic `{Name}`/`{Company}` curly fields), ≥2 with STOP language, consistent with the campaign description.** If samples contain URLs/phone numbers, flag that in the campaign's "Campaign Attributes."
 - `{review_link}` must resolve to a LIVE working page at submission (the on-site dummy review page) — carriers may click it.

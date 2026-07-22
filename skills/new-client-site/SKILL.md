@@ -35,7 +35,7 @@ Launches one client on top of the proven golden-master backend. This is an ORCHE
 ### 4. Invoke the design layer
 - Run **`/website-structure`**: generate the page set from onboarding (services/areas up to 12/14, only what's supported), steer copy + visual by the agency-chosen style preset, theme the brand color, load assets, mimic the agency-uploaded reference screenshots.
 - Generate the A2P-compliant terms/privacy page (§9b.C) → store its URL in template_vars.
-- Generate the compliance pages (two-checkbox opt-in, named Privacy/ToS, SMS Program page, footer links, working `/review` page) per `/a2p-site-compliance` — copy reproduced VERBATIM from `docs/a2p-compliance-copy-source-of-truth.md` (tokens only).
+- Generate the compliance pages (single-checkbox opt-in, named Privacy/ToS, SMS Program page, footer links, working `/review` page) per `/a2p-site-compliance` — copy reproduced VERBATIM from `docs/a2p-compliance-copy-source-of-truth.md` (tokens only).
 - As the template library matures, prefer applying a proven design template (Mode 2) over generating fresh (Mode 1).
 
 ### 5. Verify (gate)
