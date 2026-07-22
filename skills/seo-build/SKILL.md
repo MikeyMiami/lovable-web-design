@@ -90,7 +90,7 @@ Ranking factors + they gate whether searchers stay (bounce = a negative signal).
 | SEO field | Source |
 |---|---|
 | Titles / meta / H1 / local keywords | `business_name`/`company_name`, `template_vars.services` (+ per-service), `service_area[]`, `template_vars.segment`, `about_us`/`differentiators` |
-| LocalBusiness/Service schema | `business_name`, `clients.address`, **public phone = `clients.twilio_number`**, `clients.hours`, `service_area[]`, GBP = `template_vars.google_business_profile_link`, `clients.logo_url`, `sameAs` = `clients.social_links` (IG/FB/LinkedIn) + GBP |
+| LocalBusiness/Service schema | `business_name`, `clients.address`, **public phone = `clients.phone_display`** (⚠️ corrected 2026-07-16: `twilio_number` is NOT in the anon `get_client_public` projection — templates cannot read it; `phone_display` is the anon-safe public phone the whole site renders, and ops keeps it aligned with the active provider number), `clients.hours`, `service_area[]`, GBP = `template_vars.google_business_profile_link`, `clients.logo_url`, `sameAs` = `clients.social_links` (IG/FB/LinkedIn) + GBP |
 | Image alt / OG image | `template_vars.site_assets` (+ context), `clients.logo_url` |
 | Canonical / sitemap / domain | `clients.allowed_origins` / `template_vars.company_website_link`; the content store |
 | Reviews widget | `clients.review_link` + GBP |
@@ -122,6 +122,7 @@ Ranking factors + they gate whether searchers stay (bounce = a negative signal).
 - **`/website-structure`** generates the per-client page set as the **Core 30** (§2), reconciled to this skill (the old service-area-lander model is superseded; area pages are genuinely-local geo pages).
 - **`/new-client-site`** applies this at the design/build step; **`/launch-check`** gates on an SEO subsection (titles/meta present, one H1/page, valid LocalBusiness JSON-LD, sitemap/robots, NAP consistent char-for-char, Core-30 present, CWV within target).
 - Inputs: onboarding/admin data (§6) + the future **admin SEO panel** (categories / services-by-category / geo).
+- **In-app operator guide [BUILT]:** the admin SEO tab (`/admin/seo`) carries a **"?" helper** whose 7-step "How to set up SEO for this client" checklist surfaces THIS setup order-of-operations in-app (check the onboarding-vs-map panel → AI-seed from services → edit to match real GBP categories → Save → Seed Core-30 → AI-write per page, or Deep-write for Pro → Publish; ongoing geo + supporting ~monthly), alongside an **"Onboarding vs SEO map"** comparison panel (`/admin-view`).
 
 ## FINITE GENERATION [LOCKED — mirror /website-structure]
 Page identities/routes, schema types, the target-keyword formulas, and the content-store contract are FIXED by this skill. A template build MUST NOT improvise them; if a needed decision isn't covered, **FLAG it for a skill update rather than guessing.**

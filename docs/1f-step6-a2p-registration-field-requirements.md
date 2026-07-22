@@ -1,5 +1,7 @@
 # 1f Step 6 — A2P / 10DLC Registration: Full Field Requirements (record)
 
+> Historical TextGrid build spec (frozen). Live path is now the Supabase edge functions; Telnyx go-forward per `skills/telnyx-provider`.
+
 > Parked here at the audit (2026-06-16) so the A2P-registration step of 1f has the **complete real field list** when we reach it — not rediscovered piecemeal. Extracted verbatim from the **TextGrid 10DLC API** doc (`C:\Users\Pierc\Downloads\TextGrid 10DLC API.txt`). The per-client model: each client gets its own subaccount → **Brand** (per-client) → **Campaign** → number, all under the agency master account; each vets independently (~2–4 days). This is the real shape of the deferred "vertical-field gap" — **it is bigger than just vertical.**
 
 ## TL;DR — the onboarding/capture gaps
@@ -10,7 +12,7 @@ Our current model assumes "client EIN, ≥15 days old" + a single brand/campaign
 4. **Campaign `termsAndConditionsLink` AND `privacyPolicyLink`** — both REQUIRED (Nov-2024 TCR). We capture `website_terms_page_link`; confirm we generate/store BOTH a T&C and a privacy page link.
 5. The **"≥15 days old EIN"** rule is **NOT in the TextGrid docs** — likely a stale TCR/Twilio-era assumption; verify before relying on it.
 
-These imply additive `clients` columns at the A2P step (beyond the already-planned `a2p_brand_id`/`a2p_campaign_id`/`a2p_status`): e.g. `a2p_vertical`, `a2p_entity_type`, `a2p_brand_relationship`, sole-prop person fields, T&C + privacy links. (Confirm names at build.)
+These imply additive `clients` columns at the A2P step (beyond the already-planned `a2p_brand_id`/`a2p_campaign_id`/`a2p_status`): e.g. `a2p_vertical`, `a2p_entity_type`, `a2p_brand_relationship`, **`legal_address`** (the registered legal business address from the client's IRS documents — may differ from the public `clients.address`), sole-prop person fields, T&C + privacy links. (Confirm names at build.)
 
 ---
 

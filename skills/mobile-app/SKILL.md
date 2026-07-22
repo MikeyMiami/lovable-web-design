@@ -1,9 +1,9 @@
 ---
 name: mobile-app
-description: Use when building, modifying, or reviewing the client-facing mobile app (the PWA at app.theirdomain.com) — its Conversations, Review Request, Notifications, and Dashboard tabs, the in-app notification records, the day-10 Auto-Enroll button, and the owner email notifications that accompany lead/discount events. NOT for the public website or admin dashboard (use admin-view) and NOT for the drip message copy itself (use automation-config).
+description: Use when building, modifying, or reviewing the client-facing mobile app (the PWA — served today from the SHARED origin app.pierceworks.co; per-client app.theirdomain.com subdomains are not built yet) — its Conversations, Review Request, Notifications, and Dashboard tabs, the in-app notification records, the day-10 Auto-Enroll button, and the owner email notifications that accompany lead/discount events. NOT for the public website or admin dashboard (use admin-view) and NOT for the drip message copy itself (use automation-config).
 ---
 
-# Mobile App — client PWA at `app.theirdomain.com`
+# Mobile App — client PWA (shared origin `app.pierceworks.co` today; per-client `app.theirdomain.com` not yet built)
 
 Mobile-first installable PWA, scoped to the logged-in client's `client_id` via RLS. The business owner / staff (`client_owner`, `client_staff`) log in here; they see only their own client's data. Surfaces are arranged per the **B-design nav model** (see *Navigation shell + payment gate* below).
 
@@ -16,17 +16,17 @@ Formatting standard (applies to every notification + email here): stack details 
 ---
 
 ## Tab 1 — Conversations
-SMS threads across all of this client's contacts (CRM). iMessage-style, mobile-first, newest first, status badges + relative time. Reply box sends an outbound SMS in the thread. (Exists at `/app`; keep/extend.)
+SMS threads across all of this client's contacts (CRM). iMessage-style, mobile-first, newest first, status badges + relative time. Reply box sends an outbound SMS in the thread. (`app.inbox.tsx`.) **iPhone-style upgrade 2026-07-14:** the conversation list shows a **last-message text preview** per row (embedded latest message; outbound prefixed "You:"), an **unread dot + bold name** on conversations whose latest message is inbound and newer than last-open, and a **count badge on the Inbox/MessageSquare bottom-nav tab** — all via per-device localStorage `msg_last_read` (map conversationId→ISO; NO DB read/unread column), cleared on opening the thread. Same localStorage/badge pattern as the Alerts unread badge (`use-unread`).
 
 ## Tab 2 — Review Request
 The client's enrollment form for the Review Request SMS drip.
-- Fields: First Name, Last Name, Phone, Email.
+- Fields: First Name, Last Name, Phone. (Email field REMOVED 2026-07-14 — SMS/phone-only.)
 - On submit → enroll the contact into the Review Request SMS drip (one enrollment; SMS-only).
 - Subject to the **daily enrollment cap** (default 50/day; overflow queues to the next day).
 - **Re-enrollment guard:** if the contact (client_id + phone) is already enrolled in the review automation, block and show "contact already enrolled."
 
 ## Tab 3 — Notifications
-A simple feed of notification records for this client. **No read/unread tracking** — each notification is just a message filled with the relevant data. Records are written by automations as they fire (timings follow the drip specs). All are informational EXCEPT two that carry actions: the day-10 lead reminder (Auto-Enroll button) and the missed-call notification (Open-conversation deeplink).
+A simple feed of notification records for this client. **Unread badge added 2026-07-14** (per-device localStorage `alerts_last_seen` marker — the Bell tab shows an unread count pill, Home shows an "N new alerts" banner, and opening the Alerts tab marks seen; no DB read/unread column). Each notification is just a message filled with the relevant data. Records are written by automations as they fire (timings follow the drip specs). All are informational EXCEPT two that carry actions: the day-10 lead reminder (Auto-Enroll button) and the missed-call notification (Open-conversation deeplink).
 
 - **Click-to-call:** render every phone number as a `tel:` link so the owner can tap to call directly.
 - **Day-10 lead reminder — actionable:** includes an **Auto-Enroll button** that enrolls the contact into the Review Request drip directly (no manual form entry). It runs the same re-enrollment guard — if already enrolled, it shows "contact already enrolled" instead of enrolling. Suppress the whole reminder if the lead's phone is already in the review automation.
@@ -96,8 +96,8 @@ Notification copy (sources: review drip §4, one-year §5, lead-form §7, discou
 >
 > (Do NOT reply to this message; it's not the client!)
 
-**AI chat widget — new lead (§7e; chat-widget Request path, same lead-form drip; only this label differs):**
-> New Lead from your Website AI chat!
+**Website Chat widget — new lead (§7e; CAPTURE-FIRST chat widget → same lead-form drip; only this label differs. Renamed from "AI chat" 2026-07-16 — the widget is a lead form in a chat skin, no AI):**
+> New Website Chat Lead
 >
 > Name: {full_name}
 > Phone: {phone}
@@ -160,19 +160,16 @@ The Open-conversation button deep-links to that contact's thread in the Conversa
 > Email: {email}
 
 ## Tab 4 — Dashboard
-Stat counters scoped to this client (RLS), each shown week + month, computed in the client's timezone. **Lead sources are SPLIT per channel** (so the owner sees each channel's performance separately; future-proofs for more sources). Six counters:
+Client-scoped (RLS) stat displays, computed in the client's timezone. **REDESIGNED 2026-07-14 — month-focused + display-styled (no longer a 6-counter week/month grid):** three metrics — (a) **New Reviews this month** as a large bold-black hero number, (b) **Missed Calls Texted Back** as a distinct bold-number card, (c) **Website Leads this month** as a card with a relevant icon (colored-circle swapped out). The prior "this week" variants, the graph, and the small circle mini-cards were REMOVED. Data SOURCES unchanged (chat-widget source + `review_clicked` event still exist; only the display changed):
 
-> Website Leads this week: {count}
-> Website Leads this month: {count}
-> Chat Leads this week: {count}
-> Chat Leads this month: {count}
-> Review Link Clicks this week: {count}
-> Review Link Clicks this month: {count}
+> New Reviews this month: {count}            — large bold-black hero number
+> Missed Calls Texted Back this month: {count}  — distinct bold-number card
+> Website Leads this month: {count}           — card with a relevant icon (not a colored circle)
 
 - **Website Leads** = count of contacts with source `web_form` in the period (the public website lead form + the discount-claim form — both use `web_form`).
-- **Chat Leads** = count of contacts with source `chat_widget` in the period (the AI chat widget Request path).
-- **Review Link Clicks** = count of `review_clicked` events in the period = **TOTAL CLICKS (per-landing, not unique clickers)** — `review_clicked` is inserted unconditionally per landing on `/api/public/r/rate`; `tracked_links.clicked_at` stays first-click-only (the 2b funnel-state stamp for drip-exit/dedupe). Renamed from "New Google Reviews" for accuracy, since landing ≠ a confirmed posted review.
-- Lead counters read `contacts` (by `source`); Review Link Clicks reads `events`. "This week" / "this month" boundaries are computed in the client's timezone.
+- **Missed Calls Texted Back** = count of `missed_call` events in the period (each `missed_call` event = a missed call that fired the textback flow). *(Added 2026-07-14, replacing Chat Leads.)*
+- **New Reviews** = count of `review_completed` events in the period — a positive review-gate submission (rating ≥ `star_threshold`, or the direct-toggle path) that was **redirected to Google**. This is the proxy for a posted review (no Google API), and is more meaningful than counting `review_clicked` landings. *(Changed 2026-07-14 from "Review Link Clicks"/`review_clicked`.)*
+- Website Leads reads `contacts` (source=`web_form`); Missed Calls Texted Back + New Reviews read `events` (`missed_call` / `review_completed`). "This week" / "this month" boundaries are computed in the client's timezone.
 - *(Not counted as lead channels: `mobile_enroll` (owner-entered review requests) + `reactivation` (bulk uploads) — not inbound website/chat leads. Discount-form submissions currently fold into Website Leads via `web_form`; splitting them out would need a distinct `discount_form` source — decided 2026-06-14: fold into Website Leads; revisit only on client demand.)*
 
 ---
@@ -182,15 +179,15 @@ Stat counters scoped to this client (RLS), each shown week + month, computed in 
 - **Payment-gate intercept** (in the shell): reads `access_suspended` from the RLS-scoped `clients` row; when `true`, renders ONLY a full-screen message ("There was an issue with your payment method. Please correct to regain access to your mobile app.") — bottom nav + ☰ hidden — instead of the app. Verified **TOTAL** (toggling `clients.access_suspended` flips access; agency/admin surfaces never gated). Fixed string for v1.
 
 ## Account · Request an Edit · Support [BUILT — B-design Slice 2b, 2026-06-20]
-- **Account (☰, READ-ONLY):** `app.account.tsx` — read-friendly display of the client's identity/branding from their own `clients` row + `template_vars` (the same source the agency's admin-view shows; no schema change). No edit; a **"Request a change"** action deep-links to Request-an-Edit. *(Cosmetic: empty `hours` renders as `{}` — fix to em-dash; logged, non-blocking.)*
+- **Account (☰) — SIMPLIFIED 2026-07-14:** `app.account.tsx` now shows ONLY (1) the **business name** with a **subscription-tier pill** in the top-right (Starter/Growth/Pro, mapped from `clients.tier` `"297"`/`"397"`/`"749"` cheapest→priciest via `TIER_LABEL` in `src/lib/entitlements.ts`; null/empty = no pill), (2) an editable **"Notifications"** section (alert email input + on/off Switch, saved via `updateOwnerNotificationSettings` → `clients.notification_email` + `email_notifications_enabled`), and (3) the **"Request a change"** deep-link to Request-an-Edit. ALL other identity/branding/links fields were REMOVED from this page (still viewable in admin-view). `notification_email` + `email_notifications_enabled` are the only client-self-editable fields. *(Cosmetic: empty `hours` renders as `{}` — fix to em-dash; logged, non-blocking.)*
 - **Request an Edit (Feature A) + Support (Feature B):** a shared **`TicketSurface`** component (exported from `app.support.tsx`, consumed by `app.edit.tsx` with `kind='edit_request'`): ticket list (status badge, 15s poll) + composer + bubble thread (10s poll, `sender_side` alignment) + resolution banner + a `resolved`/`closed` history filter. Reads via the RLS-scoped browser `supabase`; **writes via the Slice-1 service-role fns** (`openTicket` / `postClientMessage` / `recordTicketAttachment`). Attachments: client uploads to `client-assets` at `<client_id>/tickets/<ticket_id>/<uuid>-<file>` via **`src/lib/tickets/ticket-upload.ts`** (NOT `*.client.*` — Lovable's SSR build strips `*.client.*` files from the server bundle), then registers via `recordTicketAttachment`; downloads via **signed URL** (the bucket is private). **Storage caps [set 2026-06-20]:** bucket `file_size_limit = 25 MB`; **MIME enforced at the app layer** (the helper + `recordTicketAttachment`), NOT a bucket-wide MIME list (which would break existing logo uploads).
 - **`open_ticket` notification action:** the Notifications/Alerts feed renders an "Open" deep-link for `action.open_ticket` (→ the Edit/Support thread by `kind`), alongside the existing `auto_enroll` / `open_conversation` actions. Written by `notify.server.ts` on agency reply / status change (in-app notification + owner-email stub).
 - **Agency side** (admin reply / approve / deny via `postAgencyReply` / `setTicketStatus`) = the per-client **admin-view** surfaces (see `admin-view`; B-design Prompt 3). The client surfaces here consume what the agency writes.
 
 ## Owner Email Notifications (accompany the in-app notifications)
-When a lead-form or discount-form submission fires its in-app notification, ALSO send the owner an email pointing them to the app. The in-app notification still fires — the email is additive. **One email per lead** (after-hours is a body variant of the website-lead email, not a second email).
+**IMPLEMENTED via Resend 2026-07-14:** EVERY in-app notification ALSO emails the owner the same content (`sendOwnerEmail` called from `writeNotification`; from `alerts@notif.pierceworks.co`; fail-open — never breaks the in-app write). Recipient = `clients.notification_email`; GATED by `clients.email_notifications_enabled` (owner toggles both in Account → Notifications; operator in Admin · Settings). Logs an `owner_email_sent` event on success. (Originally spec'd as lead/discount-only via Lovable native email — superseded: now every type, via Resend.) See [[reference-owner-notifications]].
 
-- **Channel:** Lovable NATIVE transactional email (owner account-activity notice = transactional). Sends from the client's verified sending subdomain; not the external marketing sender. Low volume, no warmup concern.
+- **Channel:** **Resend** (owner account-activity notice = transactional), from the SINGLE agency sender **`alerts@notif.pierceworks.co`** — NOT Lovable-native email and NOT a per-client verified sending subdomain (that framing was superseded 2026-07-14; matches the §188 / §250 build notes). Low volume, no warmup concern.
 - Phone displays as text in email (click-to-call only exists in-app).
 
 **Subject: New Website Lead** (business hours):
@@ -226,10 +223,10 @@ When a lead-form or discount-form submission fires its in-app notification, ALSO
 >
 > We've told them you'll be reaching out soon. Open your app to see the details.
 
-**Subject: New Website AI Chat Lead** (§7e chat-widget variant; same business-hours/after-hours branching as the website lead):
+**Subject: New Website Chat Lead** (§7e capture-first chat-widget variant; same business-hours/after-hours branching as the website lead; renamed from "AI Chat" 2026-07-16):
 > Hey {company_owner_first_name},
 >
-> You've got a new lead from your website AI chat!
+> You've got a new lead from your website chat!
 >
 > Name: {full_name}
 > Phone: {phone}
@@ -240,7 +237,7 @@ When a lead-form or discount-form submission fires its in-app notification, ALSO
 ---
 
 ## Per-client branding [BACKLOG]
-Each client's mobile app is **branded to their business** — their logo shown in-app, and the app's colors match their brand — so the white-label identity is consistent across the marketing site AND the app. **ONE branding source, two consumers** (set once in `/admin-view` branding → flows to both).
+Each client's mobile app is **branded to their business** — their logo shown in-app, and the app's colors match their brand — so the white-label identity is consistent across the marketing site AND the app. **ONE branding source, two consumers** (set once in `/admin-view` branding → flows to both). **Origin caveat [current]:** the PWA is served from the SHARED origin **`app.pierceworks.co`** today (per-client `app.theirdomain.com` subdomains are not built), so iOS **"Add to Home Screen" shows the shared origin name** — not the client's business name — until per-client subdomains ship; in-app theming/logo is unaffected.
 
 - **Source = the same as the marketing site:** the app reads the client's branding from the existing **`get_client_public` projection** — `brand_color` (primary) + `template_vars.brand_secondary` / `template_vars.brand_tertiary` + `logo_url` — the SAME projection the marketing template already consumes. **NO new branding model, NO new backend/schema change** — branding already lives in `clients` + `template_vars` and is already projected.
 - **In-app theming:** reuse the **hex→oklch token injection already proven in the marketing template** — port it, don't reinvent. Primary = `brand_color`; secondary/tertiary = the `template_vars` keys.
@@ -250,6 +247,6 @@ Each client's mobile app is **branded to their business** — their logo shown i
 ## Build notes
 - [BUILD] Notifications table (client_id, type, body, related contact_id, optional action {type, payload}, created_at) + automations writing to it + this UI reading it. No read/unread state.
 - [BUILD] Auto-Enroll action wired to the Review Request enrollment path (with re-enrollment guard).
-- [BUILD] Owner email notifications via Lovable native transactional email.
+- [DONE 2026-07-14] Owner email notifications via **Resend** (not Lovable native) — every notification emails the owner (`sendOwnerEmail`), gated by `clients.email_notifications_enabled`, from `alerts@notif.pierceworks.co`.
 - Dashboard counters read `events`; no extra tracking tables needed.
 - Ship as an installable PWA (manifest + service worker), client branding on icon/splash. PWA web-push is backlog, not v1 — owner emails cover the "alert me" need.

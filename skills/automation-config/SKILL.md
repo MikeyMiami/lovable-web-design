@@ -12,7 +12,9 @@ Merge keys:
 - Per-client template_vars: `company_owner_first_name`, `company_name`, `review_request_link`, `discount__on_referral`, `company_website_link`, `discount_amount`, `website_terms_page_link`.
 - Per-client template_vars also include `quote_form_link` (defaults to the site lander `{company_website_link}`; overridable in /admin-view Settings — the page hosting the quote form).
 - Dynamic (not template_vars): `message.body`, `request_time` (client tz), `full_name`, `your_message`, `caller_phone`, `call_time` (client tz), `feedback_message`, `email`.
+- **`request_time` source [FIXED 2026-07-20]:** the runner passes `submittedAt` = the processed **enrollment's `created_at`** (the true submission time) into `writeNotification`, which wins over the fallback (`contacts.created_at`). This fixes stale times for RETURNING/deduped contacts (a re-submitter whose phone was already in the CRM previously showed their FIRST-seen date, not this submission). Contexts with no enrollment (e.g. `missed_call`) still fall back to `contacts.created_at`.
 - Naming: `{first_name}` customer-facing; `{full_name}` internal notifications.
+- `your_message` = the customer's submitted message; resolves from `contacts.notes` for BOTH the lead form (wire key `notes`) and the discount form (wire key `your_message`, stored to `contacts.notes` server-side) — so it MUST render for lead-form/chat notifications + emails, not only discount. If it renders blank on a lead-form notification, the resolver is reading the wrong field.
 - Formatting standard: internal notifications + emails stack details (Name / Phone / Message) on separate lines — never inline.
 - **Runtime resolution [LOCKED]:** at send time the cron runner resolves each SMS step's `templateKey` from `public.templates` via the SHARED `resolveTemplate(client_id, key)` — the SAME resolver the 2c notification dispatcher uses — **client override preferred, global fallback** (`.or(client_id.eq.X, client_id.is.null)` → prefer `client_id===X`), then renders with the merge keys above (incl. the per-contact tracked `review_link`). The runner must NOT emit a hardcoded/`step.body` literal. *(Was missing pre-3f — the runner emitted `[stub] <key>`; corrected in the Stage-3.5 pre-freeze must-fix. The SMS body templates must be seeded as global rows for every step `templateKey`.)*
 
@@ -46,13 +48,10 @@ Opt-out keyword **`pass`** (whole-word; + standard STOP/etc.). Exit on click at 
 >
 > We've attempted to get {first_name} to leave you a review 4 times over the last 4 weeks. Try to get in touch with them — they'll have the link in their text messages.
 >
-> Name: {first_name}
+> Name: {full_name}
 > Phone: {phone}
 >
 > Here's your direct review link if you need it: {review_request_link}
->
-> (Do NOT reply to this message; it's not the client!)
-
 On completion (clicked OR ran all 4 without opt-out) → enroll into One-Year drip. Opted-out → not enrolled.
 
 ---
@@ -75,9 +74,6 @@ Enrollment: automatic handoff from review-drip completion (no form). Exit on REP
 > Their response: {message.body}
 >
 > You can reach them at {phone} if needed.
->
-> (Do NOT reply to this message; it's not the client!)
-
 **Wait 8 weeks → SMS 2:**
 > Hey {first_name}! I'm running a customer anniversary special for the next 6 days and giving {discount__on_referral}, so if you're interested (or know someone who might be), just tap this link: {company_website_link}/get-your-discount
 >
@@ -88,10 +84,7 @@ Enrollment: automatic handoff from review-drip completion (no form). Exit on REP
 >
 > We just sent them a discount offer to ask for referrals!
 >
-> Their number is {phone} if you want to reach out / or they contact you.
->
-> (Do NOT reply to this message; it's not the client!)
-
+> Their number is {phone} if you'd like to reach out, or in case they get in touch.
 **Wait 3 months → SMS 3:**
 > Hey {first_name}! I'm running a loyalty special this week and giving {discount__on_referral}.
 >
@@ -119,9 +112,6 @@ Enrollment: automatic handoff from review-drip completion (no form). Exit on REP
 > It's been about a year since we added {first_name} to your 1-year follow-up sequence for referrals / return-customer discounts. We're removing them from further follow-up.
 >
 > If you'd like to contact them for a referral or to see if they'd use your service again, reach them at {phone}.
->
-> (Do NOT reply to this message; it's not the client!)
-
 The interest notification fires on a reply after ANY of SMS 1–5.
 
 ---
@@ -137,9 +127,6 @@ Branches on Business Hours (separate setting). `{full_name}` internal, `{first_n
 > Message: {your_message}
 >
 > We've let them know you'll be in touch soon.
->
-> (Do NOT reply to this message; it's not the client!)
-
 **SMS #1 to lead — DURING business hours only (single text, correctly spelled):**
 > Hey {first_name}! Just got your form! I'll be in touch shortly!
 > -{company_owner_first_name} with {company_name}
@@ -156,23 +143,13 @@ Branches on Business Hours (separate setting). `{full_name}` internal, `{first_n
 > Phone: {phone}
 >
 > Reach out when you're back.
->
-> (Do NOT reply to this message; it's not the client!)
-
-**Day-10 owner reminder — BOTH branches; suppress if lead's phone is now in the review automation; includes Auto-Enroll button:**
+**Day-10 owner reminder — BOTH branches; suppress if lead's phone is now in the review automation; Auto-Enroll button is rendered from the notification `action` jsonb (NOT literal text in the body):**
 > Hey {company_owner_first_name},
 >
-> It's been about 10 days since {full_name} filled out a request on your website. If you've worked with them, please remember to add their info to your marketing form. This is important!
+> It's been about 10 days since {full_name} filled out a request on your website. If you've worked with them, please add their info into your Review Request form, or auto-enroll them below.
 >
 > Name: {full_name}
 > Phone: {phone}
->
-> If you haven't added them yet, add their info into the Review Request form — or auto-enroll them below.
->
-> [Auto-Enroll button]
->
-> (Do NOT reply to this message; it's not the client!)
-
 ---
 
 ## Drip 4 — Discount-Claim Drip
@@ -188,9 +165,6 @@ On submit of the discount form. If submitter is in the One-Year drip, the submit
 > Message: {your_message}
 >
 > We've told them you'll be reaching out soon.
->
-> (Do NOT reply to this message; it's not the client!)
-
 **Wait 2 minutes → SMS to lead:**
 > Hey {first_name}, just got your discounted request! I'll be in touch shortly and get you that discount!
 > -{company_owner_first_name} with {company_name}
@@ -200,7 +174,7 @@ Then ends.
 ---
 
 ## Drip 5 — Missed-Call Textback
-Fires 24/7 (live call; not gated by send window or Business Hours). Trigger: provider (TextGrid) call status `busy`/`no-answer`/`canceled`/`failed` (Twilio-API-compatible literal status strings; voicemail reports as `completed` and does NOT fire). Re-eligibility: fires only if this contact (client_id + phone) has NOT received a missed-call textback in the last 7 days (boundary = 7 days from the last send). Wait 1 min → SMS #1 + internal notification → wait 2 min → SMS #2 only if no reply.
+Fires 24/7 (live call; not gated by send window or Business Hours). Trigger: provider (TextGrid) call status `busy`/`no-answer`/`canceled`/`failed` (Twilio-API-compatible literal status strings; voicemail reports as `completed` and does NOT fire — TextGrid path; on Telnyx, AMD also fires the textback on voicemail, see features / `/telnyx-provider` §5). Re-eligibility: fires only if this contact (client_id + phone) has NOT received a missed-call textback in the last 7 days (boundary = 7 days from the last send). Wait 1 min → SMS #1 + internal notification → wait 2 min → SMS #2 only if no reply.
 
 **SMS #1 (after 1-min wait):**
 > Hey, sorry I missed you! I'll get back to you as soon as possible!
@@ -213,10 +187,8 @@ Fires 24/7 (live call; not gated by send window or Business Hours). Trigger: pro
 **SMS #2 (after 2-min wait, only if no reply):**
 > Look forward to hearing from you!... In the meantime are there any quick questions I can answer here for ya?
 
-**Internal notification (fires with SMS #1):**
+**Internal notification (fires with SMS #1). The "Open conversation" button is rendered from the notification `action` jsonb (deep-links to the caller's conversation) — NOT literal text in the body, same pattern as the Drip-3 day-10 reminder Auto-Enroll button:**
 > You missed a call from {caller_phone} at {call_time}, so we sent them a text.
->
-> View the conversation here: [Open conversation button]
 
 `{quote_form_link}` defaults to the site lander, overridable in Settings. Dynamic keys: `{caller_phone}`, `{call_time}` (client tz). A brand-new caller has no name — notification keys off phone + time. If the caller submits the quote form, they also enter the Lead-Form drip (intentional, independent).
 
@@ -238,7 +210,7 @@ Bulk-upload past customers → drip-fed slowly to win reviews organically (don't
 ---
 
 ## Owner Email Notifications (§7d)
-Sent in ADDITION to the in-app notification when a lead-form or discount-form submission occurs. One email per lead. Channel: Lovable NATIVE transactional email (from the client's sending subdomain; not the external marketing sender). Phone displays as text (no click-to-call in email).
+**IMPLEMENTED 2026-07-14 (Resend):** EVERY in-app notification ALSO emails the owner the same content — `sendOwnerEmail` (`src/lib/notifications/email.server.ts`) is called from `writeNotification` after the row insert (subject from a type→label map, body = the rendered notification body). Channel = **Resend** (secrets `RESEND_API_KEY` + `RESEND_FROM` = `Alerts <alerts@notif.pierceworks.co>`; **fail-open** — missing keys / Resend errors never break the in-app notification). Recipient = `clients.notification_email` (falls back to `clients.email`). GATED by `clients.email_notifications_enabled` (boolean, default true). Both `notification_email` + `email_notifications_enabled` are **F-pii single-source on `clients`** — NEVER in template_vars; the owner edits them in the client mobile app (Account → Notifications: email input + on/off Switch, via `updateOwnerNotificationSettings` server fn) and the operator edits them in Admin · Settings. On a successful send, an `owner_email_sent` event is logged. The polished per-type email copy below (nicer subjects/CTAs) is optional layering; the generic path reuses the in-app body + a type label. Phone displays as text (no click-to-call in email).
 
 **Subject: New Website Lead** (business-hours version):
 > Hey {company_owner_first_name},
@@ -273,16 +245,17 @@ Sent in ADDITION to the in-app notification when a lead-form or discount-form su
 >
 > We've told them you'll be reaching out soon. Open your app to see the details.
 
-**Subject: New Website AI Chat Lead** (chat-widget variant of New Website Lead — §7e; same business-hours/after-hours branching as the website lead form, since it feeds the same lead-form drip):
-> Hey {company_owner_first_name},
->
-> You've got a new lead from your website AI chat!
+**Subject: New Website Chat Lead** (chat-widget variant of New Website Lead — §7e; **renamed from "New Website AI Chat Lead" 2026-07-16 when the widget went CAPTURE-FIRST** (no AI — see /chat-widget); keys keep the `ai_chat_lead*` identifiers; same business-hours/after-hours branching as the website lead form, since it feeds the same lead-form drip). LIVE global template `ai_chat_lead_internal_notify` currently reads:
+> New Website Chat Lead
 >
 > Name: {full_name}
 > Phone: {phone}
+> Email: {email}
 > Message: {your_message}
 >
-> We've already replied to them in the chat. Open your app to see the conversation.
+> We've already texted them to say you'll be in touch. Open the conversation to follow up.
+
+*(Closing line corrected 2026-07-20 to the capture-first truth — the DRIP texts them; nothing "replies in the chat." Verified live in the global template row.)*
 
 **Subject: We Saved You From a Negative Review** (fires when a contact submits `/api/public/r/feedback` below threshold):
 > Hey {company_owner_first_name},

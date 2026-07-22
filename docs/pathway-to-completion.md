@@ -72,7 +72,7 @@
   4. `?ping=1` confirms the live runner bundle is the validated one.
   5. One manual cron tick → drip renders **real templates** (not `[stub]`) → **real SMS send via TextGrid**.
   6. Inbound reply → opt-out capture → drip exit.
-  7. Reactivation pool end-to-end.
+  7. ~~Reactivation pool end-to-end.~~ **[obsolete 2026-07-21 — pool removed; reactivation now runs per-client from `clients.telnyx_number` and is tested as part of the normal drip runner.]**
   8. A2P **Brand+Campaign approved** for that client.
   9. Only then **schedule pg_cron + flip live**.
 - **What stub/frontend testing did NOT catch (Phase E surfaces it):** live TextGrid auth (parent-on-subaccount 401 risk), form-encoding/content-type, inbound HMAC URL-exactness, **real Turnstile** (test key always-passes), CORS with the real domain, A2P carrier approval of the actual site, **consent persistence** actually writing records, owner-email deliverability, and **client login provisioning**.

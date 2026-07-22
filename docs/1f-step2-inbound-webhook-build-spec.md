@@ -1,5 +1,7 @@
 # 1f Step 2 — Net-New Inbound Webhook Layer — Audit + Build Spec
 
+> Historical TextGrid build spec (frozen). Live path is now the Supabase edge functions; Telnyx go-forward per `skills/telnyx-provider`.
+
 > The second 1f hardening step: build the inbound/voice/status webhook layer from scratch. Audited against the real frozen code @ `golden-master-v1.2` (`cloud-spark-setup@73ca26e`). Audit + spec only — no build code yet. Same discipline as step 1: validate against real code, hand verbatim mirror lines, additive migrations, re-validate + re-tag.
 
 ## Audit findings (real-code-grounded @ 73ca26e)
@@ -125,5 +127,5 @@ Bump `RUNNER_VERSION` (e.g. → `v20260617-1`) in the same commit — the cron r
 - Parent-on-subaccount auth confirm (carried from step 1) does not gate step 2, but the **per-subaccount `webhook_secret`** is what step 2 verifies against — confirm TextGrid returns it on subaccount create (10DLC doc says yes).
 
 ### LIVE-smoke watches (built right; confirm against the real provider at LIVE)
-- **URL-exactness for the HMAC.** The signature is `HMAC-SHA1(request.url + rawBody)`. If the URL TextGrid signs (the configured `smsUrl`/`statusCallback`/`voiceUrl`) differs from `request.url` the Worker sees (scheme/host/trailing-slash/query/proxy rewrite), EVERY signature → `401`. #1 real-world webhook-signature failure. Pin the exact canonical URL at A2P provisioning (step 5/6) and verify at the LIVE smoke.
+- **URL-exactness for the HMAC. ✅ [CONFIRMED 2026-07-11 — `request.url` == configured `smsUrl` exactly on Lovable/Cloudflare (https, no trailing slash); slash/http variants 401. Canonical: `https://cloud-spark-setup.lovable.app/api/public/sms/inbound`.]** The signature is `HMAC-SHA1(request.url + rawBody)`. If the URL TextGrid signs (the configured `smsUrl`/`statusCallback`/`voiceUrl`) differs from `request.url` the Worker sees (scheme/host/trailing-slash/query/proxy rewrite), EVERY signature → `401`. #1 real-world webhook-signature failure. Pin the exact canonical URL at A2P provisioning (step 5/6) and verify at the LIVE smoke.
 - **Non-ASCII `\uXXXX` re-encode.** TextGrid's signer re-encodes chars >127 as `\uXXXX` before HMAC. Form bodies are percent-encoded ASCII so this *shouldn't* bite, but confirm at LIVE with an emoji/accented inbound SMS (else those legit inbounds 401).

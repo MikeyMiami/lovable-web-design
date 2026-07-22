@@ -1,5 +1,7 @@
 # LIVE SMS + Drip — End-to-End Test Plan (tracked checklist)
 
+> ⚠️ SUPERSEDED (2026-07-20) — frozen TextGrid record. The provider→backend webhook targets below (`/api/public/sms/inbound`, `/api/public/voice/inbound`, `/api/public/voice-status`, `/api/public/sms-status`) are DEAD — the live inbound/status webhook path is now the Supabase **edge functions**. Go-forward SMS is **Telnyx** (via the `telnyx-*` edge fns; built-but-not-live), and **Telnyx voice is already LIVE** (native ringback + AMD voicemail detection, validated 2026-07-20). Current authority: `skills/telnyx-provider`. Retained as the historical TextGrid live-flip checklist.
+
 > 2026-07-09. A2P approved + live number in hand. This is the dependency-ordered checklist to validate the entire SMS/drip surface for real. Grounded in the TextGrid docs (textgrid-provider skill, 1f-step1/2/6 specs) + verified in `cloud-spark-setup` code. **Check off each # as it passes.** Do the live-flip only after the two enablers are built + the client is wired + TextGrid webhooks are pointed.
 
 ## Two LIVE-flip risk gates (watch on the FIRST send)
@@ -9,7 +11,7 @@
 ## Prerequisites (in order)
 - [ ] **P0** Deployment env: `TEXTGRID_MASTER_ACCOUNT_SID`, `TEXTGRID_MASTER_AUTH_TOKEN`, `TEXTGRID_BASE_URL` — keep `SMS_MODE=stub` for now.
 - [ ] **P1** Wire the test client (via the new TextGrid credential UI once built): `twilio_number`, `provider_subaccount_sid`, `provider_webhook_secret`.
-- [ ] **P2** On TextGrid, point the number's `smsUrl` → `/api/public/sms/inbound` and `statusCallback` → `/api/public/sms-status` (exact deployed URLs — HMAC gate #3). (+ `voiceUrl` → `/api/public/voice/inbound` for voice tests.)
+- [x] **P2 — DONE 2026-07-11 on +14194879124.** Point the number's `smsUrl` → `/api/public/sms/inbound` (POST), `voiceUrl` → `/api/public/voice/inbound`, and the number-level `statusCallback` → `/api/public/voice-status`. **Correction:** the number-level `statusCallback` is the VOICE call-status callback — NOT the SMS delivery-status route. SMS delivery-status (`/api/public/sms-status`) is set per-message on the send primitive, not at the number level. (exact deployed URLs — HMAC gate #3 resolved.)
 - [ ] **P3** Verify config: `GET /api/public/cron/sequences?ping=1` echoes runner_version; a stub enrollment tick shows NO `send_config_missing` for the test client.
 - [ ] **P4** Temp **"run drip tick now"** admin button built (pg_cron stays UNSCHEDULED until last).
 
@@ -17,7 +19,7 @@
 - [ ] **1. Flip `SMS_MODE=live` + config live** — `getTextGridConfig().mode='live'`, test client fully wired.
 - [ ] **2. Single outbound (CANARY) 🟢** — reply-box or 1-step drip to your phone → you receive it; `messages.sid` real (not `STUB-`), `status=sent/queued`. *(Watch gates #1/#2.)*
 - [ ] **3. Delivery status callback 🟢** — `messages.status → delivered` after the send. *(Needs P2 statusCallback.)*
-- [ ] **4. Inbound reply + threading 🟢** — your reply lands in the conversation, `direction=inbound`, HMAC verified. *(Gates #3/#4.)*
+- [~] **4. Inbound reply + threading 🟢** — your reply lands in the conversation, `direction=inbound`, HMAC verified. **HMAC scheme + URL-exactness + secret VALIDATED live 2026-07-11** (a signed replica of a real TextGrid POST materialized contact+message and returned 200); real-reply confirmation still pending. *(Gate #3 resolved; #4 `\uXXXX` still open.)*
 - [ ] **5. Opt-out STOP / START 🟢** — `STOP` → `opted_out_at` set + enrollments exit; next tick blocks send; `START` clears. *(Needs P4 tick.)*
 - [ ] **6. Drip — single step (live via runner) 🟢** — one live text via the tick, enrollment advances.
 - [ ] **7. Drip — multi-step 🟢** — 2-step seq: tick sends step 0 → advances → after offset, step 1.
@@ -36,7 +38,7 @@
 1. **Reactivation pool** (#16): is the agency PierceWorks campaign + pool numbers provisioned? (build spec deferred — if not, #16 waits).
 2. **Turnstile live** (#13): widget + secret on the lead forms?
 3. **statusCallback + smsUrl** on the number (#3/#4): confirm settable to the deployed routes.
-4. **`provider_webhook_secret`**: subaccount webhook secret in hand to store on the client?
+4. **`provider_webhook_secret`**: subaccount webhook secret in hand to store on the client? **RESOLVED — and it was THE root cause.** Inbound was silently fail-closed 401ing because the secret wasn't stored on the client row when the first replies arrived; storing it fixed it. Confirmed live that the signing key IS this per-client webhook secret (not the account auth token). (2026-07-11.)
 
 ## Enablers being built for this (2026-07-09)
 - **TextGrid credential UI (PERMANENT):** `provider_subaccount_sid` + `provider_webhook_secret` (+ `a2p_*` display) inputs on the Messaging settings form; "Twilio"→"TextGrid" labels.

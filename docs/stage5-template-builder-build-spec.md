@@ -20,7 +20,7 @@
 | Logo **file-upload UI** + admin **image preview/download** | **MISSING** | `admin.settings.tsx:323` = a plain "Logo URL" text input (paste only); no `<img>` preview, no upload-to-storage |
 | Immutable **onboarding submission record** (table or column) | **MISSING** | no `onboarding_submissions` table, no `clients.onboarding_*` column; admin writes parsed fields directly (`admin.settings.tsx:241-266`) |
 | **Onboarding wizard** component | **MISSING** | only `admin.settings.tsx` (a field editor); no wizard, no assembled pre-gen console |
-| Admin tabs | Dashboard, Contacts, Conversations, Feedback, Automations, Upload Customers, Number Pool, Settings | `src/routes/_authenticated/admin.*.tsx` |
+| Admin tabs | Dashboard, Contacts, Conversations, Feedback, Automations, Upload Customers, ~~Number Pool~~ *(removed 2026-07-21)*, Settings | `src/routes/_authenticated/admin.*.tsx` |
 
 ### 1.1 The corrected 3-layer model — does the structure support it cleanly? **YES, data-only.**
 - **LAYOUT / TEMPLATE** = the reusable structural site shell (a Lovable project, built from a design, selectable by niche-fit). **NOT niche-labeled.**
@@ -29,7 +29,7 @@
 - **DECOUPLING [the structural win]:** niche composes with any style → build the styles once + grow the niche library independently = **N+M to maintain, not N×M.** Adding a niche works instantly across all styles; adding a style works instantly across all niches.
 - **How it maps to artifacts (v1):** the **STYLE TEMPLATE** is one frontend-only Lovable project = layout shell + style preset + **baked-in compliance + Turnstile** (see 1.4). The **NICHE is pure data** — `template_vars.segment` + the two category strings (from #14's library) + niche-default content/images. A client site = chosen style template (Remix) + chosen niche (data) + branding (data) + business data (data).
 - **Zero-frozen-change confirmed:** niche lives in **`template_vars`** (NOT a new `clients.niche` column — that would be a migration). `template_vars.segment` + `template_vars.customer_care_category` + `template_vars.marketing_category` are anon-safe public content, projected as-is. **[FIX]** do NOT add a `clients.niche` column; use `template_vars.segment` as the niche selection key.
-- **`site_style` = the template/style SELECTION key, NOT a render-time branch** (the v1 [FIX] stands). `site_style` is free text (not enum), so revising the value set to the 6 presets is convention/UI only — **no migration.**
+- **`site_style` = the template/style SELECTION key, NOT a render-time branch** (the v1 [FIX] stands). **2026-07-22 update:** the selection is now agency-made outside the app — the onboarding choice + all app `site_style` plumbing were removed; the column is dormant (free text, never written — no migration).
 
 ### 1.2 Branding (Correction 2) — simple, mostly data-only; logo UX needs admin build
 - **Brand colors:** onboarding captures **primary / secondary / third (optional)** + a fallback ("don't have brand colors? we'll create them"). Stored in **`template_vars`** (e.g. `brand_primary`/`brand_secondary`/`brand_tertiary`; `clients.brand_color` already holds the primary hex). **Data-only, no migration.** Agency-editable in admin (the Settings `template_vars` JSON editor + `brand_color` field exist today; a dedicated 3-color picker is a nicety **[BACKLOG]**).

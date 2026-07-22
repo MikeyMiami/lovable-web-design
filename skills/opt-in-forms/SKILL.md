@@ -11,7 +11,7 @@ Every form, its fields, and exactly what it triggers. Phones normalized to E.164
 The public-write routes accept these EXACT keys (Zod-validated). **Never send `client_id`** — tenant is resolved server-side from Origin → `allowed_origins` (optional `slug` fallback). **Never send `source`** — it is server-set (`web_form`). **Phone is normalized CLIENT-SIDE to E.164 and sent as `phone_e164`** (regex `^\+[1-9]\d{6,14}$`).
 
 - **Lead form → `POST /api/public/intake`:** `{ first_name, last_name?, phone_e164?, email?, notes?, turnstile_token }` — requires **`phone_e164` OR `email`**; the lead **message field is `notes`** (NOT `your_message`).
-- **Discount form → `POST /api/public/discount`:** `{ first_name, last_name?, phone_e164, your_message?, consent, turnstile_token }` — **`phone_e164` is REQUIRED**; **`consent` is REQUIRED and must be `true`** (`discount.ts`: `consent: z.literal(true)`) — this is the **single required consent checkbox**, the ONLY consent field on either route (discount-only); the discount **message field is `your_message`** (stored to `contacts.notes` server-side).
+- **Discount form → `POST /api/public/discount`:** `{ first_name, last_name?, phone_e164, your_message?, consent, turnstile_token }` — **`phone_e164` is REQUIRED**; **`consent` is REQUIRED and must be `true`** (`discount.ts`: `consent: z.literal(true)`) — the **single required consent checkbox** (the lead-form/intake route has NO consent field; the discount route AND the chat-widget optin route — §3b — both require `consent: true`); the discount **message field is `your_message`** (stored to `contacts.notes` server-side).
 - Both: `turnstile_token` (the Cloudflare token) is REQUIRED.
 
 **[boundary] Field set vs consent copy:** `opt-in-forms` + the real route govern the **form field set + wire payload keys** (above); **`/a2p-site-compliance` §1.1/§C governs the consent COPY + two-checkbox structure**. Don't mix them — the a2p §C "Request Information" block shows consent copy, NOT the authoritative field set.
@@ -20,7 +20,7 @@ The public-write routes accept these EXACT keys (Zod-validated). **Never send `c
 
 ## 1. Mobile-app "Review Request" form (client-facing)
 - **Location:** the Review Request tab inside the client mobile app (`app.theirdomain.com`). Only the logged-in client/staff can access it.
-- **Fields:** First Name, Last Name, Phone, Email.
+- **Fields:** First Name, Last Name, Phone. **(Email field REMOVED 2026-07-14 — review requests are SMS/phone-only; the email drip was already scrapped, so the input was dead.)**
 - **Enrolls into:** the Review Request SMS Drip ONLY (one enrollment — email drip scrapped).
 - **Caps/guards:** subject to the daily enrollment cap (default 50/day, overflow queues to next day). Runs the **re-enrollment guard** — if the contact (client_id + phone) is already enrolled in the review automation, block and show "contact already enrolled."
 - **Downstream:** on review-drip completion the contact is auto-handed to the One-Year Follow-Up drip (unless opted out) — no form for that.
@@ -42,12 +42,13 @@ The public-write routes accept these EXACT keys (Zod-validated). **Never send `c
 - **Enrolls into:** the Discount-Claim Drip (immediate internal notification → 2-min wait → one SMS to lead → end).
 - **Side effect [LOCKED]:** if the submitter is currently in the One-Year drip, the submission EXITS them from it (re-engagement). A form submit is distinct from a raw link click (which does not exit the one-year drip).
 
-## 3b. AI Chat Widget opt-in (customer-facing) [LOCKED — see /chat-widget skill]
-- **Location:** corner AI chat widget on the client's main website.
-- **Opt-in gate:** before chatting, collects First Name, Last Name, Email, Phone, message/question — with SMS opt-in + terms consent (phone collected for texting).
-- **Source:** `chat_widget` (distinct from `web_form`, so chat leads are attributable).
-- **Request path → same as the website lead form:** enrolls into the Lead-Form drip (§7) with identical automations; the ONLY difference is the owner notification reads "New Website AI Chat Lead."
-- **FAQ path:** AI answers business/service questions from onboarding + site data; pricing/quote questions are redirected to submit a request. (AI behavior detailed in the /chat-widget skill; knowledge inputs depend on the onboarding form.)
+## 3b. Chat Widget (customer-facing) [LOCKED — CAPTURE-FIRST since 2026-07-16; see /chat-widget skill]
+- **Location:** corner chat bubble on the client's main website — **a lead form in a chat skin; NO AI conversation** (the AI Q&A path is PARKED — /chat-widget skill). Renders only when `chat_widget_enabled` (default true); greeting = `template_vars.chat_widget_greeting` (default: "Hi! This goes right to the owner's phone. What can I help you with?").
+- **Fields:** First Name, Last Name, Phone (+ optional message "What do you need help with?"). Email optional in the schema, not shown by the widget.
+- **Consent [LOCKED — SINGLE required checkbox, same posture as the discount form §3]:** reuses the a2p MARKETING skeleton verbatim, gates submission, sends `consent: true`. Plus Turnstile.
+- **Wire payload → `POST /api/public/chat/optin`:** `{ slug?, first_name, last_name, phone_e164, email?, your_message?, consent, turnstile_token }` — `phone_e164` REQUIRED; `consent: z.literal(true)`; message key = **`your_message`** (stored to `contacts.notes`). CORS allowlist + IP/client rate limits; contact deduped by (client_id, phone_e164); **source `chat_widget`** (distinct from `web_form`, so widget leads are attributable).
+- **Submit = the website lead form, immediately:** enrolls the Lead-Form drip (§7) on the Business-Hours branch, writes the message into the contact's conversation as `messages.channel='chat'` (visible in the owner's Conversations tab; the drip's SMS #1 threads into the same conversation), and the ONLY notification difference is the label: **"New Website Chat Lead."** Re-submits never error (already-enrolled guard; message still recorded).
+- **Post-submit [LOCKED 2026-07-17]:** the panel STAYS OPEN — the form is replaced by a conversation view ending in the business's in-chat reply bubble = `template_vars.chat_widget_confirmation` (customizable in the admin Chat Widget card beside the greeting; default "Thanks, I've received your message and will respond as soon as possible!"). Widget chrome themes from `clients.brand_color` (site theme tokens — never hardcoded).
 
 ## 4. Public review-funnel pages [LOCKED]
 Destination of BOTH the review-drip tracked link and the reactivation link. Landing on `/api/public/r/rate` (via `/api/public/r/<token>`) writes a `review_clicked` event and EXITS the contact from the review drip; status + one-year handoff are set by the star selection. **These routes (`/api/public/r/<token>`, `/api/public/r/rate`, `/api/public/r/feedback`) are served by the SHARED BACKEND domain** (they write to the DB) — NOT the frontend-only client marketing site.

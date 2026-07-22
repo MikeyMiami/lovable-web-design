@@ -25,7 +25,7 @@ description: Use when building a client-site TEMPLATE in a NEW frontend-only Lov
 
 A client site composes THREE decoupled layers (+ branding + business data):
 - **Layout / Template** — the reusable structural site shell (THIS project), built from a design, selectable by niche-fit. **NOT niche-labeled.**
-- **Style** — a selectable PRESET (copy voice + photo/visual treatment) that fills the shell and gives it a feel. The 6 definitive styles (display name → slug key): **Professional Modern** (`professional_modern`), **Artistic Unique** (`artistic_unique`), **Corporate** (`corporate`), **Modern Tech** (`modern_tech`), **Family Owned / Local Business** (`family_owned`), **Owner Operated / Local Business** (`owner_operated`) — voices + visual directions in `/website-structure`. Reusable, not client-specific. In v1 the style is embodied IN this project (a `Template — {Style}` project); `clients.site_style` is the **template/style SELECTION key** (= the slug key; which project to remix) — **NOT a render-time branch.**
+- **Style** — a selectable PRESET (copy voice + photo/visual treatment) that fills the shell and gives it a feel. The 6 definitive styles (display name → slug key): **Professional Modern** (`professional_modern`), **Artistic Unique** (`artistic_unique`), **Corporate** (`corporate`), **Modern Tech** (`modern_tech`), **Family Owned / Local Business** (`family_owned`), **Owner Operated / Local Business** (`owner_operated`) — voices + visual directions in `/website-structure`. Reusable, not client-specific. In v1 the style is embodied IN this project (a `Template — {Style}` project); the style/template selection is an **agency-side pick made outside the app** (2026-07-22: the client-facing onboarding choice + all app `site_style` plumbing were removed; the dormant `clients.site_style` column is never written) — the slug key just names which project to remix, **NOT a render-time branch.**
 - **Niche** — a SEPARATE, selectable content/context layer (plumbing, roofing, HVAC, dentist…), applied onto ANY style/layout. **Pure DATA** — `template_vars.segment` + the niche-default fallback images + the two compliance category strings (`{customer_care_category}`/`{marketing_category}`), all keyed to the niche via the `/a2p-site-compliance` niche library (skill #14). The shell is niche-AGNOSTIC; never hardcode niche content.
 
 **DECOUPLE niche from style:** any niche composes with any style → build styles once + grow the niche library independently = **N+M to maintain, not N×M.** Adding a niche works instantly across all styles; adding a style works instantly across all niches. Niche lives in `template_vars` (data-only) — do NOT add a `clients.niche` column.
@@ -57,7 +57,7 @@ These render through `useClient()` from `template_vars` like all other content �
 | brand_color | text | THE primary theme color — apply as CSS var `--brand` site-wide. **When unset, DERIVE the palette from the ART-STYLE references** (dominant + accent); `#bd703e` is a **last-resort fallback only** (no references + no client colors). NOT a build-prompt parameter — comes from references (demo) or client data (live), never hand-entered. See `/website-structure` Brand-color theming. |
 | service_area | text[] | "Serving X, Y, Z" section/strip |
 | social_links | jsonb | Footer/contact icons ({instagram, facebook, bbb, tiktok, yelp} — render only the present ones) |
-| site_style | text | The **template/style SELECTION key** = the slug key of the remixed `Template — {Style}` project, one of: `professional_modern` / `artistic_unique` / `corporate` / `modern_tech` / `family_owned` / `owner_operated`. A label, **not a render-time branch** — this project already embodies one style. (Free text, not enum — voices/directions in website-structure.) |
+| site_style | text | **DORMANT (2026-07-22)** — never written or read; the template/style selection (which `Template — {Style}` project to remix) is an agency-side pick made outside the app. Slug set + voices/directions live in website-structure. |
 | (niche) | template_vars.segment | The **niche selection** (plumbing / roofing / …) — pure data; drives niche content/context + the two compliance category strings via the `/a2p-site-compliance` library. NOT a `clients` column. |
 | brand colors | brand_color + template_vars | Primary = `clients.brand_color`; secondary/tertiary = `template_vars.brand_secondary`/`brand_tertiary` (optional). Captured at onboarding, agency-editable. |
 | review_link | text | "Leave us a review" CTAs (direct Google link) |
@@ -97,7 +97,7 @@ Follow the **website-structure skill** (import it alongside this one) for the lo
 2. **Quote/discount CTAs** → `template_vars.quote_form_link` / discount form per opt-in-forms.
 3. **Review CTAs** → `client.review_link`.
 4. **Phone CTAs** → `tel:` links from `phone_display`.
-5. **NO chat widget wiring here** — the AI chat widget is injected per the chat-widget skill separately; just leave the standard mount point if the structure calls for one.
+5. **NO chat widget wiring here** — the chat widget (CAPTURE-FIRST lead form in a chat skin, no AI) is injected separately per `docs/chat-widget-inject-prompt.md` / the chat-widget skill; just leave the standard mount point if the structure calls for one.
 
 ## Build workflow (the order matters)
 

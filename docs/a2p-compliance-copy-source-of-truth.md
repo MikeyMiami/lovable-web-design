@@ -210,7 +210,7 @@ Clients will be able to sign up to receive SMS notifications by checking their p
 - EIN/TIN Number: {ein}
 - EIN/TIN Issuer (Country): {ein_country}
 - DUNS/GIIN/LEI (if applicable): {duns_giin_lei_type} / {duns_giin_lei_number}
-- Address/Street: {street} · City: {city} · State: {state} · Zip: {zip} · Country: {country}
+- Legal Business Address (as on the client's IRS/EIN documents — the registered brand address; stored in `clients.legal_address`; **MAY DIFFER from the public business address shown on the site**) — Street: {street} · City: {city} · State: {state} · Zip: {zip} · Country: {country}
 - Website: {site_url}
 - Contact Email Address: {contact_email}  ⚠️ **domain MUST match {site_url}'s domain — mismatch = campaign decline**
 - Contact Phone Number: {phone_e164}  (E.164, e.g. +17183083801)

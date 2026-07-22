@@ -43,6 +43,7 @@ Pages are **DATA** (`content_pages` store, `/seo-build` §4) rendered by dynamic
 | `contact` | `/contact` | Lead form + business contact info | Contact, Contact Us, Get in Touch |
 | `discount` | `/get-your-discount` | Discount-claim funnel (One-Year drip destination; route per `/opt-in-forms`) | Get Your Discount, Special Offer, Claim Your Discount |
 | `review` | `/review` | "Review Us" page — the on-site working review action A2P needs | Reviews, Review Us, Leave a Review |
+| `review_redirect` | `/review/$token` | **Option-A tracked-link redirect [LOCKED, decision 2026-07-13]:** immediate 302/redirect → `https://reviewbatch.com/api/public/r/$token` — texted review links live on the CLIENT's domain (matches their A2P campaign registration at the registrable-domain level), then hand off to the one shared backend funnel. NO UI, NO nav presence, no content — redirect only. | (none — never in nav) |
 | `thank-you` | `/thank-you` | Post-submit confirmation | Thank You, Thanks |
 | `terms` | `/terms` | Terms of Service (verbatim `/a2p-site-compliance` §A) | **Terms of Service** *(FIXED — do not flex)* |
 | `privacy` | `/privacy` | Privacy Policy (verbatim `/a2p-site-compliance` §B) | **Privacy Policy** *(FIXED — do not flex)* |
@@ -52,7 +53,7 @@ Routes use TanStack file-based routing (`$slug`/`$area` = dynamic segments). The
 
 ## Design generation inputs [LOCKED]
 Visual design, fonts, colors, copy, and layout are AI-driven, from combining:
-1. **Site style choice** (`clients.site_style`, §9b — 4 options below) → copy VOICE + styling DIRECTION.
+1. **Site style** (AGENCY-CHOSEN at build time — the 6 presets below; the client-facing onboarding choice + all app `site_style` plumbing were removed 2026-07-22, `clients.site_style` is dormant) → copy VOICE + styling DIRECTION.
 2. **Onboarding form data** → content + the AI's copy source (About Us, services, areas, differentiators, hours, identity).
 3. **Visual assets from onboarding** → logo (`clients.logo_url`, uploaded or agency-made) + photos of previous work (the `public-assets` / `client-assets` buckets).
 4. **Reference style screenshots** — AGENCY-uploaded at build time (NOT an onboarding field). **MIMIC CLOSELY:** treat the references as the design spec to FAITHFULLY REPRODUCE (layout, section structure, spacing, typography, visual style) — not loose inspiration. Label them PAGE-LAYOUT (structure/section flow) vs ART-STYLE (palette/type/visual feel). The only things that change from the references: business content renders from the client data object (never hardcoded), the baked compliance surface (`/a2p-site-compliance`) is added, and the chosen style's copy voice fills the text — everything structural/visual follows the references.
@@ -61,9 +62,9 @@ This resolves the copy-strategy decision: copy is **AI-GENERATED, steered by the
 
 ## Site styles (copy voice + photo treatment) [LOCKED — the 6 definitive styles]
 
-Style = a selectable PRESET (copy voice + photo/visual treatment) that fills a layout shell — **DECOUPLED from niche** (any niche, a data layer `template_vars.segment` + the `/a2p-site-compliance` library, composes onto any style). `clients.site_style` holds the **slug key** below: the template/style **SELECTION key** (which `Template — {Style}` project to remix) — **free text, no migration, NOT a render-time branch**. Each style = a display name + slug key + copy voice + visual/photo direction. Authoritative layer model: `/template-builder` + `docs/stage5-template-builder-build-spec.md`.
+Style = a selectable PRESET (copy voice + photo/visual treatment) that fills a layout shell — **DECOUPLED from niche** (any niche, a data layer `template_vars.segment` + the `/a2p-site-compliance` library, composes onto any style). The **slug key** below is the template/style **SELECTION key** (which `Template — {Style}` project to remix) — an **agency-side pick made outside the app** (2026-07-22: the onboarding choice + app plumbing were removed; the dormant `clients.site_style` column is no longer written) and **NOT a render-time branch**. Each style = a display name + slug key + copy voice + visual/photo direction. Authoritative layer model: `/template-builder` + `docs/stage5-template-builder-build-spec.md`.
 
-| Display name | Slug key (`site_style`) | Copy voice | Visual / photo direction |
+| Display name | Slug key | Copy voice | Visual / photo direction |
 |---|---|---|---|
 | **Professional Modern** | `professional_modern` | Professional, high-quality, polished; typography-forward and credible; elevated but not cold. | High-quality imagery, refined type hierarchy, clean modern layout. |
 | **Artistic Unique** | `artistic_unique` | Artist/brand-led, retro-artistic, highly minimalistic; **lowest copy density of the set** — image + branding carry the site, minimal copy, visual-first. | The brand identity + imagery create the aesthetic; sparse text, generous visual space. |
@@ -122,6 +123,6 @@ This is the design analog of the backend's golden-master logic: generate while d
 - **[A2P-PREP — compliance pages] Every site carries the carrier-compliance surface from `/a2p-site-compliance`:** the two-checkbox opt-in (unchecked/optional; fixed consent skeleton + per-niche category strings keyed by `{segment}`), the named (not generic) Privacy Policy + Terms of Service, the SMS Program page, footer Privacy/Terms/SMS-Program links on every page, and the working `{site_url}/review` page. **Copy is reproduced VERBATIM from the `/a2p-site-compliance` skill's "Appendix — Canonical Verbatim Copy" — tokens only, never paraphrased** (the same copy is also kept at `docs/a2p-compliance-copy-source-of-truth.md` for human reference + parity). (Carrier 10DLC review reads the live site.) These pages + the Turnstile widget are **baked into the STYLE template** (`/template-builder`) once, so every per-client remix inherits them — not authored per client.
 - Generate the pages the client's **GBP categories/services** support (the Core 30 — `/seo-build` §2); **no fixed cap** (mirror the GBP). Geo/supporting pages are added over time by the content-automation tool (`/seo-content`).
 - **Service-area / geo pages [LOCKED — SUPERSEDED by `/seo-content`]:** the old v1 rule ("re-targeted lander, NO bespoke per-area copy, city-swap") is **RETIRED** — it's exactly the city-swap anti-pattern `/seo-content` forbids. Geo/neighborhood pages MUST be **genuinely local** (real neighborhoods + their conditions, driving routes, landmarks from Google Maps/Places API), targeting rank-map positions 4–6, built diagnostic-driven. Structure/route = `/seo-build`; copy standard = `/seo-content`.
-- Assets come from the storage buckets; copy is generated from onboarding data steered by `site_style`.
+- Assets come from the storage buckets; copy is generated from onboarding data steered by the agency-chosen style preset.
 - As the template library matures, prefer Mode 2 (apply a proven template) over Mode 1 (regenerate) for reliability.
 - **FINITE GENERATION [LOCKED — mirror]:** page identities/routes (the canonical page registry above), env-var names, and the service-area / fonts / compliance-render rules are FIXED by the skills — a template build MUST NOT improvise them; if a needed decision isn't covered, **FLAG it for a skill update rather than guessing** (authoritative rule: `/template-builder` → FINITE GENERATION).

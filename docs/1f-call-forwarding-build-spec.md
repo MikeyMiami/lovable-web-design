@@ -1,5 +1,7 @@
 # 1f — Call-Forwarding — Audit + Build Spec
 
+> Historical TextGrid build spec (frozen). Live path is now the Supabase edge functions; Telnyx go-forward per `skills/telnyx-provider`.
+
 > Routes an inbound call to the client's real phone (`clients.call_forwarding_number`) so the owner receives calls AND the missed-call textback (built at step 2 / v1.3) has something to detect. Audited against the real frozen code @ `golden-master-v1.4` (`cloud-spark-setup@ac37b56`). Per `textgrid-provider` §5. Audit + spec only.
 
 ## Audit findings (real code @ ac37b56)

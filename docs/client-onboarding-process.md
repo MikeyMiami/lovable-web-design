@@ -1,5 +1,7 @@
 # Client Onboarding Process — Plain-English Explanation
 
+> ⚠️ SUPERSEDED (2026-07-20) — two specifics below are stale: (1) the template model is **per-STYLE only** (`Template — {Style}`, 6 styles) — **niche is a pure DATA layer** (`template_vars.segment`) composing onto any style (**N+M, not N×M**); there are no per-niche template projects. (2) The **/onboard admin wizard is BUILT + validated** — data entry is no longer manual DB work. See `ONBOARDING-ORDER-OF-OPERATIONS.md` §4 + `skills/template-builder`. The one-directional data-flow model still holds; retained as the plain-English explainer.
+
 > **What this doc is:** the simple, step-by-step explanation of how a client goes from "signed up" to "live site + running automations" on this platform. Written to be re-read anytime the process needs re-explaining. No jargon, literal steps, with WHERE each step happens.
 >
 > **Status note:** this describes the TARGET process. The admin onboarding wizard is built in Stage 3 (`onboard-from-form` skill); site templates are built after Stage 4 (backend freeze). Until those exist, the data-entry steps happen manually against the database instead of through the wizard — same destination, same data, just without the nice UI yet.
@@ -31,7 +33,7 @@ There are **three kinds of Lovable projects** in the workspace:
    - Services + site content values → `template_vars` (jsonb)
    - Photos/videos → storage buckets under structured paths (`{client_id}/work-examples/…`, `{client_id}/services/{service}/…`, `{client_id}/staff/…`) + an asset manifest so the site knows what exists. Missing categories will fall back to pre-approved niche-default images.
    - Send settings → timezone, send window, caps (`send_settings` row)
-   - Record the chosen **niche + site style** (`clients.site_style`) — this just tells YOU which template to remix in Phase B.
+   - Record the **niche** (`template_vars.segment`). The site style is YOUR pick (agency-side, outside the app — `clients.site_style` dormant since 2026-07-22); it just determines which template to remix in Phase B.
 3. **The onboarding form is now DONE.** Its data lives in the database. The form itself is never uploaded into any Lovable project. Both the website AND the SMS automations will read from what the wizard just wrote — one entry, no double data entry, no drift between site and texts.
 
 ### PHASE B — Site creation (WHERE: the Lovable workspace, ~minutes)
@@ -44,7 +46,7 @@ There are **three kinds of Lovable projects** in the workspace:
 
 ### PHASE C — Verify (WHERE: the live site + admin; this is DATA QA, not site QA)
 
-9. Walk the launch checklist (`/launch-check`) — because the code is the same proven template every time, verification is mostly **checking the DATA**: clients row complete? template_vars all set (the 8 required keys)? assets present or falling back cleanly? domain in allowed_origins? send_settings/timezone right? Twilio number assigned + A2P (per launch gates)?
+9. Walk the launch checklist (`/launch-check`) — because the code is the same proven template every time, verification is mostly **checking the DATA**: clients row complete? template_vars all set (the 11 required keys)? assets present or falling back cleanly? domain in allowed_origins? send_settings/timezone right? Twilio number assigned + A2P (per launch gates)?
 10. **Test the loop end-to-end:** submit the site's lead form → contact appears in admin → lead-form drip enrolls → (stub or live) SMS fires per schedule. Click a tracked review link → funnel pages load logged-out → events recorded.
 11. Live.
 

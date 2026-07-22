@@ -1,5 +1,7 @@
 # 1f Step 1 — Outbound TextGrid Swap — Lovable Build Spec
 
+> Historical TextGrid build spec (frozen). Live path is now the Supabase edge functions; Telnyx go-forward per `skills/telnyx-provider`.
+
 > The exact change-set for the FIRST 1f hardening step: swap the stub send for a real TextGrid outbound send. Audited against the real frozen code @ `golden-master-v1.1` (`cloud-spark-setup@5e41f41`). Decisions locked 2026-06-16. Hand this verbatim to Lovable; validate the build report against real code before re-tag.
 
 ## Scope
@@ -8,7 +10,7 @@
 **OUT (separate 1f items — do NOT build here):** the net-new inbound + voice + **delivery-status (StatusCallback) webhook layer**; Turnstile/rate-limit; the reactivation number pool; the `a2p_*` / `provider_webhook_secret` columns. (Delivery `delivered`/`failed`/`undelivered` arrives via the StatusCallback webhook built in the webhook-layer item — this step writes only the *synchronous* send result.)
 
 ## Locked decisions (recorded)
-1. **Send boundary = pure transport.** The primitive does zero DB access; the caller resolves `to`, `from`, `sendingAccountSid`, and `auth` and passes them in. This is the from-resolution seam: the future reactivation pool reuses the SAME primitive by passing a pool number as `from` + agency creds — no branch, no second primitive.
+1. **Send boundary = pure transport.** The primitive does zero DB access; the caller resolves `to`, `from`, `sendingAccountSid`, and `auth` and passes them in. This is the from-resolution seam: every per-client send reuses the SAME primitive by passing `from` + auth — no branch, no second primitive. *(Historical note: this seam was originally illustrated with a "reactivation number pool"; that pool was REMOVED 2026-07-21 — reactivation now reuses the seam from `clients.telnyx_number` via the normal runner.)*
 2. **Auth is a caller-passed param.** Build for **Option 1** (one agency MASTER token acting on the per-client subaccount; no per-client secret storage). The primitive stays agnostic about whose account it sends from; flipping to Option 2 (per-client subaccount token on the row) is a pure caller-resolution change. **Path `sendingAccountSid` is decoupled from the Bearer `auth` pair** so the parent-on-subaccount confirm (below) is also a caller-only change.
 3. Delivery status deferred to the webhook layer (above).
 4. **Retryable mapping:** TextGrid 5xx → `retryable:true` (existing 2× loop); 4xx → `retryable:false` → `failed`; `400` opted-out → terminal non-retryable; `401` → auth error, non-retryable, alert.

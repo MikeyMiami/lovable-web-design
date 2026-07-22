@@ -1,6 +1,6 @@
 ---
 name: new-client-site
-description: Use to launch a new client — the per-client orchestrator. Provisions the client on the ONE shared backend (client row + settings + messaging-provider (TextGrid) number + onboarding capture), Remixes the marketing site for the client's domain (frontend-only, pointed at the shared backend), invokes the design layer, and runs the launch check. Does NOT clone or regenerate the backend. Run AFTER the golden master exists. Sequences the other per-client skills; doesn't reimplement them.
+description: Use to launch a new client — the per-client orchestrator. Provisions the client on the ONE shared backend (client row + settings + messaging-provider (Telnyx default; TextGrid legacy) number + onboarding capture), Remixes the marketing site for the client's domain (frontend-only, pointed at the shared backend), invokes the design layer, and runs the launch check. Does NOT clone or regenerate the backend. Run AFTER the golden master exists. Sequences the other per-client skills; doesn't reimplement them.
 ---
 
 # New Client Site — per-client launch orchestrator
@@ -16,14 +16,15 @@ Launches one client on top of the proven golden-master backend. This is an ORCHE
 - Capture all §9b data → run **`/onboard-from-form`** (owner fields → clients columns / template_vars / send_settings; agency config; assets → buckets; assemble the AI knowledge bundle).
 - Set `allowed_origins` to the client's marketing domain(s) (so CORS will pass for their site's form POSTs).
 - Validate template_vars required keys are all populated.
-- **[BUILT — C-3c-1] Finalize & Invite (per-client `/admin` → Settings):** once config is set, mint the client login via **`provisionClientOwner`** (invite → the business notification email = `notification_email ?? email`; audited `client_owner` grant) and read the **Remix handoff checklist** there (slug, `VITE_CLIENT_SLUG`, `allowed_origins`, matched `site_style`) — which feeds step 3 (Remix). Manual + idempotent. Detail: `/admin-view` → Finalize & Invite; spec `docs/phase-c-3c1-build-spec.md`.
+- **[BUILT — C-3c-1] Finalize & Invite (per-client `/admin` → Settings):** once config is set, mint the client login via **`provisionClientOwner`** (invite → the business notification email = `notification_email ?? email`; audited `client_owner` grant) and read the **Remix handoff checklist** there (slug, `VITE_CLIENT_SLUG`, `allowed_origins`) — which feeds step 3 (Remix). Manual + idempotent. Detail: `/admin-view` → Finalize & Invite; spec `docs/phase-c-3c1-build-spec.md`.
 
-### 2. Messaging provider + per-client A2P registration (TextGrid)
+### 2. Messaging provider + per-client A2P registration (Telnyx default; TextGrid legacy)
+> **Provider fork (Telnyx-default 2026-07):** new clients are **Telnyx** — the admin Settings "Messaging Provider" select now offers ONLY Telnyx and `clients.provider` defaults to `telnyx`. **Telnyx path (default for new clients)** = `/telnyx-provider` §4 (10DLC brand → campaign from the same a2p pack → number → Messaging Profile → TeXML app → flip provider; single account, one API key). **TextGrid path** = the steps below — now **FROZEN LEGACY, used only for an existing client already on `textgrid`; it is not offered for new clients.** Either way: register at signing (3–7d Telnyx / 2–4d TextGrid vet overlaps the site build), and the number/webhooks must be wired before `/launch-check`.
 - Create the client's **subaccount** under the agency master account; store `provider_subaccount_sid` / `provider_webhook_secret` on the clients row.
 - Register **Brand** (client EIN, ≥15 days old) → **Campaign** (use-case, sample messages, opt-in/out/help language, T&C + privacy links from the marketing site) → **provision + attach a number** (local area code). Each subaccount vets **INDEPENDENTLY per-client** (~2–4 days — register at signing so it vets during the site build). Detail: `skills/textgrid-provider` §4.
 - Store From / MessagingServiceSid on the clients row (non-secret, column names retained).
-- Set per-number webhooks (`smsUrl` / `voiceUrl` / `statusCallback`) → `/api/public/*` (verified by `X-TextGrid-Signature`); forward the number to `call_forwarding_number`.
-- Write the provisioned number to `clients.twilio_number` (single-source — the unchanged runner picks it up). Place it on the site + Google Business Profile.
+- Set per-number webhooks (`smsUrl` / `voiceUrl` / `statusCallback`) → the Supabase **edge functions** (TextGrid's inbound/status handlers, verified by `X-TextGrid-Signature`). **Telnyx fork:** point the Messaging-Profile / TeXML webhooks at the `telnyx-*` edge fns (`telnyx-sms-inbound`/`telnyx-sms-status`, `telnyx-voice-inbound`/`telnyx-voice-status`), verified by **Ed25519**. Then forward the number to `call_forwarding_number`.
+- Write the provisioned number to `clients.twilio_number` (**TextGrid path only** — single-source; the unchanged runner picks it up). **Telnyx fork:** write `telnyx_number` (+ the other `telnyx_*` columns — `telnyx_messaging_profile_id`, `telnyx_texml_app_id`, `telnyx_brand_id`, `telnyx_campaign_id`); routing keys off `clients.provider`, NOT `twilio_number`. Place the active number on the site + Google Business Profile.
 - Brand/Campaign copy + URLs (Description, CTA, samples, T&C + privacy links) come **pre-generated from `/a2p-site-compliance`** (the admin A2P-prep panel; verbatim copy `docs/a2p-compliance-copy-source-of-truth.md`); the contact email domain MUST equal the site domain.
 
 ### 3. Remix the marketing site (frontend-only)
@@ -32,7 +33,7 @@ Launches one client on top of the proven golden-master backend. This is an ORCHE
 - Keep it frontend-only: no service-role key, no DB-hitting server fns. Public reads via anon SELECT; form POSTs go to the shared backend's CORS-guarded public routes.
 
 ### 4. Invoke the design layer
-- Run **`/website-structure`**: generate the page set from onboarding (services/areas up to 12/14, only what's supported), steer copy + visual by `site_style`, theme the brand color, load assets, mimic the agency-uploaded reference screenshots.
+- Run **`/website-structure`**: generate the page set from onboarding (services/areas up to 12/14, only what's supported), steer copy + visual by the agency-chosen style preset, theme the brand color, load assets, mimic the agency-uploaded reference screenshots.
 - Generate the A2P-compliant terms/privacy page (§9b.C) → store its URL in template_vars.
 - Generate the compliance pages (two-checkbox opt-in, named Privacy/ToS, SMS Program page, footer links, working `/review` page) per `/a2p-site-compliance` — copy reproduced VERBATIM from `docs/a2p-compliance-copy-source-of-truth.md` (tokens only).
 - As the template library matures, prefer applying a proven design template (Mode 2) over generating fresh (Mode 1).

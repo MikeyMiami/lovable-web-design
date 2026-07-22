@@ -1,0 +1,235 @@
+# TELNYX PARALLEL BUILD — HANDOFF SPEC FOR CLAUDE CODE
+
+> ⚠️ SUPERSEDED (2026-07-20) — historical origin/handoff doc. Current authority: `skills/telnyx-provider`. Corrections that override this spec: SINGLE Telnyx account (NO Managed Accounts — the per-client `telnyx_managed_account_id`/`telnyx_api_key` model here is abandoned; one account-wide `TELNYX_API_KEY`), the switch column is `clients.provider`, and AMD lives on the TeXML `<Number>` noun (NOT `<Dial>`, whose AMD attrs are silently ignored). Retained as historical record.
+
+**Date:** 2026-07-15. **Author:** External research/architecture review (full Telnyx platform research + full audit of current TextGrid code).
+**Mission:** Build a complete Telnyx provider path **side-by-side** with the existing TextGrid path, **without deleting or modifying TextGrid behavior**. If the Telnyx build finishes before TextGrid resolves the ringback defect, we flip providers. TextGrid stays intact as the fallback until we decide.
+
+---
+
+## 0. Ground rules (non-negotiable)
+
+1. **TextGrid code is frozen.** Do not modify the four live TextGrid edge functions, the TextGrid constants, or TextGrid behavior in `send.server.ts`. The Telnyx path is additive.
+2. **Per-client provider switch, not a global one.** Add `clients.provider` (`'textgrid' | 'telnyx'`, default `'textgrid'`). All routing decisions key off this column. This gives us instant, reversible, per-client cutover.
+3. **DB naming stays frozen.** Reuse the existing `twilio_*` and `provider_subaccount_*` columns per the established convention. For Telnyx: `provider_subaccount_sid` ⇄ Managed Account ID, `provider_subaccount_auth_token` ⇄ that Managed Account's API key, `twilio_number` ⇄ the client's Telnyx number (E.164 with `+`). Add **new additive columns** only where no equivalent exists: `telnyx_messaging_profile_id`, `telnyx_texml_app_id` (nullable).
+4. **Capture-first discipline.** The TextGrid saga's core lesson: never trust docs or assumptions about webhook payloads — log the raw reality before parsing it. Every new Telnyx webhook handler gets an unconditional raw-capture debug insert (same pattern as `voice_inbound_debug` / `voice_inbound_branch`) from day one, plus a branch event before every return recording which branch ran and the exact response served.
+5. **Account status constraint:** our Telnyx signup is currently blocked by their security screen (support ticket pending; Managed Accounts also needs enablement by Telnyx). **Build everything in stub/fixture mode now**; the moment the account opens, run the Day-0 capture protocol (§8) and reconcile code against captured reality before any further build.
+6. **The code is not the critical path.** Campaign approval (3–7 business days) and account unblocking are. Surface anything that blocks those immediately.
+
+---
+
+## 1. Current-state anchor (what the provider boundary is)
+
+The entire provider surface in this codebase is six things. Everything else (contacts, conversations, sequences, enrollments, drip runner, throttling, templates, tenant model, PWA) is provider-agnostic and must not change.
+
+| Surface | TextGrid version (frozen) | Telnyx version (to build) |
+|---|---|---|
+| Outbound SMS | `send.server.ts` → form-encoded POST `Accounts/{sid}/Messages.json` | Provider adapter → JSON POST `https://api.telnyx.com/v2/messages` |
+| Inbound SMS webhook | `supabase/functions/sms-inbound` (form-encoded, HMAC-SHA1) | NEW `supabase/functions/telnyx-sms-inbound` (JSON, Ed25519) |
+| SMS delivery status | `supabase/functions/sms-status` | NEW `supabase/functions/telnyx-sms-status` |
+| Voice inbound (forward) | `supabase/functions/voice-inbound` (TwiML) | NEW `supabase/functions/telnyx-voice-inbound` (TeXML — near-identical XML) |
+| Voice status / missed-call | `supabase/functions/voice-status` (number-level statusCallback) | NEW `supabase/functions/telnyx-voice-status` (Dial **action** callback + AMD callback + status events) |
+| Config/admin | TextGrid constants, admin settings card, onboarding number writes | `TELNYX_*` env secrets, provider-aware settings card fields |
+
+**Refactor directive:** extract the shared business logic that both providers' handlers need — contact upsert, conversation threading, STOP/START intent handling, missed-call fire (`fireMissedCall`), enrollment triggers, `normalizeE164` — into `supabase/functions/_shared/` modules. The two webhook shells (TextGrid's existing, Telnyx's new) call the same core. Do this by **extracting** from the TextGrid functions and having them import the shared module (behavior-identical, verify with the existing debug instrumentation), not by copy-pasting logic into the Telnyx handlers. Copy-paste divergence is how side-by-side builds rot.
+
+`send.server.ts` becomes a thin router: read `client.provider` → call `sendViaTextGrid(...)` (existing code, unchanged) or `sendViaTelnyx(...)` (new). **Preserve the exact return contract** (`ok`, `provider_message_id`, error shape) so the drip runner, throttle logic, and reply box need zero changes. Keep the existing stub mode working for both providers.
+
+---
+
+## 2. Credentials & environment model
+
+- `TELNYX_MASTER_API_KEY` — manager-account API key (fallback + provisioning ops), stored in secrets alongside the existing `TEXTGRID_*` secrets. Never in client-side code.
+- `TELNYX_PUBLIC_KEY` — the account's Ed25519 webhook public key from the Telnyx portal (Account Settings → Keys & Credentials). **One key for the whole account** — webhook verification no longer needs per-client secrets. `provider_webhook_secret` is unused on the Telnyx path (leave column alone).
+- Per-client: Managed Account API key in `provider_subaccount_auth_token`, Managed Account ID in `provider_subaccount_sid` (same encryption/storage posture as today's TextGrid tokens).
+- Managed Accounts are created by the manager account (portal or `POST /v2/managed_accounts`), and the manager can mint an API key for a managed account via API. Note: existing standalone Telnyx accounts cannot be moved under a manager later — everything client-facing gets created under the manager from day one.
+
+---
+
+## 3. Outbound SMS spec
+
+Native v2 API (preferred; Telnyx's Twilio-compatible "Twexit" endpoint exists as an emergency bridge, but build native — it's a small function and unlocks per-message webhook config):
+
+```ts
+// sendViaTelnyx (shape sketch — align to send.server.ts's existing contract)
+const res = await fetch("https://api.telnyx.com/v2/messages", {
+  method: "POST",
+  headers: {
+    Authorization: `Bearer ${clientApiKey ?? Deno.env.get("TELNYX_MASTER_API_KEY")}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    from: clientNumber,          // E.164 with +
+    to: recipient,               // E.164 with +
+    text: body,
+    webhook_url: TELNYX_SMS_STATUS_URL,      // per-message delivery status → closes checklist #3
+    use_profile_webhooks: false,             // don't double-fire the profile-level webhook for status
+  }),
+});
+const json = await res.json();
+// success: json.data.id  → provider_message_id
+// failure: json.errors[] → [{ code, title, detail }] — map into the existing error fields
+```
+
+Notes:
+- Telnyx error codes are **not** Twilio-style numeric codes; map `errors[0].code/title/detail` into whatever `send.server.ts` currently records for TextGrid failures. Log the full errors array in debug events during the canary phase.
+- Delivery status arrives as webhook events (`message.sent`, `message.finalized` with per-recipient status like `delivered` / `delivery_failed` / `sending_failed`). `telnyx-sms-status` records these against `provider_message_id` — this is the delivery-status feature that was never finished on TextGrid; it comes nearly free here.
+- Long messages: Telnyx bills per part like everyone; no code change needed, but log `parts` if present for cost visibility.
+
+---
+
+## 4. Inbound SMS webhook spec (`telnyx-sms-inbound`)
+
+Telnyx native webhooks are **JSON** (not form-encoded) with this envelope shape (verify against capture on Day 0):
+
+```json
+{
+  "data": {
+    "event_type": "message.received",
+    "id": "...",
+    "occurred_at": "...",
+    "payload": {
+      "id": "<message id>",
+      "from": { "phone_number": "+1419..." },
+      "to": [ { "phone_number": "+1419...", "status": "..." } ],
+      "text": "...",
+      "direction": "inbound",
+      "messaging_profile_id": "..."
+    }
+  }
+}
+```
+
+Handler flow (mirrors the TextGrid function's proven order, with the lessons baked in):
+1. Read `rawBody` once; unconditional raw-capture debug insert.
+2. **Verify Ed25519 signature** (§6) → branch event `bad_sig` on failure, 401.
+3. Parse JSON; extract `from`/`to`/`text`; run **`normalizeE164` on both anyway** (Telnyx documents E.164 in/out, but we normalize on principle now — that bug class is dead forever).
+4. Client lookup by normalized `to` against `twilio_number` where `provider = 'telnyx'`.
+5. Shared core: contact upsert, conversation/message insert, STOP/START/keyword intent, enrollment triggers — via `_shared/`.
+6. Branch event with outcome; 200.
+
+**Opt-out config decision (make explicit in the plan):** Telnyx offers platform-level auto opt-out handling on messaging profiles. Our app already implements STOP/START in-app. Default recommendation: **disable Telnyx's auto-responder** on the messaging profile so we don't double-reply, and let the in-app logic remain the single source of truth. (Alternative — adopt Telnyx's and strip ours — is more code churn for no gain right now.) Either way, verify on the Day-0 canary that exactly one STOP confirmation is sent.
+
+---
+
+## 5. Voice spec (`telnyx-voice-inbound` + `telnyx-voice-status`)
+
+### Wiring model
+Voice on Telnyx runs through a **TeXML Application** (portal: Voice → Programmable Voice → TeXML apps). Each app has: Voice URL (+ method GET/POST — use POST), a failover URL, and a Status Callback URL. Numbers get assigned to the app. Because each client lives in their own Managed Account, each MA gets its own TeXML app — **all pointing at the same** `telnyx-voice-inbound` URL (the function resolves the client by `To`, exactly like today). Store the app id in `telnyx_texml_app_id`.
+
+### Inbound handler
+Telnyx sends TeXML webhooks **in Twilio's format** (CallSid/From/To/CallStatus-style params) — the existing parse/lookup logic should port almost verbatim. Still: capture-first, confirm exact param names, casing, encoding, and whether `To` carries `+` (normalize regardless). Respond with TeXML — same XML dialect:
+
+```xml
+<Response>
+  <Dial timeout="20"
+        callerId="{client business number}"
+        action="{TELNYX_VOICE_STATUS_URL}"
+        machineDetection="Enable"
+        amdStatusCallback="{TELNYX_VOICE_STATUS_URL}">
+    <Number>{owner forwarding number}</Number>
+  </Dial>
+</Response>
+```
+
+Differences vs. the TextGrid document — all upgrades:
+- **`action` is finally real.** TeXML documents a full Dial Action Callback payload (including `error_code`/`error_message` on failures). This is the deterministic "dial ended, here's what happened" signal the build spec always wanted.
+- **AMD.** TeXML `<Dial>` supports `machineDetection` with an AMD status callback. This solves the empirically-proven TextGrid failure where the owner's carrier voicemail answers the forward and it reports as completed: on `machine`, treat as missed → fire textback. (Confirm the exact attribute spellings against the TeXML `<Dial>` docs page in §10 before coding — the capability is confirmed; spellings are docs-level detail.)
+- `statusCallbackEvent` is available if we want per-event progress webhooks (`initiated/ringing/answered/completed`) — nice-to-have, not required for v1.
+- `<Conference>`, `<Enqueue>`, `<Record>`, `<Stream>`, `<Transcription>` all exist in TeXML — no architectural ceiling if we ever need conference-based flows.
+- **Do not add a `<Say>` before `<Dial>`** in v1. Telnyx should produce real ringback; the "please hold" line was a TextGrid bandage. Decide after the Day-0 listen test.
+
+### `telnyx-voice-status`
+Handles two payload families posted to the same URL: the Dial **action** callback (dial outcome) and the **AMD** callback (human/machine). Missed-call rule for v1:
+
+```
+missed := DialCallStatus in {no-answer, busy, failed, canceled}
+       OR AMD result == machine
+→ shared fireMissedCall(client, caller) with the existing 60-min dedupe window
+```
+
+Keep the raw-capture + branch instrumentation identical to the TextGrid voice functions — it's already proven its worth twice.
+
+---
+
+## 6. Webhook signature verification (Ed25519 — replaces per-client HMAC)
+
+Telnyx signs webhooks with Ed25519. Headers: `telnyx-signature-ed25519` (base64 signature) and `telnyx-timestamp`. Signed message is `"{timestamp}|{rawBody}"`. Verify against `TELNYX_PUBLIC_KEY` (base64, from portal). Sketch for Deno:
+
+```ts
+import { verifyAsync } from "https://esm.sh/@noble/ed25519@2";
+
+async function verifyTelnyxWebhook(req: Request, rawBody: string): Promise<boolean> {
+  const sig = req.headers.get("telnyx-signature-ed25519");
+  const ts  = req.headers.get("telnyx-timestamp");
+  if (!sig || !ts) return false;
+  if (Math.abs(Date.now() / 1000 - Number(ts)) > 300) return false; // replay window
+  const msg = new TextEncoder().encode(`${ts}|${rawBody}`);
+  const sigBytes = Uint8Array.from(atob(sig), (c) => c.charCodeAt(0));
+  const keyBytes = Uint8Array.from(atob(Deno.env.get("TELNYX_PUBLIC_KEY")!), (c) => c.charCodeAt(0));
+  return await verifyAsync(sigBytes, msg, keyBytes);
+}
+```
+
+⚠️ **Open question to settle on Day 0 (§9-Q1):** confirm whether **TeXML voice webhooks** carry the same Ed25519 headers as native JSON webhooks, a Twilio-style signature, or none. Do not assume — capture headers in the debug insert (log header names/presence, never log secret values) and adapt. Until confirmed, gate TeXML handlers on capture + soft-verify (log-only) so signature assumptions can't silently 401 us like the SMS saga did.
+
+---
+
+## 7. Per-client provisioning runbook (manual for cutover; API in Phase 2)
+
+Manual portal steps per client (document in admin UI copy so Mikey can follow one labeled step at a time):
+1. Manager account → create Managed Account for the client (name it with the client slug). Record MA ID → `provider_subaccount_sid`.
+2. Create an API key inside that MA → `provider_subaccount_auth_token`.
+3. In the MA: register 10DLC **brand** (client EIN/legal name — reuse the wizard's collected fields; same content that passed TCR on TextGrid) → then **campaign** (reuse the approved sample messages / opt-in language verbatim). Expect ~3–7 business days; carrier review ≤3. Note: one brand per EIN; T-Mobile caps 49 numbers per campaign (irrelevant at our scale, worth knowing).
+4. Buy a local number (~$1.00/mo + SMS enablement). **Number ordering may be restricted until the account passes Telnyx's verification level (L2)** — do L2 verification immediately after account opens, before anything else.
+5. Create a Messaging Profile (inbound webhook → `telnyx-sms-inbound`; disable auto opt-out per §4) → `telnyx_messaging_profile_id`; assign number to profile **and to the approved campaign** (assignment ~2h to propagate; no A2P traffic before assignment completes).
+6. Create TeXML app (Voice URL → `telnyx-voice-inbound`, POST; Status Callback → `telnyx-voice-status`) → `telnyx_texml_app_id`; assign number to the app.
+7. Flip `clients.provider = 'telnyx'` for that client. Done — everything else routes automatically.
+
+**Phase 2 (separate scope, big unlock, not required for cutover):** all of steps 1–6 have full API coverage (managed accounts, API keys, 10DLC brand/campaign endpoints, number order, messaging profiles, TeXML apps) — the onboarding wizard can eventually do the entire provisioning flow programmatically, which was never possible on TextGrid.
+
+---
+
+## 8. Day-0 protocol (the moment the account unblocks) — in order
+
+1. Complete account **L2 verification**; request **Managed Accounts enablement** (support ticket already references this); pull the **Ed25519 public key** into secrets.
+2. Submit the Pierce brand + campaign immediately (this starts the only clock that matters).
+3. Buy one test number on the manager account; wire a **clone** of the handlers in capture-only mode.
+4. **The go/no-go listen test:** TeXML app → `telnyx-voice-inbound` clone serving the bare `<Dial>` → call the number from a cell → **listen for ringback**. If ringback is audible: proceed with everything. If not (unexpected): STOP, capture everything, escalate — do not build around silence a second time.
+5. SMS canary each direction + one STOP; capture raw payloads/headers; reconcile every parser and the signature verifier against captured reality; only then finish the build against fixtures made from real captures.
+6. Live-test missed-call: no-answer case and voicemail-answers case (AMD should catch the second — the one TextGrid never could).
+
+---
+
+## 9. Open questions to resolve empirically (numbered — answer each with a capture, not an assumption)
+
+1. TeXML webhook signing scheme (Ed25519 headers? Twilio-style? none?) — §6.
+2. Exact TeXML inbound param set/casing and whether `To`/`From` include `+` (normalize regardless).
+3. Exact Dial action + AMD callback payload field names (`DialCallStatus` spelling, AMD result field).
+4. Exact attribute spellings for AMD on TeXML `<Dial>` (capability confirmed; verify names on the docs page).
+5. Whether TeXML apps must live inside each Managed Account or can be shared from the manager (assume per-MA; confirm).
+6. Whether Managed Account API keys work against `/v2/texml/...` endpoints or voice needs anything extra per MA.
+7. Messaging profile auto-opt-out default state (confirm off, or turn off).
+8. Whether the `webhook_url` on `POST /v2/messages` fully overrides profile webhooks for status events when `use_profile_webhooks:false`.
+9. Content-filter strictness vs TextGrid (relevant to the Review Batch problem) — observe on canary sends of the actual templates.
+
+## 10. Primary documentation to fetch before planning
+
+- TeXML `<Dial>` verb (action callback, AMD, statusCallbackEvent): `https://developers.telnyx.com/docs/voice/programmable-voice/texml-verbs/dial`
+- TeXML overview/setup + app configuration: `https://support.telnyx.com/en/articles/4374050-configuring-call-control-texml-applications-voice-api`
+- Messaging v2 API (send, events, webhooks) + webhook signature verification: `https://developers.telnyx.com/` (Messaging → Send & Receive; Development → Webhooks/signature)
+- Managed Accounts: `https://support.telnyx.com/en/articles/4951492-managed-accounts` (+ `/v2/managed_accounts` API reference)
+- 10DLC process & APIs: `https://support.telnyx.com/en/articles/10646301-telnyx-10dlc-process`, number-to-campaign assignment: `https://support.telnyx.com/en/articles/11072276-10dlc-number-assignment-status`
+- Account levels / ordering restrictions (L2): `https://developers.telnyx.com/docs/account-setup/levels-and-capabilities`
+
+## 11. Explicit non-goals for this build
+
+No DB renames; no changes to sequences/drip runner/throttle/PWA/tenant model; no TextGrid deletion or decommissioning; no number porting (fresh Telnyx numbers only); no Phase-2 provisioning automation in v1; no `<Say>` bandage unless the listen test fails. TextGrid remains fully functional for any client whose `provider` still says `textgrid`.
+
+## 12. Suggested phase skeleton for your plan
+
+- **A. Scaffold (now, account still blocked):** provider column + adapter interface + `_shared/` extraction (TextGrid functions import shared core, verified behavior-identical) + Telnyx handler shells in capture/stub mode + fixtures from documented shapes.
+- **B. SMS path:** `sendViaTelnyx` + `telnyx-sms-inbound` + `telnyx-sms-status` against fixtures; stub-mode drip run green.
+- **C. Voice path:** `telnyx-voice-inbound` + `telnyx-voice-status` (action + AMD) against fixtures.
+- **D. Admin/settings:** provider-aware settings card (MA ID + masked API key + profile/app ids), `normalizeE164` on **write** for all number fields (ports the audit's hardening fix), onboarding wiring.
+- **E. Live validation (gated on account):** Day-0 protocol §8 → reconcile → canaries → flip test client's `provider` → re-run the affected checklist items on the Telnyx path.
