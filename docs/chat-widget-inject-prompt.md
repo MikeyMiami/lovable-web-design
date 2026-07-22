@@ -26,7 +26,7 @@ route. One self-contained component; no AI, no streaming, no third-party chat li
    - CONSENT: the single REQUIRED consent checkbox — reuse the EXACT single-consent marketing skeleton the discount form
      uses (same verbatim copy structure with the site's consent-category tokens, linking to this site's /privacy and
      /terms). The form must not submit without it.
-   - Cloudflare Turnstile widget inside the form — same site key mechanism as the existing forms.
+   - Invisible native PoW bot-shield (2026-07-22 — replaces the Turnstile widget): same shared bot-shield module as the site's other forms (challenge from `/api/public/challenge`, Web Worker solve, `pow_token` + hidden `website` honeypot). No visible check UI.
 
 3. SUBMIT — POST to the platform backend route /api/public/chat/optin using the SAME base URL / transport / env the
    existing lead form uses for /api/public/intake (do NOT invent a new host). JSON body:
@@ -36,7 +36,7 @@ route. One self-contained component; no AI, no streaming, no third-party chat li
        phone_e164,                       // E.164 with +
        your_message,                     // omit if empty
        consent: true,
-       turnstile_token
+       pow_token (+ website honeypot, empty for humans)
      }
    Response: { ok: true, enrolled: "<sequence>" } on success.
 
@@ -48,7 +48,7 @@ route. One self-contained component; no AI, no streaming, no third-party chat li
    a visitor who already submitted this session reopens to this conversation view, never the form.
 
 5. ERRORS (as chat bubbles, friendly): 429 → "We're getting a lot of messages right now — please try again in a few
-   minutes."; captcha_failed → re-render Turnstile and ask to retry; anything else → "Something went wrong — please use
+   minutes."; captcha_failed → re-mint + re-solve the PoW challenge and ask to retry; anything else → "Something went wrong — please use
    the contact form or call us."
 
 6. MOBILE: on small screens the panel opens as a full-width bottom sheet; the bubble must not overlap the site's existing

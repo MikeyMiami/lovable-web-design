@@ -656,7 +656,7 @@ Every external service/connection the build needs, with what to set up and when 
 - **Google (review links)** — NO integration/OAuth/API. Just two stored strings per client (`review_link`, `review_place_id`); the leave-a-review URL is constructed. Per-client (onboarding).
 - **Storage** — native Supabase: `public-assets` (public-read), `client-assets` (private, client_id-scoped RLS). Buckets/policies = golden-master; uploads = per-client.
 - **Scheduling** — native pg_cron + pg_net → `/api/public/cron/sequences` with `x-cron-secret`. Needs stable backend URL + `CRON_SECRET`. Golden-master.
-- **Domains/DNS** — shared backend needs a stable custom domain (gates provider (TextGrid) webhooks, cron, tracked links) = golden-master. Per-client: marketing domain (→ deploy + `allowed_origins` + Turnstile hostname), `app.theirdomain.com` for the mobile app.
+- **Domains/DNS** — shared backend needs a stable custom domain (gates provider (TextGrid) webhooks, cron, tracked links) = golden-master. Per-client: marketing domain (→ deploy + `allowed_origins`; Turnstile-hostname step retired 2026-07-22 — native bot-shield), `app.theirdomain.com` for the mobile app.
 - **Rate-limiter store** — in-memory won't work across Worker isolates; use Cloudflare Durable Objects / Workers KV / DB-based. Golden-master decision (no new account).
 
 ### Architecture note — shared-backend vs frontend-only split [LOCKED]
