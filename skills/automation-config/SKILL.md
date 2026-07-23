@@ -9,7 +9,7 @@ Seed these EXACTLY (casing/punctuation/typos/line breaks included). All copy is 
 
 Merge keys:
 - Built-in: `first_name`, `phone`, `review_link` (per-contact tracked redirect, review drip only).
-- Per-client template_vars: `company_owner_first_name`, `company_name`, `review_request_link`, `discount__on_referral`, `company_website_link`, `discount_amount`, `website_terms_page_link`.
+- Per-client template_vars: `company_owner_first_name`, `company_name`, `review_request_link`, `discount__on_referral`, `company_website_link`, `discount_amount`. (`website_terms_page_link` is NOT an SMS merge key and is no longer a required key [2026-07-23] — it's the site-side terms link only and may stay blank; A2P registration runs on a separate external platform.)
 - Per-client template_vars also include `quote_form_link` (defaults to the site lander `{company_website_link}`; overridable in /admin-view Settings — the page hosting the quote form).
 - Dynamic (not template_vars): `message.body`, `request_time` (client tz), `full_name`, `your_message`, `caller_phone`, `call_time` (client tz), `feedback_message`, `email`.
 - **`request_time` source [FIXED 2026-07-20]:** the runner passes `submittedAt` = the processed **enrollment's `created_at`** (the true submission time) into `writeNotification`, which wins over the fallback (`contacts.created_at`). This fixes stale times for RETURNING/deduped contacts (a re-submitter whose phone was already in the CRM previously showed their FIRST-seen date, not this submission). Contexts with no enrollment (e.g. `missed_call`) still fall back to `contacts.created_at`.
@@ -273,4 +273,4 @@ Bulk-upload past customers → drip-fed slowly to win reviews organically (don't
 
 ## Seeding rules
 - Seed all of the above as `templates` rows + `sequences` steps_json, verbatim — including line breaks.
-- Verify required `template_vars` exist before activating: `company_owner_first_name`, `company_name`, `review_request_link`, `discount__on_referral`, `company_website_link`, `discount_amount`, `website_terms_page_link`, `quote_form_link`. Missing keys render blank silently — don't let a client go live with these unset.
+- Verify required `template_vars` exist before activating: `company_owner_first_name`, `company_name`, `review_request_link`, `discount__on_referral`, `discount_amount`, `quote_form_link`. Missing keys render blank silently — don't let a client go live with these unset. `company_website_link` is a post-launch YELLOW field (fillable only at domain-live, D.5) — it DOES merge into drips, so confirm it's set before real marketing sends; `website_terms_page_link` was REMOVED from the required set 2026-07-23 (may stay blank).
