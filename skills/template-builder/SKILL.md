@@ -64,7 +64,7 @@ These render through `useClient()` from `template_vars` like all other content �
 | template_vars | jsonb | Everything below |
 
 ### `template_vars` keys (merge values shared with the SMS automations)
-`company_owner_first_name`, `company_name`, `review_request_link`, `discount__on_referral`, `company_website_link`, `discount_amount`, `website_terms_page_link`, `quote_form_link` — plus site-content keys: `services` (array: [{name, slug, description, …}] — the services section LOOPS over this; never a fixed number of hardcoded cards), and any flagged additions (rule 3).
+`company_owner_first_name`, `company_name`, `review_request_link`, `discount__on_referral`, `company_website_link`, `discount_amount` — plus site-content keys: `services` (array: [{name, slug, description, …}] — the services section LOOPS over this; never a fixed number of hardcoded cards), and any flagged additions (rule 3). (NOTE: `quote_form_link` + `website_terms_page_link` are NOT in the required-keys list (removed 2026-07-23). `quote_form_link` is **fallback-only, no Settings editor** — blank derives from `company_website_link` at render; its verified consumer is the Missed-Call Textback SMS #1. `website_terms_page_link` is the site terms link, may stay blank. Neither should be treated as a must-fill site var.)
 
 ### Asset manifest (in template_vars or `site_assets` key)
 Categorized media the wizard uploaded: `work_examples[]`, `services.{service_slug}[]`, `staff[]` (storage-bucket URLs). **Every image slot must have a fallback:** if a category is empty, render the niche-default images bundled with THIS template (pre-approved by the human, stored in the template's assets) — a client with zero uploads must still look complete and professional.

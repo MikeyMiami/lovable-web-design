@@ -10,7 +10,7 @@ Seed these EXACTLY (casing/punctuation/typos/line breaks included). All copy is 
 Merge keys:
 - Built-in: `first_name`, `phone`, `review_link` (per-contact tracked redirect, review drip only).
 - Per-client template_vars: `company_owner_first_name`, `company_name`, `review_request_link`, `discount__on_referral`, `company_website_link`, `discount_amount`. (`website_terms_page_link` is NOT an SMS merge key and is no longer a required key [2026-07-23] — it's the site-side terms link only and may stay blank; A2P registration runs on a separate external platform.)
-- Per-client template_vars also include `quote_form_link` (defaults to the site lander `{company_website_link}`; overridable in /admin-view Settings — the page hosting the quote form).
+- Per-client template_vars also include `quote_form_link` — the quote link in Missed-Call Textback SMS #1. **Fallback-only: NO Settings editor**; when blank the runner auto-substitutes `company_website_link` at render (`runner.server.ts`). NOT in the required-keys list (removed 2026-07-23) — it never needs its own value; the client's live homepage (via `company_website_link`, set at domain-live D.5) IS the quote page.
 - Dynamic (not template_vars): `message.body`, `request_time` (client tz), `full_name`, `your_message`, `caller_phone`, `call_time` (client tz), `feedback_message`, `email`.
 - **`request_time` source [FIXED 2026-07-20]:** the runner passes `submittedAt` = the processed **enrollment's `created_at`** (the true submission time) into `writeNotification`, which wins over the fallback (`contacts.created_at`). This fixes stale times for RETURNING/deduped contacts (a re-submitter whose phone was already in the CRM previously showed their FIRST-seen date, not this submission). Contexts with no enrollment (e.g. `missed_call`) still fall back to `contacts.created_at`.
 - Naming: `{first_name}` customer-facing; `{full_name}` internal notifications.
@@ -190,7 +190,7 @@ Fires 24/7 (live call; not gated by send window or Business Hours). Trigger: pro
 **Internal notification (fires with SMS #1). The "Open conversation" button is rendered from the notification `action` jsonb (deep-links to the caller's conversation) — NOT literal text in the body, same pattern as the Drip-3 day-10 reminder Auto-Enroll button:**
 > You missed a call from {caller_phone} at {call_time}, so we sent them a text.
 
-`{quote_form_link}` defaults to the site lander, overridable in Settings. Dynamic keys: `{caller_phone}`, `{call_time}` (client tz). A brand-new caller has no name — notification keys off phone + time. If the caller submits the quote form, they also enter the Lead-Form drip (intentional, independent).
+`{quote_form_link}` is fallback-only (no Settings editor) — blank auto-derives from `company_website_link` (the live homepage) at render. Dynamic keys: `{caller_phone}`, `{call_time}` (client tz). A brand-new caller has no name — notification keys off phone + time. If the caller submits the quote form, they also enter the Lead-Form drip (intentional, independent).
 
 ---
 
@@ -273,4 +273,4 @@ Bulk-upload past customers → drip-fed slowly to win reviews organically (don't
 
 ## Seeding rules
 - Seed all of the above as `templates` rows + `sequences` steps_json, verbatim — including line breaks.
-- Verify required `template_vars` exist before activating: `company_owner_first_name`, `company_name`, `review_request_link`, `discount__on_referral`, `discount_amount`, `quote_form_link`. Missing keys render blank silently — don't let a client go live with these unset. `company_website_link` is a post-launch YELLOW field (fillable only at domain-live, D.5) — it DOES merge into drips, so confirm it's set before real marketing sends; `website_terms_page_link` was REMOVED from the required set 2026-07-23 (may stay blank).
+- Verify required `template_vars` exist before activating: `company_owner_first_name`, `company_name`, `review_request_link`, `discount__on_referral`, `discount_amount`. Missing keys render blank silently — don't let a client go live with these unset. `company_website_link` is a post-launch YELLOW field (fillable only at domain-live, D.5) — it DOES merge into drips (and `quote_form_link` derives from it), so confirm it's set before real marketing sends. `quote_form_link` (fallback-only) + `website_terms_page_link` were REMOVED from the required set 2026-07-23 (may stay blank).
