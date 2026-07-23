@@ -1,6 +1,6 @@
 ---
 name: chat-widget
-description: Use when building or modifying the website CHAT WIDGET — the corner bubble on the client's marketing site that captures leads chat-style (greeting → First/Last/Phone/message form → enrolls the SAME lead-form drip). CAPTURE-FIRST since 2026-07-16: no AI conversation (the AI Q&A path is PARKED, not deleted). Covers the widget UI, the customizable greeting, the opt-in wire contract, conversations-tab threading, the owner notification, and the admin card. NOT for lead-form drip copy/timing (automation-config) or the main website lead form (opt-in-forms §2).
+description: "Use when building or modifying the website CHAT WIDGET — the corner bubble on the client's marketing site that captures leads chat-style (greeting → First/Last/Phone/message form → enrolls the SAME lead-form drip). CAPTURE-FIRST since 2026-07-16: no AI conversation (the AI Q&A path is PARKED, not deleted). Covers the widget UI, the customizable greeting, the opt-in wire contract, conversations-tab threading, the owner notification, and the admin card. NOT for lead-form drip copy/timing (automation-config) or the main website lead form (opt-in-forms §2)."
 ---
 
 # Website Chat Widget — capture-first lead form in a chat skin (§7e)
