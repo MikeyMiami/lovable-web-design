@@ -95,7 +95,7 @@ The registration pack (brand fields, campaign description, CTA, samples, T&C/pri
 
 ## §9 — Endgame: replacing TextGrid (the finite cutover edit-set)
 
-> **⚡ ACCELERATED (2026-07): the first endgame steps have shipped for NEW clients.** The column default is now `'telnyx'` (step 1's default piece) and the admin Messaging Provider select is Telnyx-only with the TextGrid card hidden unless a client is already on `'textgrid'` (step 4, for new clients). The remaining steps still gate on migrating the EXISTING TextGrid clients (which continue to route on the frozen path).
+> **⚡ ACCELERATED (2026-07): the first endgame steps have shipped for NEW clients.** The column default is now `'telnyx'` (step 1's default piece) and the admin Messaging Provider select was RETIRED entirely 2026-07-22 (card deleted — Telnyx is the only provider; the TextGrid card stays hidden unless a client is already on `'textgrid'`, keyed off `client.provider`). The remaining steps still gate on migrating the EXISTING TextGrid clients (which continue to route on the frozen path).
 
 1. Flip remaining `clients.provider` → `'telnyx'`; **column default → `'telnyx'` [DONE 2026-07].**
 2. Delete `sendViaTextGrid`; collapse the router.
