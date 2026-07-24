@@ -18,7 +18,7 @@ There are **three kinds of Lovable projects** in the workspace:
 
 **The one rule that makes it all work:** data flows in ONE direction — `onboarding form → admin wizard → database → site/automations read it`. The form is entered ONCE in the admin. The site and the SMS automations both render from the SAME client row + template_vars. Nothing is ever typed twice; the template is never edited per client.
 
-**"Linking" a remix to Project 1 is NOT magic:** it's two environment variables. The template's code fetches `clients` by slug from the backend URL in `.env`. Remixing copies that code; you change `VITE_CLIENT_SLUG` to the new client's slug; done. No prompts, no skills, no AI at remix time — the skills governed how the TEMPLATE was built; by remix time the code already embodies everything.
+**"Linking" a remix to Project 1 is NOT magic:** the template's code fetches `clients` by slug from the shared backend. The backend URL + anon key are **hardcoded constants in the template code** (same for every client forever; Lovable's remix strips `VITE_SUPABASE_*` from `.env`, so they must not depend on it). Remixing copies that code; you set the ONE per-client value — the **slug** (`VITE_CLIENT_SLUG`, or a `client-slug.ts` constant); done. No prompts, no skills, no AI at remix time — the skills governed how the TEMPLATE was built; by remix time the code already embodies everything.
 
 ---
 
@@ -40,7 +40,7 @@ There are **three kinds of Lovable projects** in the workspace:
 
 4. **Open the matching template project** (per the niche/style chosen in step 2) → click **Remix**. This creates an exact copy — no AI, no generation, no credits burned on design.
 5. **Rename the remix** (e.g. "Client — Joe's Plumbing").
-6. **Edit `.env` in the remix — change ONE line:** `VITE_CLIENT_SLUG=joes-plumbing` (the backend URL + anon key lines are already correct from the template — they're the same for every client, always Project 1). The site now renders Joe's data, fetched live from Project 1.
+6. **Set the ONE per-client value — the slug:** `VITE_CLIENT_SLUG=joes-plumbing` (in `.env`, or a `client-slug.ts` constant). The backend URL + anon key are NOT in the remix `.env` (Lovable strips them) — they're hardcoded constants in the template code, same for every client, always Project 1. The site now renders Joe's data, fetched live from Project 1. (If it flashes then reverts to demo, the template's connection constants are missing — a template-code fix, not a `.env` fix.)
 7. **Connect the client's domain** to the remixed project (Lovable's domain settings).
 8. **In Project 1's admin: add the client's domain to their `allowed_origins`.** This is what makes the backend trust lead-form submissions from their site (the CORS resolver). Without this step the site renders but the lead form is rejected.
 

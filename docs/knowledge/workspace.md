@@ -5,7 +5,7 @@ These rules govern the PierceWorks platform projects: the shared-backend APP ("P
 ## Project taxonomy — know where you are before editing
 - **APP (Project 1)** — shared multi-tenant backend + admin dashboard + client PWA. Has `src/routes/api/public/*`, server fns, migrations. Origin `app.pierceworks.co`.
 - **TEMPLATE** — a frontend-only marketing-site shell (one project per style preset). `.env` has `VITE_CLIENT_SLUG=` blank (demo mode).
-- **REMIX (client site)** — an exact copy of a template with ONE change: `VITE_CLIENT_SLUG=<slug>`. Frontend-only forever.
+- **REMIX (client site)** — a copy of a template with ONE per-client change: the **slug**. The shared-backend URL + anon key are HARDCODED constants in the template code (Lovable's remix strips `VITE_SUPABASE_*` from `.env`, so they must NOT depend on `.env`); the slug lives in `VITE_CLIENT_SLUG` (or a `client-slug.ts` constant). Frontend-only forever.
 
 ## Golden-master architecture [LOCKED — never violate]
 - ONE shared backend serves ALL clients; every tenant row keyed by `client_id`; isolation via RLS. Built once, frozen — NEVER regenerated or cloned per client.
