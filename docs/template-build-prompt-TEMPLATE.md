@@ -1,47 +1,51 @@
-# Reusable Style-Template Build Prompt — PARAMETERIZED MASTER (v2, 2026-07-27)
+# Reusable Style-Template Build Prompt — MASTER (v2.1, 2026-07-27)
 
-> **What this is:** the **canonical, reusable** Lovable build prompt for spinning up ANY new style template from design reference images. v2 is a full rewrite of the 2026-07-16 master, reconciled line-by-line against the SHIPPED reference template (`professional-landscpaing-template` @ `d9f512d`) and every invariant landed 2026-07-23 → 2026-07-27: runtime origin + auto-noindex, the image-rendering contract (`img.ts`/`SiteImage`/focal/`site_slots`), the SSR-head (`getClientCached`) rule, the route-vocabulary contract the app's AI writer depends on, the Content-Studio copy resolver, the 5-line `.env` (incl. `VITE_SITE_URL=`), homepage local-SEO signals, and the PoW-only bot shield (Turnstile fully retired).
+> **What this is:** the canonical Lovable build prompt for spinning up ANY new style template from design reference images. v2 was reconciled line-by-line against the SHIPPED reference template (`professional-landscpaing-template` @ `d9f512d`) and every invariant landed 2026-07-23 → 2026-07-27. **v2.1 restructures the fill experience:** all variables live in ONE `BUILD PARAMETERS` block at the top of the paste body — edit only that block, attach your images, paste the whole thing. Nothing below the line is ever edited; the body resolves every reference from the block, and looks up the style's voice/visual/slug from the imported `website-structure` skill itself.
 >
-> Fill the `{{blanks}}`, run Setup, paste PROMPT 1. When the build reports done, paste PROMPT 2 (`docs/template-build-check-prompt.md`) into the SAME project as the acceptance gate. A template is not blessed for remixing until PROMPT 2 reports all-PASS **and** Claude's external post-publish probe passes.
+> When the build reports done, paste PROMPT 2 (`docs/template-build-check-prompt.md`) into the SAME project as the acceptance gate. A template is not blessed for remixing until PROMPT 2 is all-PASS **and** Claude's external post-publish probe (PART C of that doc) passes.
 >
-> **Consider Mode 2 first (cheaper):** if the new design is structurally close to an existing blessed template, REMIX that template and restyle it (visual-only edits) instead of building from scratch — all wiring is inherited for free. Use THIS prompt when the layout/structure is genuinely new.
+> **Consider Mode 2 first (cheaper):** if the new design is structurally close to an existing blessed template, REMIX that template and restyle it (visual-only edits) — all wiring inherited free. Use THIS prompt when the layout/structure is genuinely new.
 
----
+## Setup (operator, before pasting — ~5 minutes)
 
-## FILL THESE BEFORE RUNNING — build parameters
-
-Style values come verbatim from `/website-structure` → Site styles (the 6-style table). Niche values are the demo vertical for THIS build. **Never hardcode a niche or style into the body — everything specific lives in these blanks.** Never hand-edit a previously filled prompt (stale carryover); copy this doc fresh each time.
-
-| Param | Fill with | Example |
-|---|---|---|
-| `{{STYLE_DISPLAY_NAME}}` | One of the 6 display names in `/website-structure` Site styles | `Modern Tech` |
-| `{{STYLE_SLUG}}` | The matching slug key | `modern_tech` |
-| `{{STYLE_VOICE}}` | The **Copy voice** cell, verbatim | *(from the table)* |
-| `{{STYLE_VISUAL}}` | The **Visual / photo direction** cell, verbatim | *(from the table)* |
-| `{{DEMO_NICHE_DISPLAY}}` | Demo business vertical | `Plumbing` |
-| `{{DEMO_NICHE_SEGMENT}}` | `template_vars.segment` value | `Home services / Plumbing` |
-| `{{DEMO_BUSINESS_NAME}}` | A FICTIONAL business name (zero real-business identifiers) | `Bluewater Plumbing Co.` |
-| `{{DEMO_SERVICES}}` | 3–5 realistic services | `Drain cleaning, Water heaters, Leak repair, Repiping` |
-| `{{NICHE_CONSENT_NOTE}}` | Seeded `/a2p-site-compliance` niche-library entry's category strings, or the DEFAULT entry (state which) | `DEFAULT entry` |
-
-> `{{STYLE_DISPLAY_NAME}}` must be one of the 6. A new style gets added to the `/website-structure` table FIRST (name + slug + voice + visual), then built — never invented here.
-
-## Setup (operator, before prompting)
-
-1. **New Lovable project, frontend-only** — DECLINE Cloud/DB/auth. Name it `Template — {{STYLE_DISPLAY_NAME}}`.
+1. **New Lovable project, frontend-only** — DECLINE Cloud/DB/auth. Name it `Template — {Style}`.
 2. **Import skills** (GitHub tree URLs): `template-builder`, `website-structure`, `opt-in-forms`, `a2p-site-compliance`, `seo-build`, `chat-widget`.
-3. **Paste the project knowledge**: `docs/knowledge/project-template.md` into the project's Knowledge. (Workspace knowledge auto-applies.)
-4. **Attach design references**, labeled: **PAGE-LAYOUT references** (site layouts to follow — hero, sections, page flow) and **ART-STYLE references** (palette / TYPOGRAPHY / visual feel / imagery treatment). **No real-business logo anywhere.**
-5. After the build + check pass: **GitHub-connect** the project (backup + Claude's code audit), publish, and hand to Claude for the external probe before first remix.
+3. **Paste the project knowledge**: `docs/knowledge/project-template.md` into the project's Knowledge.
+4. **Attach your reference images** to the prompt message (the two kinds you normally have): your **lander / web-page content examples** (= PAGE-LAYOUT refs) and your **layout/branding/font/typography images** (= BRAND-STYLE refs). No real-business logo anywhere.
+5. Fill the `BUILD PARAMETERS` block below → paste the whole PROMPT 1 body.
+6. After build + check pass: GitHub-connect, publish, Claude runs the external probe, then freeze/bless.
 
 ---
 
-## PROMPT 1 — the build (paste into Lovable, blanks filled)
+## PROMPT 1 — the build (edit ONLY the parameters block, attach images, paste everything)
 
 ```
-Build a frontend-only, data-driven client-site TEMPLATE per the imported template-builder + website-structure + opt-in-forms + a2p-site-compliance + seo-build + chat-widget skills. This is the reusable {{STYLE_DISPLAY_NAME}} STYLE shell (slug {{STYLE_SLUG}}). The niche is a separate DATA layer — we seed {{DEMO_NICHE_DISPLAY}} via the demo client to prove composition; do NOT hardcode anything niche- or style-specific into components. Where this prompt and a skill conflict, THIS PROMPT WINS (it is newer); where this prompt is silent, the skills are the authority; if neither covers a needed decision, FLAG it in your final report instead of guessing (finite generation — every template must resolve these identically).
+══════════════ BUILD PARAMETERS — EDIT ONLY THIS BLOCK ══════════════
+STYLE: <one of: Professional Modern | Artistic Unique | Corporate | Modern Tech | Family Owned / Local Business | Owner Operated / Local Business>
 
-MIMIC THE ATTACHED REFERENCES for visual/layout treatment ONLY — treat them as a design spec to reproduce faithfully (layout, section structure, spacing, typography, overall feel), not loose inspiration. The PAGE SET, routes and page identities come from the canonical page registry in /website-structure, NEVER from the reference labels. Label precedence [LOCKED]: every nav/heading label must be one of that page's allowed_display_labels; if a reference shows a word outside the set, use the closest allowed value — the reference NEVER overrides the registry. Compliance pages keep FIXED labels (Terms of Service / Privacy Policy / SMS Program).
+DEMO NICHE: <the demo business vertical, e.g. Plumbing>
+
+DEMO BUSINESS NAME (fictional, invented — never a real business): <e.g. Bluewater Plumbing Co.>
+
+DEMO SERVICES (3–5, realistic for the niche): <e.g. Drain cleaning, Water heater repair, Leak detection, Repiping>
+
+ATTACHED IMAGES:
+  PAGE-LAYOUT refs = <name/describe the attached lander / page-content example images — the page structure, sections and flow to reproduce>
+  BRAND-STYLE refs = <name/describe the attached branding / typography / font / palette images — the visual feel and type to reproduce>
+
+NOTES (optional, may be empty): <any extra direction — e.g. "full-bleed hero", "keep nav minimal">
+══════════════════════════════════════════════════════════════════════
+
+HOW TO RESOLVE THE PARAMETERS (do this silently; never ask me to re-confirm them):
+- Every reference below to "the STYLE", "the DEMO NICHE", "the DEMO BUSINESS NAME", "the DEMO SERVICES", the PAGE-LAYOUT refs or the BRAND-STYLE refs means the value in the block above.
+- Look up the STYLE's slug key, its Copy voice, and its Visual/photo direction VERBATIM from the imported website-structure skill's "Site styles" table. If the STYLE is not one of the 6 in that table, STOP and say so — a new style is added to the skill first, never invented here.
+- Derive template_vars.segment as "Home services / {DEMO NICHE}" unless NOTES says otherwise.
+- Consent category strings: use the DEMO NICHE's entry in the a2p-site-compliance niche library when one exists, else the DEFAULT entry — state which you used in your final report.
+- NOTES may refine visuals/layout but can NEVER override a HARD RULE or a LOCKED contract below.
+
+Build a frontend-only, data-driven client-site TEMPLATE per the imported template-builder + website-structure + opt-in-forms + a2p-site-compliance + seo-build + chat-widget skills. This is the reusable STYLE shell; the niche is a separate DATA layer — we seed the DEMO NICHE via the demo client to prove composition; do NOT hardcode anything niche- or style-specific into components. Where this prompt and a skill conflict, THIS PROMPT WINS (it is newer); where this prompt is silent, the skills are the authority; if neither covers a needed decision, FLAG it in your final report instead of guessing (finite generation — every template must resolve these identically).
+
+MIMIC THE ATTACHED REFERENCES for visual/layout treatment ONLY — the PAGE-LAYOUT refs are the structural spec (sections, hero, page flow) and the BRAND-STYLE refs are the visual spec (palette, typography, imagery treatment); reproduce them faithfully, not as loose inspiration. The PAGE SET, routes and page identities come from the canonical page registry in /website-structure, NEVER from the reference labels. Label precedence [LOCKED]: every nav/heading label must be one of that page's allowed_display_labels; if a reference shows a word outside the set, use the closest allowed value — the reference NEVER overrides the registry. Compliance pages keep FIXED labels (Terms of Service / Privacy Policy / SMS Program).
 
 ════ HARD RULES (violating any of these fails the build) ════
 1. Frontend-only. No Lovable Cloud, no database, no auth, no service-role key, no DB-writing server functions. The backend already exists; this site only READS via anon RPCs and POSTs to /api/public/* endpoints.
@@ -69,7 +73,7 @@ src/lib/content-pages.ts — the SEO content store reader. SAME hardcoded fallba
 
 src/lib/site-url.ts — runtime origin + indexability. resolveSiteUrl(): VITE_SITE_URL (trimmed, no trailing slash) → window.location.origin in the browser → the template's own published origin as a last-resort constant. isIndexableOrigin(origin): FALSE whenever VITE_SITE_URL is unset OR the host ends with ".lovable.app"; true otherwise. (Remember hard rule 5: no server-only imports here — this module is client-reachable.)
 
-src/lib/demo-client.ts — a FULLY FICTIONAL {{DEMO_NICHE_DISPLAY}} business named {{DEMO_BUSINESS_NAME}} (invented phone/email/address; zero real-business identifiers; logo_url EMPTY so the text-logo fallback is exercised). Shape it EXACTLY like the live contract — the same key names the platform actually populates, NO demo-only content keys: clients columns (slug, business_name, tagline, phone_display, email, address, license_number, hours in the canonical {"mon":["09:00","17:00"],…} shape, logo_url, brand_color, service_area[], social_links, review_link, chat_widget_enabled) + template_vars (segment: "{{DEMO_NICHE_SEGMENT}}", customer_care_category + marketing_category ({{NICHE_CONSENT_NOTE}}), privacy_url:"/privacy", terms_url:"/terms", optin_url:"/contact", support_email, contact_email, effective_date, contact_person, brand_secondary, brand_tertiary, company_owner_first_name, company_name, company_website_link, discount_amount, discount__on_referral, review_request_link, lead_form_headline, lead_form_subhead, lead_form_cta, chat_widget_greeting, chat_widget_confirmation, about_us (2–3 factual sentences), differentiators, services_structured (the {{DEMO_SERVICES}} as [{name, slug, description}] — sections LOOP over this, never fixed cards), site_assets manifest with some categories filled and AT LEAST ONE EMPTY (exercises niche-default fallbacks; staff entries carry type:"individual" {name, position} or type:"group" {label})). Demo brand colors: DERIVE dominant + accent from the ART-STYLE references (never the #bd703e fallback when references exist). Also bundle niche-default images under src/assets/niche-defaults/ (a NICHE_DEFAULTS object: hero + gallery[] of generic, non-branded {{DEMO_NICHE_DISPLAY}} imagery).
+src/lib/demo-client.ts — a FULLY FICTIONAL business of the DEMO NICHE, named the DEMO BUSINESS NAME (invented phone/email/address; zero real-business identifiers; logo_url EMPTY so the text-logo fallback is exercised). Shape it EXACTLY like the live contract — the same key names the platform actually populates, NO demo-only content keys: clients columns (slug, business_name, tagline, phone_display, email, address, license_number, hours in the canonical {"mon":["09:00","17:00"],…} shape, logo_url, brand_color, service_area[], social_links, review_link, chat_widget_enabled) + template_vars (segment per the resolution rules above, customer_care_category + marketing_category per the resolution rules, privacy_url:"/privacy", terms_url:"/terms", optin_url:"/contact", support_email, contact_email, effective_date, contact_person, brand_secondary, brand_tertiary, company_owner_first_name, company_name, company_website_link, discount_amount, discount__on_referral, review_request_link, lead_form_headline, lead_form_subhead, lead_form_cta, chat_widget_greeting, chat_widget_confirmation, about_us (2–3 factual sentences), differentiators, services_structured (the DEMO SERVICES as [{name, slug, description}] — sections LOOP over this, never fixed cards), site_assets manifest with some categories filled and AT LEAST ONE EMPTY (exercises niche-default fallbacks; staff entries carry type:"individual" {name, position} or type:"group" {label})). Demo brand colors: DERIVE dominant + accent from the BRAND-STYLE refs (never the #bd703e fallback when references exist). Also bundle niche-default images under src/assets/niche-defaults/ (a NICHE_DEFAULTS object: hero + gallery[] of generic, non-branded imagery fitting the DEMO NICHE).
 
 src/lib/default-copy.ts — the Content-Studio copy resolver. Exactly EIGHT slots: home.hero_sub, home.services_intro, services.index_intro, about.overview, about.approach, contact.intro, gallery.intro, discount.sub. resolveCopy(slot, client) = template_vars.content?.[slot] (agency/AI override, non-blank string) → else buildDefault(slot, client), a clean merged default composed ONLY from live data fields (business_name, segment, services, service_area, hours…). LOCKED: owner-typed about_us / differentiators / tagline are AI INPUTS and are NEVER rendered raw as page copy — the resolver has no raw-display tier. The three SEO-critical slots (home.hero_sub, home.services_intro, services.index_intro) build defaults in plain search language naming the primary trade + city.
 
@@ -85,7 +89,7 @@ Content-page renderers (one shared ContentPageView component renders a ContentPa
   - service-area.$slug.tsx → renders ONLY type geo; else 404.
   - $slug.tsx → renders ONLY type supporting; else 404. Every static route above beats it.
   - locations.tsx → "Service areas" index: lists the client's published GEO pages as links to /service-area/{slug} (plus the service_area strip); graceful empty state pre-SEO.
-  - index.tsx (the lander) → fetches the published "home" content page: when present its H1/title/schema/body WIN (render the body's H2-per-category sections + editorial links); when absent fall back to hero_headline-free, data-driven copy via resolveCopy. TITLE FALLBACK CHAIN [LOCKED]: published home title → "{segment} in {first service_area} | {business_name}" → "{segment} | {business_name}" → "{business_name}" — NEVER "Welcome"/"Home". Homepage also carries: the hero-embedded lead form card, the services overview LOOPING template_vars.services_structured with per-card "Learn more" → /services/{slug} (these 404 until the client's SEO pages publish — expected), a Google Maps embed (iframe https://www.google.com/maps?q={encodeURIComponent(address)}&output=embed, rendered ONLY when address is non-blank, styled to the shell), hours, service-area strip, review CTA → client.review_link, and LocalBusiness JSON-LD (from the home row's schema_jsonld when published, else built from client identity).
+  - index.tsx (the lander) → fetches the published "home" content page: when present its H1/title/schema/body WIN (render the body's H2-per-category sections + editorial links); when absent fall back to data-driven copy via resolveCopy. TITLE FALLBACK CHAIN [LOCKED]: published home title → "{segment} in {first service_area} | {business_name}" → "{segment} | {business_name}" → "{business_name}" — NEVER "Welcome"/"Home". Homepage also carries: the hero-embedded lead form card, the services overview LOOPING template_vars.services_structured with per-card "Learn more" → /services/{slug} (these 404 until the client's SEO pages publish — expected), a Google Maps embed (iframe https://www.google.com/maps?q={encodeURIComponent(address)}&output=embed, rendered ONLY when address is non-blank, styled to the shell), hours, service-area strip, review CTA → client.review_link, and LocalBusiness JSON-LD (from the home row's schema_jsonld when published, else built from client identity).
   - review.$token.tsx → IMMEDIATE redirect (server 302 where the framework allows, else instant client-side) to https://reviewbatch.com/api/public/r/$token — no UI, no content, never in nav. This exact behavior is load-bearing for review SMS links; never remove it.
   - review.index.tsx (/review) → the "Review Us" page: a working CTA to client.review_link ONLY. NO comment box, NO /api/public/intake POST from this page (intake hardcodes source=web_form — a comment box here would mint fake leads into the lead drip).
   - get-your-discount.tsx → the discount funnel (DiscountForm below), branded via the shell; LINKED FROM NOWHERE — not nav, not footer, not sitemap; reachable only by direct/SMS link. thank-you.tsx → post-submit confirmation, also excluded from the sitemap.
@@ -110,18 +114,18 @@ ONE shared LeadForm component owns all lead wiring (fields, validation, shield, 
 Privacy Policy page = verbatim appendix §B (WHOLE policy — IMPORTANT NOTICE header + SMS section + SMS Data Protection Statement + all numbered sections), Terms of Service = verbatim §A (SMS clauses 1–8 + TCPA/CTIA line + General Terms), SMS Program = verbatim §D — each as JSX components (e.g. src/components/compliance/*Content.tsx), {tokens} filled from template_vars ({business_name}, {support_email}, {contact_email}, {effective_date}, {contact_person}, {marketing_category}, {customer_care_category}, privacy/terms/optin URLs → the on-site routes). No literal {token} may survive to a rendered page. Straight ASCII quotes byte-for-byte.
 
 ════ PHASE 5 — design pass ════
-Now style everything from the references: {{STYLE_DISPLAY_NAME}} voice = "{{STYLE_VOICE}}"; visual/photo direction = "{{STYLE_VISUAL}}". FONTS: match the ART-STYLE references' typography as closely as possible with real web fonts (serif vs sans, weight, proportions, character) — NEVER default to Inter/Poppins and never a loose "in the spirit of" pick; if the references don't clearly show type, choose a distinctive pairing fitting the voice, then LOCK it for this style. Two-mode rule: design edits touch visuals only — the variable wiring from Phases 1–4 is untouched. Copy density and tone follow the style voice; all copy composes from live data via resolveCopy/data fields (never invented facts — no years-in-business, awards, certifications, guarantees, or "licensed/insured" claims unless the data carries them).
+Now style everything from the references: the STYLE's copy voice and visual/photo direction (both taken verbatim from the website-structure Site styles table per the resolution rules) steer tone and look. FONTS: match the BRAND-STYLE refs' typography as closely as possible with real web fonts (serif vs sans, weight, proportions, character) — NEVER default to Inter/Poppins and never a loose "in the spirit of" pick; if the references don't clearly show type, choose a distinctive pairing fitting the voice, then LOCK it for this style. Two-mode rule: design edits touch visuals only — the variable wiring from Phases 1–4 is untouched. Copy density and tone follow the style voice; all copy composes from live data via resolveCopy/data fields (never invented facts — no years-in-business, awards, certifications, guarantees, or "licensed/insured" claims unless the data carries them).
 
 ════ PHASE 6 — self-check, then report ════
-Run the full acceptance audit in docs/template-build-check-prompt.md if it has been provided to you; otherwise run template-builder's self-check PLUS: type check passes; blank slug renders the complete demo site; grep src (excluding demo-client.ts and niche-default assets) for the demo business name, its phone digits, and "{{DEMO_NICHE_DISPLAY}}" → ZERO hits; every route head() shows live-data titles; robots[.]txt + sitemap[.]xml respond; /review/faketoken redirects to https://reviewbatch.com/api/public/r/faketoken; all three forms carry the shield + honeypot and no-op in demo mode; no *.client.* filenames; no @tanstack/react-start/server imports outside route server handlers. FINAL REPORT: what was built, every FLAGGED decision, and every NEW template_vars key you introduced (each becomes an onboarding/admin field — the human must approve them).
+Run the full acceptance audit in docs/template-build-check-prompt.md if it has been provided to you; otherwise run template-builder's self-check PLUS: type check passes; blank slug renders the complete demo site; grep src (excluding demo-client.ts and niche-default assets) for the DEMO BUSINESS NAME, its phone digits, and the DEMO NICHE word → ZERO hits; every route head() shows live-data titles; robots[.]txt + sitemap[.]xml respond; /review/faketoken redirects to https://reviewbatch.com/api/public/r/faketoken; all three forms carry the shield + honeypot and no-op in demo mode; no *.client.* filenames; no @tanstack/react-start/server imports outside route server handlers. FINAL REPORT: what was built, every FLAGGED decision, which consent-library entry was used, and every NEW template_vars key you introduced (each becomes an onboarding/admin field — the human must approve them).
 ```
 
 ---
 
 ## PROMPT 2 — acceptance gate
 
-Paste `docs/template-build-check-prompt.md` into the same project after PROMPT 1 reports done. Remix nothing until it's all-PASS and Claude's external probe (publish → robots/canonical/sitemap/OPTIONS-preflight/live-slug render) passes.
+Paste `docs/template-build-check-prompt.md` into the same project after PROMPT 1 reports done. Remix nothing until it's all-PASS and Claude's external probe (PART C of that doc) passes.
 
 ## Freeze
 
-After validation: GitHub-connect, publish, Claude's external probe, then the project is the remixable golden master for `{{STYLE_DISPLAY_NAME}}` — FROZEN (no per-client edits; improvements are versioned via CHANGELOG and reach existing clients only by re-remix). Per-client use: Remix (history=No) → rename `Client — {Business}` → set `VITE_CLIENT_SLUG` → publish → domain-day D.5 (runbook: allowed_origins + company_website_link + review_link_domain + `VITE_SITE_URL` + republish).
+After validation: GitHub-connect, publish, Claude's external probe, then the project is the remixable golden master for this STYLE — FROZEN (no per-client edits; improvements are versioned via CHANGELOG and reach existing clients only by re-remix). Per-client use: Remix (history=No) → rename `Client — {Business}` → set `VITE_CLIENT_SLUG` → publish → domain-day D.5 (runbook: allowed_origins + company_website_link + review_link_domain + `VITE_SITE_URL` + republish).
