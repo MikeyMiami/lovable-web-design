@@ -33,7 +33,11 @@ ATTACHED IMAGES:
   PAGE-LAYOUT refs = <name/describe the attached lander / page-content example images — the page structure, sections and flow to reproduce>
   BRAND-STYLE refs = <name/describe the attached branding / typography / font / palette images — the visual feel and type to reproduce>
 
-NOTES (optional, may be empty): <any extra direction — e.g. "full-bleed hero", "keep nav minimal">
+DESIGN NOTES & POINTERS (optional, free-form, as many lines as you like — direction for the DESIGN layer: mood, spacing, density, section emphasis, animation taste, what to copy hardest from each reference, what to avoid):
+<e.g. "hero full-bleed with the headline overlapping the image like ref 2"
+ "generous whitespace, editorial feel — closer to ref 3 than ref 1"
+ "subtle scroll animations only; no parallax"
+ "footer should feel heavy/anchored like the lander example">
 ══════════════════════════════════════════════════════════════════════
 
 HOW TO RESOLVE THE PARAMETERS (do this silently; never ask me to re-confirm them):
@@ -41,7 +45,7 @@ HOW TO RESOLVE THE PARAMETERS (do this silently; never ask me to re-confirm them
 - Look up the STYLE's slug key, its Copy voice, and its Visual/photo direction VERBATIM from the imported website-structure skill's "Site styles" table. If the STYLE is not one of the 6 in that table, STOP and say so — a new style is added to the skill first, never invented here.
 - Derive template_vars.segment as "Home services / {DEMO NICHE}" unless NOTES says otherwise.
 - Consent category strings: use the DEMO NICHE's entry in the a2p-site-compliance niche library when one exists, else the DEFAULT entry — state which you used in your final report.
-- NOTES may refine visuals/layout but can NEVER override a HARD RULE or a LOCKED contract below.
+- DESIGN NOTES & POINTERS apply to the DESIGN layer only (Phase 5 + component styling): follow them closely when styling — they rank ABOVE your own taste and refine how you interpret the references — but they can NEVER override a HARD RULE, a LOCKED contract, the route registry, or any wiring in Phases 1–4. If a note appears to conflict with a locked rule, the rule wins and you FLAG the conflict in your report.
 
 Build a frontend-only, data-driven client-site TEMPLATE per the imported template-builder + website-structure + opt-in-forms + a2p-site-compliance + seo-build + chat-widget skills. This is the reusable STYLE shell; the niche is a separate DATA layer — we seed the DEMO NICHE via the demo client to prove composition; do NOT hardcode anything niche- or style-specific into components. Where this prompt and a skill conflict, THIS PROMPT WINS (it is newer); where this prompt is silent, the skills are the authority; if neither covers a needed decision, FLAG it in your final report instead of guessing (finite generation — every template must resolve these identically).
 
@@ -122,9 +126,13 @@ Run the full acceptance audit in docs/template-build-check-prompt.md if it has b
 
 ---
 
-## PROMPT 2 — acceptance gate
+## Validation — two routes (DEFAULT = the free Claude audit)
 
-Paste `docs/template-build-check-prompt.md` into the same project after PROMPT 1 reports done. Remix nothing until it's all-PASS and Claude's external probe (PART C of that doc) passes.
+**Route A (default, zero Lovable credits): GitHub-connect + publish the preview → Claude audits.** Claude clones the repo and runs the ENTIRE A–J checklist from `docs/template-build-check-prompt.md` against the raw code, plus curls the published preview (SSR titles, robots/noindex, sitemap, redirect, demo purity) and probes the platform endpoints. Claude returns a findings list; any fixes go back to Lovable as ONE small fix prompt. Claude gives special weight to the **page-type layering** (section D + E2: each renderer bound to exactly its content_pages type, catch-all precedence, the route-vocabulary mapping, sitemap type→URL mapping) — the contract every existing client's AI-written links depend on.
+
+**Route B (fallback, costs credits): paste `docs/template-build-check-prompt.md` into the project.** Use when a build came out rough and you want Lovable to fix-as-it-verifies mechanically in one pass, or when Claude isn't in the loop.
+
+Either route: remix nothing until all-PASS **and** the external probe (PART C) passes. The ONLY check that needs human eyes either way: the hero lead-form card visually fitting the hero viewport at laptop sizes — 30 seconds of eyeballing the preview.
 
 ## Freeze
 

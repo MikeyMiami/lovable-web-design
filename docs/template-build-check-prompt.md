@@ -1,6 +1,8 @@
-# Template Build-Check Prompt — acceptance gate (v1, 2026-07-27)
+# Template Build-Check Prompt — acceptance gate (v1.1, 2026-07-27)
 
-> Run against a FINISHED template project (fresh build via `docs/template-build-prompt-TEMPLATE.md`, or any template being re-blessed after edits). It verifies the wiring WITHOUT a live-client end-to-end: everything here is checkable from the code + the in-editor preview. **PART C at the bottom is NOT for Lovable** — it's the human/Claude external probe after publish. A template is blessed for remixing only when this reports all-PASS **and** PART C passes.
+> Run against a FINISHED template project (fresh build via `docs/template-build-prompt-TEMPLATE.md`, or any template being re-blessed after edits). It verifies the wiring WITHOUT a live-client end-to-end.
+>
+> **DEFAULT ROUTE (free): don't paste this into Lovable at all.** GitHub-connect + publish the preview, and Claude runs this ENTIRE A–J checklist from the cloned repo + curls the preview (Claude's audit is also more trustworthy — Lovable self-reports have been caught wrong). Fixes then go back to Lovable as one small fix prompt. **FALLBACK ROUTE (costs credits): paste the prompt below into the project** when you want Lovable to fix-as-it-verifies in one pass, or Claude isn't in the loop. Either way, **PART C at the bottom is never for Lovable** — it's the external post-publish probe. A template is blessed for remixing only when A–J is all-PASS **and** PART C passes. The one check needing human eyes: the hero lead-form card visually fitting the hero viewport at 1366×768.
 
 ## The prompt (paste into the template's Lovable project)
 
