@@ -4,7 +4,7 @@
 >
 > When the build reports done, paste PROMPT 2 (`docs/template-build-check-prompt.md`) into the SAME project as the acceptance gate. A template is not blessed for remixing until PROMPT 2 is all-PASS **and** Claude's external post-publish probe (PART C of that doc) passes.
 >
-> **Consider Mode 2 first (cheaper):** if the new design is structurally close to an existing blessed template, REMIX that template and restyle it (visual-only edits) — all wiring inherited free. Use THIS prompt when the layout/structure is genuinely new.
+> **DEFAULT ROUTE FOR A NEW STYLE = Mode 2 (remix + restyle), NOT scratch.** Remixing a blessed template is a byte-exact copy at ZERO credits — every wired file (data loader, routes, forms, shield, compliance, SEO container, image pipeline) is inherited instead of regenerated, which is both cheaper AND more accurate. Credits are then spent only on the irreducible AI work: the design layer. Use **PROMPT 1-R** below for that. Reach for the scratch build (PROMPT 1) only when the layout/structure is so different that restyling would fight the inherited markup — and even then, consider restructuring the presentational components of a remix first. (GitHub note: on any connected project, commits pushed from git sync INTO Lovable without consuming credits — Claude can ship wiring fixes to a template for free. Lovable has also reportedly added "New Project → Import from GitHub" for Vite React/TS + TanStack Start repos (mid-2026 guides), but its own docs still said export-only when checked 2026-07-27 — verify on the New Project screen before relying on it; remix makes it unnecessary for our stack anyway.)
 
 ## Setup (operator, before pasting — ~5 minutes)
 
@@ -125,6 +125,32 @@ Run the full acceptance audit in docs/template-build-check-prompt.md if it has b
 ```
 
 ---
+
+## PROMPT 1-R — the RESTYLE build (Mode 2 — DEFAULT for a new style; run on a fresh REMIX of a blessed template)
+
+Setup: Remix the blessed template (history=No) → rename `Template — {Style}` → spot-check the project Knowledge/skills carried over (remixes copy them; re-import/re-paste if not) → fill the SAME `BUILD PARAMETERS` block from PROMPT 1 (style, demo niche/name/services, image labels, DESIGN NOTES) → attach your reference images → paste the block followed by this body:
+
+```
+This project is a REMIX of a fully-wired, production-blessed site template. Your job is a DESIGN RESTYLE into the STYLE named in the BUILD PARAMETERS block above, driven by the attached PAGE-LAYOUT and BRAND-STYLE reference images and the DESIGN NOTES & POINTERS. The wiring is inherited and correct — you are FORBIDDEN from breaking it.
+
+RESOLVE THE PARAMETERS exactly as written in the block's resolution rules (STYLE voice/visual/slug from the imported website-structure Site styles table; segment derived; consent-library entry per the niche, reported).
+
+OFF-LIMITS — do NOT modify the logic of (visual-only className/markup edits inside these are allowed ONLY where explicitly noted):
+- .env (all five lines) and package.json's overrides.
+- src/lib/* wiring: client-data, content-pages, site-url, img, bot-shield, phone, hours, hex-to-oklch, site-assets, default-copy (the 8 slots and the override→default resolver are LOCKED — you may restyle where copy RENDERS, never how it resolves).
+- Route FILE NAMES and the route set (the registry is a locked cross-system contract), every loader, every head() computation, the robots/sitemap server handlers, the /review/$token redirect, the content-page type↔renderer bindings (services.$slug = category|service only; service-area.$slug = geo only; $slug catch-all = supporting only).
+- Form WIRING: POST endpoints, payload keys, validation, the PoW shield, the honeypot, consent semantics (lead = unchecked/optional; discount + chat = required), demo-mode no-op. You may restyle form APPEARANCE freely — the hero card must still fit the hero viewport at 1366×768 (compact variant, never transform:scale) with the header-wrapper spacing rule intact.
+- Compliance page TEXT (byte-locked) — restyle their typography/containers only.
+- The image contract: keep every client photo rendering through SiteImage/imgUrl with the fixed-height hero box + aspect-[16/9] inline figures + focal objectPosition + og:image original; you may change surrounding composition, not the mechanism.
+
+WHAT YOU RESTYLE (this is the whole job): styles.css/tailwind theme, fonts (match the BRAND-STYLE refs per the locked font rule — never Inter/Poppins defaults), Header/Footer/PageShell/section composition and markup, spacing/density/animation, hero composition, card/section design across every page — reproducing the PAGE-LAYOUT refs' structure and the BRAND-STYLE refs' feel, in the STYLE's voice. Nav/heading labels stay within each page's allowed_display_labels (closest allowed value when a ref shows something else; compliance labels fixed).
+
+RE-SEED THE DEMO LAYER for the new niche: update demo-client.ts VALUES only (same keys, same shape — the DEMO BUSINESS NAME, invented contact details, the DEMO SERVICES as services_structured, segment + consent categories per the resolution rules, brand colors derived from the BRAND-STYLE refs) and replace src/assets/niche-defaults/ with generic non-branded imagery fitting the DEMO NICHE. Zero identifiers from the PREVIOUS demo niche may survive anywhere (grep the old demo business name + old niche word → zero hits outside git history).
+
+SELF-CHECK before reporting: type check passes; blank slug renders the full new-style demo site; git-level sanity — the only files changed are styles/presentational components/demo-client values/niche-default assets (+ any FLAGGED exceptions you list); the old niche/business greps are clean; forms still no-op with the toast in demo mode; robots[.]txt + sitemap[.]xml + /review/faketoken still respond/redirect; hero card fits at 1366×768. REPORT: what changed, every file touched, any place the refs demanded something a locked rule forbade (FLAG, don't do), and the consent-library entry used.
+```
+
+Then run the SAME validation as any build (Route A below — the free Claude audit is even stronger here: the diff against the parent template makes wiring regressions trivially visible).
 
 ## Validation — two routes (DEFAULT = the free Claude audit)
 
