@@ -91,6 +91,40 @@ Follow the **website-structure skill** (import it alongside this one) for the lo
 
 **Page identity is fixed by the canonical page registry in `/website-structure`** [Approach B]: each page has a stable **canonical id + route** (system-facing — use it for route files, data wiring, and cross-page links) and a set of **`allowed_display_labels`** (visitor-facing). The nav/heading label MAY use any allowed synonym to match the style/reference; the **id/route NEVER varies**, and NEVER invent a label outside the allowed set. Compliance pages (Privacy Policy / Terms of Service / SMS Program) have **FIXED labels** — do not flex them.
 
+## Image rendering contract [LOCKED — shipped 2026-07-26]
+
+Every client photo on the site is served through **Supabase Storage image transformations** (enabled on this backend; they resize, honor `resize=cover`, auto-negotiate WebP from the request's `Accept` header, and never upscale past the source). Measured effect: a 286 KB JPEG hero delivered as 43 KB of WebP at 640w.
+
+1. **`src/lib/img.ts`** — the only place transformation logic lives:
+   - `imgUrl(url, { width, height?, quality? })` — swaps `/storage/v1/object/public/` → `/storage/v1/render/image/public/`, appends `width`, adds `height` + `resize=cover` when a height is given, `quality` default 78. **Non-Supabase URLs (demo / niche-default stock) pass through untouched.**
+   - `srcSet(url, widths, { aspect?, naturalWidth? })` — emits `"url Nw, …"`, **caps candidates at the source's natural width** (when every candidate exceeds it, emit exactly ONE at the cap), and **returns `""` for non-Supabase URLs** so callers omit the attribute rather than emitting duplicate candidates.
+2. **`SiteImage`** (`src/components/site/SiteImage.tsx`) wraps `<img>` and is used for every client photo outside the content-page renderer: `{ url, alt, widths, sizes, aspect?, priority?, naturalWidth?, naturalHeight?, className?, style? }`. `priority` → `loading="eager"` + `fetchPriority="high"`; otherwise `loading="lazy"`. Always `decoding="async"`, always emit `width`/`height` (CLS). When `srcSet` returns `""`, omit **both** `srcSet` and `sizes`.
+3. **Applied everywhere:** content-page hero (eager, `sizes="100vw"`, widths 640–2048, 16:9 server-side crop) and inline figures (lazy, widths 480–1024); plus the lander hero, the `/about` image and team photos, and every `/gallery` tile (widths 320–768).
+4. **`og:image` stays the ORIGINAL object URL** — social scrapers want the full file, not a transformed variant.
+5. **`PageImage.focal { x, y }`** (0–1, optional, default 0.5/0.5) → apply as `style={{ objectPosition: `${x*100}% ${y*100}%` }}` on hero + inline. This is how portrait/odd-ratio uploads crop safely; there is deliberately **no** subject detection.
+6. **`SiteAsset` may carry `width`/`height`/`orientation`/`lowRes`** (the admin app records these at upload via canvas normalization and can backfill legacy assets). Pass `width` as `naturalWidth` to `srcSet`. A `galleryAssets()`-style helper returning the same ordered list as `galleryUrls()` but as full asset objects is the clean way to look this up per rendered URL.
+7. **Layout invariants that make ANY client upload safe — keep these in any new design:** hero = fixed-height box (`h-[52vh] min-h-[380px]`) with absolute `object-cover`; inline images = `<figure className="aspect-[16/9] overflow-hidden">` + `object-cover` + an `onError` that hides the figure. A portrait upload can then never break spacing.
+8. **Phone rendering:** format all **visible** phone text (`(419) 750-0242`); `tel:` hrefs and JSON-LD `telephone` stay E.164/digits.
+
+## Static-surface slot contract — `template_vars.site_slots` [LOCKED — shipped 2026-07-26]
+
+The admin Photo Board assigns images to `content_pages` rows, but `/about`, `/gallery` and the team block are **static routes with no row**. Without an explicit contract they pick images *by index* out of the flattened `galleryUrls(site_assets)` list, which means JSON key order decides placement and the agency has zero control.
+
+- Read the **optional, additive** key `template_vars.site_slots`: `{ about_image?: string; team?: string[]; gallery?: string[] }` (each value a photo URL).
+- Resolution, with **every existing fallback preserved** so a client without the key renders exactly as before:
+  - about image = `site_slots.about_image` → `galleryUrls[1]` → `galleryUrls[0]` → `work_examples[1]` → `NICHE_DEFAULTS`
+  - team photos = `site_slots.team` (in order, when non-empty) → `validStaff.map(s => s.image)` → names-only
+  - gallery grid = `site_slots.gallery` (in order, when non-empty) → `galleryUrls` → `work_examples` → `NICHE_DEFAULTS`
+- **The lander hero is deliberately NOT in `site_slots`.** It resolves from the `home` content page's Photo-Board hero (`heroImg?.url ?? galleryUrls[0] ?? work_examples[0] ?? NICHE_DEFAULTS.hero`) — one source of truth per image, or the two drift.
+- The app writes this key via an admin-gated server fn doing a **full read-merge-write of `template_vars`** (never a partial replace — locked rule).
+
+## Absolute-URL origin + indexability [LOCKED — shipped 2026-07-26]
+
+- `src/lib/site-url.ts`: `resolveSiteUrl()` = `VITE_SITE_URL` → `window.location.origin` (browser) → template constant (last resort). `isIndexableOrigin(origin)` = **false whenever `VITE_SITE_URL` is unset OR the host ends `.lovable.app`**.
+- `pageHeadMeta` **forces** `robots: noindex,follow` when not indexable — a stored `index,follow` must never win. A **dynamic `src/routes/robots[.]txt.tsx`** replaces any static `public/robots.txt`: `Allow: /` only on an indexable origin, else `Disallow: /`, always with an **absolute** `Sitemap: ${origin}/sitemap.xml`. Never export a `SITE_URL` constant that could hardcode the template's own domain.
+- **⚠ BUILD TRAP:** never import `@tanstack/react-start/server` (`getRequest`/`getURL`) from a module the CLIENT graph can reach — Start's import protection fails the production build even behind `typeof window === "undefined"` + `await import()`. Route **server handlers** (`server: { handlers: { GET: async ({ request }) => … } }`) *do* receive `request`, so `robots[.]txt.tsx` and `sitemap[.]xml.tsx` should use `new URL(request.url).origin`. Page `head()` cannot — accept the constant fallback (harmless while noindexed) or seed the origin into router context from the SSR entry.
+- **⛔ Launch consequence:** `VITE_SITE_URL` is an indexing kill-switch. Until it is set on the remix **and republished** (env bakes at publish), the client's real domain serves `noindex` + `Disallow: /` on every page, silently.
+
 ## Platform integration points (wire exactly)
 
 1. **Lead form** → POST to `/api/public/intake` on the platform host (fields per the opt-in-forms skill; the backend resolves the tenant from the request Origin — the form does NOT send client_id; consent language + terms link from `template_vars.website_terms_page_link`).

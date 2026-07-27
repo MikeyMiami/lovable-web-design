@@ -51,6 +51,27 @@ Pages are **DATA** (`content_pages` store, `/seo-build` §4) rendered by dynamic
 
 Routes use TanStack file-based routing (`$slug`/`$area` = dynamic segments). The **id** is the system key the data contract + skills reference; the **route** is the URL; the **label** is display-only. `/template-builder` points here as the authority for page identity.
 
+### 🔒 ROUTE-VOCABULARY CONTRACT — the app's AI writer depends on these exact shapes [LOCKED 2026-07-26]
+
+The admin app's SEO writer builds a **closed allowed-href vocabulary** from the client's published `content_pages` rows, hands it to the model as the only linkable set, and then **deterministically unwraps any anchor whose href falls outside it** (keeping the text, dropping the link). The mapping it uses is:
+
+| `content_pages.type` | URL it assumes | Renderer |
+|---|---|---|
+| `home` | `/` | lander |
+| `category`, `service` | `/services/<slug>` | `services.$slug` |
+| `geo` | `/service-area/<slug>` | `service-area.$slug` (geo-only, else 404) |
+| `supporting` | `/<slug>` | `$slug` catch-all (**supporting-only**, else 404) |
+
+Plus the always-valid static routes `/services`, `/locations`, `/contact`, `/about`, `/gallery`.
+
+**Consequence: if a new template renames or reshapes any of these routes, every AI-written internal link across every existing client silently 404s** — the writer will keep emitting the old paths, and the sanitizer will keep accepting them because they match the contract, not the template. Treat this table as immutable; if a route genuinely must change, the app's `loadWriteContext` route map and the deterministic `sanitizeLinks` whitelist have to change in the same breath, and every published page needs re-sanitizing.
+
+Two related invariants the writer also relies on: the anon RPCs return **published-only** rows (so a draft page's URL 404s — the vocabulary is filtered to published for exactly this reason), and each geo/supporting row carries `parent_slug` (a service slug, a category slug, or `home`), which is what both the internal-link structure and the admin photo-suggester key off.
+
+### Static-surface image slots — `template_vars.site_slots`
+
+`/about`, `/gallery` and the team block are static routes with no `content_pages` row, so the Photo Board cannot address them by page. They read the optional additive key `template_vars.site_slots` = `{ about_image?: string; team?: string[]; gallery?: string[] }`, each falling back to the previous index-based `galleryUrls()` behavior when absent. The **lander hero is deliberately excluded** — it resolves from the `home` content page's Photo-Board hero. Full contract + fallback chains in `/template-builder`.
+
 ## Design generation inputs [LOCKED]
 Visual design, fonts, colors, copy, and layout are AI-driven, from combining:
 1. **Site style** (AGENCY-CHOSEN at build time — the 6 presets below; the client-facing onboarding choice + all app `site_style` plumbing were removed 2026-07-22, `clients.site_style` is dormant) → copy VOICE + styling DIRECTION.
