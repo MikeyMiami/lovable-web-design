@@ -81,6 +81,20 @@ J. REPORT
 Output: (1) the full A–I table with PASS/FIXED/FAIL + evidence; (2) the flag list (every FAIL needing a human decision, every improvised decision found); (3) every template_vars key read in code but missing from demo-client.ts, and every key in demo-client.ts the code never reads; (4) confirm type check passes after your fixes.
 ```
 
+## PROMPT 2-V — visual-delta check (Lovable fallback, AFTER a PROMPT 1-V change; costs credits — the free default is Claude's delta audit in the runbook)
+
+```
+AUDIT the visual changes just made to this blessed template. Verifier role: PASS/FAIL + one line of evidence per item; fix only mechanical fails; FLAG anything needing a decision. 
+1. SCOPE: list every file changed for this change-set. PASS only if all are presentational components/styles/assets — any wiring file (src/lib/*, route loaders/head logic, .env, package.json, form endpoints/payloads, robots/sitemap handlers, compliance text) = FAIL that file.
+2. Type check passes; blank slug renders the FULL demo site with the changes.
+3. Every copy slot (home.hero_sub, home.services_intro, services.index_intro, about.overview, about.approach, contact.intro, gallery.intro, discount.sub) still renders somewhere via resolveCopy, or is explicitly reported as an intentionally-orphaned slot. No slot text was hardcoded/reworded in code.
+4. Purity: grep changed files for the demo business name/phone/niche words + any factual-claim literals (licensed/insured/award/years) = zero.
+5. Data bindings intact in the changed sections: services still LOOP services_structured; phone visible = formatPhoneUS with tel: E.164; images still via SiteImage/imgUrl fallback chains (no hardcoded image URLs); hours via the normalizer.
+6. If the lander changed: the published-home-row precedence (title/H1/body) still wins over fallback copy; the hero lead-form card still fits the hero viewport at 1366×768; the maps embed still renders when address is set.
+7. Forms still no-op with the demo toast on blank slug; footer compliance links present on every page; nav/page labels within allowed_display_labels.
+REPORT: table 1–7, files-changed list, orphaned/new slots or template_vars keys, anything a guardrail blocked.
+```
+
 ## PART C — external probe (Claude/human, AFTER publish — not part of the Lovable prompt)
 
 1. Publish; GitHub-connect. Claude clones and re-greps A/B/C-class checks from the raw repo (Lovable self-reports can be wrong).
