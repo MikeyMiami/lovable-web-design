@@ -156,6 +156,41 @@ SELF-CHECK before reporting: type check passes; blank slug renders the full new-
 
 Then run the SAME validation as any build (Route A below — the free Claude audit is even stronger here: the diff against the parent template makes wiring regressions trivially visible).
 
+---
+
+## PROMPT 1-V — targeted VISUAL/design changes to an EXISTING blessed template
+
+Use when a working, validated template needs design tweaks — moving/restyling/adding/removing page sections, changing what a section displays — WITHOUT a restyle or rebuild. Run it on the TEMPLATE project (golden-master discipline: template changes reach existing client sites only by re-remix; running it on one client's remix instead is a deliberate per-client divergence). Fill the CHANGE REQUEST block, attach reference images if any, paste everything:
+
+```
+═══════════ CHANGE REQUEST — EDIT ONLY THIS BLOCK ═══════════
+CHANGES (one per line: page/section → what to change):
+<e.g. "lander: swap the services-overview and gallery-strip section order"
+ "about: replace the two-column story block with a full-width timeline design"
+ "lander hero: move the review CTA out of the hero into a new trust-bar section below it">
+ATTACHED REFS (optional): <describe any attached design images for the new look>
+NOTES (optional): <extra design direction>
+═════════════════════════════════════════════════════════════
+
+This project is a FULLY-WIRED, validated, blessed site template. Execute ONLY the changes in the block above, as VISUAL/design edits. Everything on this site renders from live client data through a layered ownership system — your changes must respect it exactly.
+
+TEXT-OWNERSHIP MAP — every piece of displayed text has exactly ONE owner; a design change may move or restyle WHERE an owner renders, but must never change the owner, its keys, or its resolution:
+1. COPY SLOTS (agency/AI-managed via resolveCopy — override→default; NEVER reword, NEVER hardcode replacements): home.hero_sub + home.services_intro (lander), services.index_intro (/services), about.overview + about.approach (/about), contact.intro (/contact), gallery.intro (/gallery), discount.sub (/get-your-discount). If a change removes the section rendering a slot, the slot is orphaned — allowed, but FLAG it. If a NEW section needs a paragraph of flexible copy, bind it to a NEW template_vars.content slot via resolveCopy with a data-composed buildDefault, and FLAG the new slot.
+2. LIVE DATA FIELDS (render as-is from the client object; restyle/move freely, never replace with literals): business_name, tagline, phone (formatPhoneUS visible / tel: E.164), email, address, hours (via the tolerant normalizer), service_area, social_links, license_number, review_link, logo (with text fallback), services_structured (the services section LOOPS over it — never fixed cards), lead_form_headline/subhead/cta, chat_widget_greeting/confirmation.
+3. PUBLISHED CONTENT-PAGE BODIES (the SEO system owns them — home body/H1/title when a home row is published, and every /services/*, /service-area/*, supporting page): the template is a RENDERER for these; you may restyle ContentPageView's presentation, never author, edit, or hardcode their content, and the h1/title/meta precedence (published row WINS) must survive any change.
+4. COMPLIANCE TEXT (byte-locked): Privacy/ToS/SMS-Program bodies + the consent-checkbox skeletons — typography/containers may change, characters may not.
+5. STYLE-OWNED STRUCTURAL COPY — the ONLY freely editable text tier: section eyebrows/headings ("What we do"), microcopy, button labels, empty-state lines. Keep it niche-agnostic and business-agnostic (composable with ANY client), keep nav/page labels within each page's allowed_display_labels, and never introduce factual claims (no "licensed/insured", years, awards, guarantees).
+
+STRUCTURAL GUARDRAILS:
+- MOVING a section = safe. REMOVING one: check its render-owners first; never remove the hero-embedded lead form, the footer compliance links, the consent checkbox from any form, the services loop, the maps embed (it stays, gated on address), the review CTA surface, or any content-page renderer. ADDING a section: all text binds to tiers 1/2/5 (or a FLAGGED new template_vars key with fallback); all imagery goes through SiteImage/imgUrl with the existing fallback logic (site_slots → galleryUrls → work_examples → NICHE_DEFAULTS) — never a hardcoded image URL.
+- OFF-LIMITS entirely: routes (names/set/loaders/head logic), src/lib wiring modules, form endpoints/payloads/validation/shield/honeypot, .env, package.json overrides, robots/sitemap handlers, the /review/$token redirect, JSON-LD builders, the noindex forcing. If the hero is touched, the lead-form card must still fit the hero viewport at 1366×768 (compact variant, never transform:scale).
+- Inherited hard rules: no *.client.* filenames; no "@tanstack/react-start/server" imports outside route server handlers; no Turnstile; zero business/niche literals outside demo-client.ts.
+
+SELF-CHECK before reporting: type check passes; blank slug renders the full demo site with the changes in place; the ONLY files touched are the presentational components/styles for the requested changes (+ FLAGGED exceptions); demo purity greps still clean; every copy slot still renders somewhere OR is flagged orphaned; forms still no-op with the demo toast; if the lander changed, the published-home-row precedence still wins over the fallback copy. REPORT: each requested change → what was edited (files), any orphaned/new copy slots or template_vars keys (FLAGGED), anything requested that a guardrail forbade (FLAG, don't do).
+```
+
+After it lands: Claude runs the **delta audit** (runbook §Delta) — diff-scope + targeted re-checks of the touched surfaces — then re-tag/CHANGELOG the template. Existing client sites keep the OLD design until re-remixed (snapshot rule); new remixes inherit the change immediately.
+
 ## Validation — two routes (DEFAULT = the free Claude audit)
 
 **Route A (default, zero Lovable credits): GitHub-connect + publish the preview → Claude audits.** Claude clones the repo and runs the ENTIRE A–J checklist from `docs/template-build-check-prompt.md` against the raw code, plus curls the published preview (SSR titles, robots/noindex, sitemap, redirect, demo purity) and probes the platform endpoints. Claude returns a findings list; any fixes go back to Lovable as ONE small fix prompt. Claude gives special weight to the **page-type layering** (section D + E2: each renderer bound to exactly its content_pages type, catch-all precedence, the route-vocabulary mapping, sitemap type→URL mapping) — the contract every existing client's AI-written links depend on.

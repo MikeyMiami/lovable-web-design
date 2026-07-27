@@ -9,7 +9,11 @@ description: Use when building a client-site TEMPLATE in a NEW frontend-only Lov
 >
 > **The human's role after you build: proofread.** So get the wiring right from this skill, not from guesses.
 >
-> **To build a new style template:** use the parameterized prompt at `docs/template-build-prompt-TEMPLATE.md` — fill the style (from `/website-structure` Site styles) + demo-niche blanks; never hand-edit a previous filled prompt (stale niche/style carryover).
+> **The template-lifecycle prompt set (canonical home: `docs/`)** — refer to these by name:
+> - **`template-build-prompt-TEMPLATE.md`** — the MASTER doc. Contains **PROMPT 1** (build a brand-new template from scratch from design images — the single BUILD PARAMETERS edit block + fixed body), **PROMPT 1-R** (fork+restyle a remix into a new style), and **PROMPT 1-V** (targeted visual/design changes to an EXISTING blessed template, with the copy-ownership guardrails).
+> - **`template-build-check-prompt.md`** — PROMPT 2, the in-Lovable acceptance audit (fallback route; costs credits).
+> - **`template-claude-audit-runbook.md`** — Route A (default): Claude's free repo+preview audit, incl. the delta-audit mode for post-blessing design changes.
+> Never hand-edit a previously FILLED prompt (stale niche/style carryover) — copy fresh from the master each time.
 
 ## Hard rules [LOCKED]
 

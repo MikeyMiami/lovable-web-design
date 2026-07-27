@@ -71,6 +71,13 @@
 - Platform endpoints (from any origin): `POST https://app.pierceworks.co/api/public/challenge` with `{"slug":"<any-active-slug>"}` → signed challenge JSON. (Full PoW lead E2E only in the optional live-slug smoke below.)
 - **Optional live-slug smoke (needs operator):** set `VITE_CLIENT_SLUG` to a test client + add the preview origin to that client's allowed_origins + republish → live data renders; Claude solves PoW server-side and lands ONE lead from that Origin → verify contact + enrollment created → DELETE the contact → blank slug + remove origin + republish.
 
+## Delta audit — post-blessing design changes (PROMPT 1-V) or any small template edit
+Full A–J is overkill for a targeted change. Instead:
+1. `git diff <last-blessed-tag>..origin/main --stat` → the touched-file set must match the change request (+ flagged exceptions). ANY hit on wiring modules, route loaders/head logic, `.env`, `package.json`, form wiring, or compliance components = escalate to the relevant full section.
+2. Re-run ONLY the sections owning the touched surfaces (lander touched → C4/E-head/G1-hero-fit + curl `/`; about touched → I1/F4 + curl `/about`; any form surface → G; any image surface → F).
+3. Always re-run regardless of scope (cheap + high-value): the demo-purity greps (C), the copy-slot render-or-flagged check (I1), type-check evidence, and a curl of `/` + every changed page on the preview (SSR renders, robots still noindex on preview, no literal `{token}`).
+4. Verdict + re-tag/CHANGELOG. Existing clients unchanged until re-remix (snapshot rule) — note in the report which live remixes now diverge from the master.
+
 ## Verdict + report
 - Output the A–J table (PASS/FAIL + evidence path:line), findings ranked CRITICAL (breaks clients/contracts) → HIGH (breaks this template) → NIT.
 - Author ONE consolidated Lovable fix prompt for all fixable findings (file-anchored, same style as this project's fix prompts). Re-audit the diff after it lands.
