@@ -1,0 +1,27 @@
+---
+name: template-visual-edits
+description: STANDING GUARDRAILS for any visual/design change to a blessed, fully-wired site template (or a client remix, as deliberate divergence). Import once into the template project; then every visual change is a short prompt that names this skill + lists the changes. Contains the 5-tier text-ownership map (what may be reworded vs only moved/restyled), the structural move/remove/add rules, the off-limits wiring list, and the self-check. Use for ANY request that changes how pages look, what sections display, or section order. NOT for new-template builds (docs/template-build-prompt-TEMPLATE.md PROMPT 1), NOT for full restyles into a new style (PROMPT 1-R), NOT for copy/content edits (Content Studio owns copy slots; the SEO tab owns content pages).
+---
+
+# Template Visual Edits — standing guardrails [LOCKED]
+
+Whenever a prompt requests visual/design changes to this template ("per the template-visual-edits skill"), execute ONLY the requested changes as design edits, under every rule below. This template is a fully-wired, validated golden master: everything renders from live client data through a layered ownership system. Where a requested change conflicts with a rule here, the rule wins — FLAG the conflict in your report instead of obeying the request.
+
+## The 5-tier TEXT-OWNERSHIP MAP
+Every piece of displayed text has exactly ONE owner. A design change may move or restyle WHERE an owner renders — never change the owner, its keys, or its resolution.
+1. **COPY SLOTS** (agency/AI-managed via `resolveCopy`, override→default; NEVER reword in code, NEVER hardcode replacements): `home.hero_sub` + `home.services_intro` (lander), `services.index_intro` (/services), `about.overview` + `about.approach` (/about), `contact.intro` (/contact), `gallery.intro` (/gallery), `discount.sub` (/get-your-discount). Removing the section that renders a slot ORPHANS it — allowed, but FLAG it. A NEW section needing flexible copy binds a NEW `template_vars.content` slot through `resolveCopy` with a data-composed `buildDefault` — FLAG the new slot.
+2. **LIVE DATA FIELDS** (render as-is from the client object; restyle/move freely, never replace with literals): business_name, tagline, phone (formatPhoneUS visible / `tel:` E.164), email, address, hours (via the tolerant normalizer), service_area, social_links, license_number, review_link, logo (text fallback), `services_structured` (the services section LOOPS it — never fixed cards), lead_form_headline/subhead/cta, chat_widget_greeting/confirmation.
+3. **PUBLISHED CONTENT-PAGE BODIES** (SEO-system-owned: the home row's title/H1/body when published + every /services/*, /service-area/*, supporting page): the template is a RENDERER — restyle ContentPageView's presentation only; never author/edit/hardcode their content; published-row precedence must survive any change.
+4. **COMPLIANCE TEXT** (byte-locked): Privacy/ToS/SMS-Program bodies + the consent-checkbox skeletons — containers/typography may change, characters may not.
+5. **STYLE-OWNED STRUCTURAL COPY** — the ONLY freely editable text tier: section eyebrows/headings, microcopy, button labels, empty states. Keep it niche- and business-agnostic; nav/page labels stay within each page's `allowed_display_labels` (/website-structure registry); never introduce factual claims (licensed/insured, years, awards, guarantees).
+
+## Structural guardrails
+- **MOVING a section = safe. REMOVING:** check its render-owners first; NEVER remove the hero-embedded lead form, footer compliance links, any form's consent checkbox, the services loop, the maps embed (stays, gated on address), the review CTA surface, or any content-page renderer. **ADDING:** all text binds to tiers 1/2/5 (or a FLAGGED new template_vars key with fallback); all imagery through SiteImage/imgUrl with the existing fallback chains (site_slots → galleryUrls → work_examples → NICHE_DEFAULTS) — never a hardcoded image URL.
+- **OFF-LIMITS entirely:** routes (names/set/loaders/head logic), src/lib wiring modules, form endpoints/payloads/validation/PoW shield/honeypot, .env, package.json overrides, robots/sitemap handlers, the /review/$token redirect, JSON-LD builders, the noindex forcing. If the hero is touched, the lead-form card must still fit the hero viewport at 1366×768 (compact variant, never transform:scale).
+- **Inherited hard rules:** no `*.client.*` filenames; no `@tanstack/react-start/server` imports outside route server handlers; no Turnstile; zero business/niche literals outside demo-client.ts.
+
+## Self-check + report (run after every change-set)
+Type check passes; blank slug renders the full demo site with the changes; ONLY presentational components/styles/assets touched (+ FLAGGED exceptions); demo-purity greps clean; every copy slot still renders somewhere OR is flagged orphaned; forms still no-op with the demo toast; lander changes keep published-home-row precedence. REPORT: each requested change → files edited; orphaned/new slots or template_vars keys (FLAGGED); anything a guardrail blocked.
+
+## After the change lands (human/Claude side, for reference)
+Claude runs the free delta audit (docs/template-claude-audit-runbook.md §Delta) → re-tag/CHANGELOG. Snapshot rule: existing client remixes keep the old design until re-remixed; new remixes inherit immediately.

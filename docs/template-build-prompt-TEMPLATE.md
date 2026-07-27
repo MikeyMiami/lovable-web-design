@@ -160,7 +160,18 @@ Then run the SAME validation as any build (Route A below — the free Claude aud
 
 ## PROMPT 1-V — targeted VISUAL/design changes to an EXISTING blessed template
 
-Use when a working, validated template needs design tweaks — moving/restyling/adding/removing page sections, changing what a section displays — WITHOUT a restyle or rebuild. Run it on the TEMPLATE project (golden-master discipline: template changes reach existing client sites only by re-remix; running it on one client's remix instead is a deliberate per-client divergence). Fill the CHANGE REQUEST block, attach reference images if any, paste everything:
+Use when a working, validated template needs design tweaks — moving/restyling/adding/removing page sections, changing what a section displays — WITHOUT a restyle or rebuild. Run it on the TEMPLATE project (golden-master discipline: template changes reach existing client sites only by re-remix; running it on one client's remix instead is a deliberate per-client divergence).
+
+**EVERYDAY FORM (preferred): import the `template-visual-edits` skill ONCE into the template project — it carries the entire guardrail body below as standing context — then each visual change is just this short prompt:**
+
+```
+Per the imported template-visual-edits skill — follow its ownership map, guardrails and self-check EXACTLY, and FLAG anything a rule blocks. CHANGES:
+- <page/section → what to change>
+- <page/section → what to change>
+<optional: refs attached / design notes>
+```
+
+**FULL INLINE FORM (below): use for HEAVY structural change-sets, or any project that doesn't have the skill imported.** Fill the CHANGE REQUEST block, attach reference images if any, paste everything:
 
 ```
 ═══════════ CHANGE REQUEST — EDIT ONLY THIS BLOCK ═══════════
