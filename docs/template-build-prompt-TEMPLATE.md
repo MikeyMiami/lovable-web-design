@@ -2,7 +2,7 @@
 
 > **What this is:** the canonical Lovable build prompt for spinning up ANY new style template from design reference images. v2 was reconciled line-by-line against the SHIPPED reference template (`professional-landscpaing-template` @ `d9f512d`) and every invariant landed 2026-07-23 → 2026-07-27. **v2.1 restructures the fill experience:** all variables live in ONE `BUILD PARAMETERS` block at the top of the paste body — edit only that block, attach your images, paste the whole thing. Nothing below the line is ever edited; the body resolves every reference from the block, and looks up the style's voice/visual/slug from the imported `website-structure` skill itself.
 >
-> When the build reports done, paste PROMPT 2 (`docs/template-build-check-prompt.md`) into the SAME project as the acceptance gate. A template is not blessed for remixing until PROMPT 2 is all-PASS **and** Claude's external post-publish probe (PART C of that doc) passes.
+> When the build reports done, validate per the **Validation** section at the bottom: the DEFAULT is Route A — GitHub-connect + publish, then Claude runs the full audit for free (`docs/template-claude-audit-runbook.md`); Route B (pasting `docs/template-build-check-prompt.md` into the project) is the credits-costing fallback. A template is not blessed for remixing until the audit is all-PASS.
 >
 > **TWO EQUALLY-VALID ROUTES TO A NEW TEMPLATE — both end in the SAME artifact.** A Lovable remix is a **snapshot fork**: after the copy moment the new project has ZERO ongoing link to its parent (nothing propagates, nothing is shared — proven repeatedly in this platform's history). So whether a template is born from scratch (PROMPT 1) or born as a restyled fork of an existing template (PROMPT 1-R), the result is identical in kind: a fully independent, frozen golden master that client sites remix from at any scale. Choose by design distance and preference:
 > - **PROMPT 1 (scratch) — the ratified primary route:** a brand-new build from the design images, wiring generated per this prompt's contracts, then Claude's free GitHub audit as the acceptance gate. Clean slate, no inherited cruft; costs more credits (the wiring is generated) and leans on the audit to catch generation errors.
@@ -17,7 +17,7 @@
 3. **Paste the project knowledge**: `docs/knowledge/project-template.md` into the project's Knowledge.
 4. **Attach your reference images** to the prompt message (the two kinds you normally have): your **lander / web-page content examples** (= PAGE-LAYOUT refs) and your **layout/branding/font/typography images** (= BRAND-STYLE refs). No real-business logo anywhere.
 5. Fill the `BUILD PARAMETERS` block below → paste the whole PROMPT 1 body.
-6. After build + check pass: GitHub-connect, publish, Claude runs the external probe, then freeze/bless.
+6. When the build reports done: **GitHub-connect + publish** → Claude runs the full free audit (Route A, `docs/template-claude-audit-runbook.md`) → any findings go back to Lovable as ONE fix prompt → you eyeball the hero card fit → freeze/bless.
 
 ---
 
@@ -105,7 +105,7 @@ Content-page renderers (one shared ContentPageView component renders a ContentPa
   - sitemap[.]xml.tsx → dynamic SERVER route: origin from the request; <loc> entries = the 6 statics (/, /services, /locations, /about, /contact, /gallery) + every PUBLISHED content page whose robots isn't noindex, mapped by type per the vocabulary (home → /, category/service → /services/{slug}, geo → /service-area/{slug}, supporting → /{slug}). Discount, thank-you, review and compliance pages stay OUT of the sitemap.
   - Every route's head() derives from getClientCached() loader data (SSR must show the LIVE business in <title>/OG — never the demo), and static routes emit canonical + og:url from the resolved siteUrl with the same forced-noindex rule.
 
-Header/nav + Footer: nav composition fits the style/reference but links only registry pages with allowed labels (Home, About, Services, Gallery, Contact; Reviews optional). Footer on EVERY page: named Privacy Policy / Terms of Service / SMS Program links (FIXED labels), business identity, formatted phone (formatPhoneUS visible, tel: E.164), social_links (render only the present ones), license_number trust line when present. Logo component: clients.logo_url with a text-rendered business_name fallback.
+Header/nav + Footer: nav composition fits the style/reference but links only registry pages with allowed labels (Home, About, Services, Gallery, Contact; Reviews and Locations optional — Locations label ∈ {Service Areas, Locations, Areas We Serve}). Footer on EVERY page: named Privacy Policy / Terms of Service / SMS Program links (FIXED labels), business identity, formatted phone (formatPhoneUS visible, tel: E.164), social_links (render only the present ones), license_number trust line when present. Logo component: clients.logo_url with a text-rendered business_name fallback. Also provide a styled 404/notFound boundary consistent with the shell (used by the type-guarded renderers) — data-driven like everything else.
 
 About page: renders resolveCopy("about.overview") + resolveCopy("about.approach") — NEVER raw about_us — plus the about image and Team. Static-surface image slots [LOCKED]: about image = template_vars.site_slots?.about_image → galleryUrls[1] → galleryUrls[0] → work_examples[1] → NICHE_DEFAULTS; team photos = site_slots?.team (in order) → staff entries' own images → names-only (individual staff = headshot + name + position; group = single photo + label); gallery grid = site_slots?.gallery (in order) → galleryUrls → work_examples → NICHE_DEFAULTS. The LANDER HERO is deliberately NOT in site_slots — it resolves from the home content page's hero image (heroImg?.url → galleryUrls[0] → work_examples[0] → NICHE_DEFAULTS.hero). Gallery page: the grid via SiteImage (widths 320–768, sizes "(max-width: 640px) 50vw, 320px").
 
@@ -130,7 +130,7 @@ Run the full acceptance audit in docs/template-build-check-prompt.md if it has b
 
 ---
 
-## PROMPT 1-R — the RESTYLE build (Mode 2 — DEFAULT for a new style; run on a fresh REMIX of a blessed template)
+## PROMPT 1-R — the RESTYLE build (fork + restyle — the cost-saving ALTERNATIVE; run on a fresh REMIX of a blessed template)
 
 Setup: Remix the blessed template (history=No) → rename `Template — {Style}` → spot-check the project Knowledge/skills carried over (remixes copy them; re-import/re-paste if not) → fill the SAME `BUILD PARAMETERS` block from PROMPT 1 (style, demo niche/name/services, image labels, DESIGN NOTES) → attach your reference images → paste the block followed by this body:
 

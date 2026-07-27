@@ -37,6 +37,7 @@ Pages are **DATA** (`content_pages` store, `/seo-build` §4) rendered by dynamic
 | `services` | `/services` | Services index — links to the **category** pages → **service** pages | Services, Our Services, What We Do |
 | `category` | `/services/$slug` | **Per GBP secondary category** (~3–4); Core 30; target kw = category + city; editorial-links to its service pages (`/seo-build` §2) | *(label = the category name)* |
 | `service` | `/services/$slug` | Per-service detail; **one per GBP service (~25–30 — mirror the GBP, no cap)**; target kw = service + city | *(label = the service name)* |
+| `locations` | `/locations` | Service-areas INDEX — lists every published geo page (links to `/service-area/$slug`) + the service_area strip; graceful empty state pre-SEO. (Row added 2026-07-27 — the page shipped in the reference template + the route-vocabulary statics but was missing from this registry.) | Service Areas, Locations, Areas We Serve |
 | `service-area` | `/service-area/$slug` | **Geo/neighborhood page — GENUINELY LOCAL** (landmark/neighborhood + service + city per `/seo-content`); diagnostic-driven; **NOT a re-targeted lander** | *(label = the neighborhood/landmark name)* |
 | `supporting` | `/$slug` | FAQ/topical deep page (`/seo-content`); editorial-linked from a Core-30 page | *(label = the topic)* |
 | `gallery` | `/gallery` | Photos of previous work | Gallery, Projects, Our Work |
