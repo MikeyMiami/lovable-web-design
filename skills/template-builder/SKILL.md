@@ -37,7 +37,7 @@ Compliance + Turnstile bake into the STYLE shell (this project), so every style 
 - **Named Privacy Policy + Terms of Service + SMS Program** pages (rendered from the canonical doc via tokens).
 - **Footer** Privacy/Terms/SMS-Program links on EVERY page; all links working, no typos.
 - **Working `/review` page** = the always-present "Review Us" page; loads + presents a working review action — a **CTA to `client.review_link`** (Google). **No comment box / no `/api/public/intake` POST** (intake hardcodes `source=web_form` and would create a fake lead enrolled in the lead-form drip). No new backend route. (Matches `/a2p-site-compliance` §C + the build-prompt master.)
-- **Cloudflare Turnstile widget** on all 3 lead forms with the agency PUBLIC site key; submit `turnstile_token` in the POST body. Backend is **fail-closed** → a form WITHOUT the widget = **zero leads.** (Build/test with the Cloudflare test keys; real keys set at launch.)
+- **Invisible native PoW bot shield** on all 3 forms (lead, discount, chat-optin) — challenge from `{platform host}/api/public/challenge` (POST with `{ slug }` body), solved in a Web Worker, submitted as `pow_token` (`challenge.sig.nonce`) + the hidden `website` honeypot input (off-screen positioning, NEVER `display:none`). Zero visible UI; fail-soft on the client. Backend is **fail-closed** → a form WITHOUT the shield = **zero leads.** (Turnstile is RETIRED 2026-07-22 — no widget, no keys, no `turnstile` imports anywhere; the backend still verifies legacy `turnstile_token` server-side only.)
 
 These render through `useClient()` from `template_vars` like all other content — data-only, **zero frozen-backend change** (`get_client_public` already projects `template_vars`).
 
