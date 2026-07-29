@@ -222,3 +222,22 @@ GROUP BY 1,2 HAVING count(*) > 1 ORDER BY rows DESC LIMIT 25;
 ## 8. Monitoring runbook (until the health tile grows)
 
 Weekly: A-2 (blocked re-enrollments), A-3 (stall loops), A-8 (cron firing + net responses 200). Monthly: A-7 (growth), A-9 (dupes). After any template copy edit: A-4 (token alignment). After any backend publish: `?ping=1` version gate (POST-only).
+
+---
+
+## 9. ADDENDUM — second-wave outcomes after operator review (2026-07-29, same day)
+
+The operator challenged P-2 and P-3. Re-audited against Telnyx's own documentation (help-center 1270091 + developers advanced-opt-in-out). Results:
+
+### P-2 — WITHDRAWN from the fire list (operator was right)
+The original F-5 severity rested on our docs' claim that Telnyx auto-opt-out was DISABLED (decision D10). **Telnyx docs prove D10 was never achievable:** auto opt-out is default account behavior and **cannot be fully disabled** (only keywords/auto-responses customize). So the provider layer ALWAYS enforces STOP: the sender is added to Telnyx's opt-out list, Telnyx auto-confirms ("You have successfully been unsubscribed…"), and any later send to that phone fails **40300 "Blocked due to STOP message"** — which the runner's D13 `OPTOUT_HINT_RE` (`/blocked.*stop/i`) matches → contact synced + enrollment exited. The duplicate-contact STOP hole therefore **cannot deliver a message after STOP**; its residue is one blocked attempt + data cleanup, i.e. hygiene, not compliance. F-5 severity: HIGH → **LOW**. The `.limit(1)` dedupe-lookup hardening folds into the F-1/F-3 post-launch design pass.
+**Root-cause of the false HIGH:** trusting our own doc's provider-behavior claim (D10) without provider-doc verification — the same doc-vs-reality failure mode this audit exists to catch, one layer up.
+
+### NEW FINDING (from the same research) — F-11 · MED (architecture): Telnyx opt-out blocks are PROFILE-WIDE
+"If a user opts out from one number on your profile, they're opted out from all numbers on that profile." On the ONE shared platform profile: **STOP to any client's number blocks that phone for EVERY client** — a shared customer of two platform clients who stops one silently stops both (second client's sends → 40300 → D13 marks their contact copy opted-out). Compliance-conservative (over-blocking, never under), but silent cross-client coupling. Rare until client density overlaps in one metro. **Option when it matters:** per-client messaging profiles at onboarding (one API call; webhook URL identical; voice/TeXML + runtime routing unaffected — nothing reads the profile id at send/inbound time). Operator decision, parked. Skills updated (/telnyx-provider §3 Opt-out ownership; D10/J5/Q7 marked superseded/resolved).
+
+### P-3 — RE-TIMED, not fired (operator context changed the call)
+The FALLBACK_CLIENT UUID is the **agency's own client row** (operator-confirmed) — so debug events land in the agency's own tenant, not a customer's; the cross-tenant-PII branch of F-4 collapses. Capture-first is also a DOCUMENTED decision (D9: "stripped only at steady-state"), and **SMS Day-0 still needs it** (Q8/Q9 resolve by capture). Verdict: **keep capture-first through SMS Day-0; strip the pre-verification raw-body debug inserts at steady-state** (the planned retirement), leaving post-verification branch events. Residual until then: unauthenticated POSTs can write ~1 events row each (spam/growth vector, agency-visible only) — accepted short-term. Run A-1 once anyway to confirm the row's id/status matches expectations.
+
+### P-1 — unchanged, operator-approved, ready to fire (§6).
+### Day-0 canary spec corrected: the STOP canary now EXPECTS Telnyx's confirmation + a 40300 on the follow-up send + a HELP auto-reply check (/telnyx-provider §8 step 7).
