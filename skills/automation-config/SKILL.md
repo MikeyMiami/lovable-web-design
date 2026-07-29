@@ -27,6 +27,10 @@ Opt-out keyword **`pass`** (whole-word; + standard STOP/etc.). Exit on click at 
 > Hi {first_name}! This is {company_owner_first_name}. If you loved working with {company_name}, would you mind leaving us a review? We really appreciate it! Here's the link:
 >
 > {review_link}
+>
+> Reply STOP to opt-out.
+
+*(**Opt-out line added 2026-07-29.** Every drip's FIRST customer message ends with a blank line then `Reply STOP to opt-out.` — Drips 1–6. Only the first message of a drip carries it, never the follow-ups, and never an internal/owner notification. Because Drip 6 shares these exact templates, this one line covers reactivation too.)*
 
 **Wait 4 days → check. Clicked → `Review Completed`, exit. Else SMS 2:**
 > Hi {first_name}! I see you haven't left a review yet. If you loved {company_name}, could you leave one? It's a HUGE help for us!
@@ -46,13 +50,13 @@ Opt-out keyword **`pass`** (whole-word; + standard STOP/etc.). Exit on click at 
 **Wait 48 hours → check. Clicked → `Review Completed`, exit. Else internal notification (terminal, not a customer text):**
 > Hey {company_owner_first_name}!
 >
-> We've attempted to get {first_name} to leave you a review 4 times over the last 4 weeks. Try to get in touch with them — they'll have the link in their text messages.
+> We've attempted to get {first_name} to leave you a review 4 times over the last few weeks. Try to get in touch with them — they'll have the link in their text messages.
 >
 > Name: {full_name}
 > Phone: {phone}
 >
 > Here's your direct review link if you need it: {review_request_link}
-On completion (clicked OR ran all 4 without opt-out) → enroll into One-Year drip. Opted-out → not enrolled.
+On completion (clicked OR ran all 4 without opt-out) → enroll into One-Year drip. Opted-out → not enrolled. **⚠ THIS WAS DOCUMENTED-BUT-NOT-BUILT until 2026-07-29 (app `a82a6b1`).** Until then the runner had ZERO `enroll()` calls — it only marked the enrollment `completed` — so the ONLY One-Year enrollments came from the review FUNNEL (`r/$token.ts` / `r/rate.ts`), i.e. clickers. A contact who ignored all four texts was enrolled into nothing. **As-built now:** `handoffToOneYear()` in `runner.server.ts` fires from the terminal-completion branch, gated on `sequence_key === "review_request"` only, after the `completed` update and its `cron_decision` event. It re-reads the contact scoped by `client_id` and skips with a logged reason on `contact_not_found` / `contact_opted_out` / `contact_deleted`, then calls the base `enroll()` (which independently re-checks opt-out and dedupes on the `UNIQUE (client_id, contact_id, sequence_key)` constraint, so a clicker who also completed can't double-enroll). Every outcome writes an `events` row `review_drip_completed_handoff` with `{enrollment_id, source_sequence_key, target_sequence_key, enrolled, reason}`. Whole body is try/caught — a handoff failure can never fail the tick. **Note it calls the base `enroll()`, NOT `enrollReviewRequest()`**, so the daily-enrollment cap (which lives only in the latter) does NOT silently drop handoffs when a large cohort completes together. **Timing:** review runs day 0/4/11/18, terminal notif day 20, and `one_year_followup.start_delay_minutes = 43200` (30 days) → a non-engaging contact's first One-Year message lands ~**day 50**.
 
 ---
 
@@ -65,6 +69,8 @@ Enrollment: automatic handoff from review-drip completion (no form). Exit on REP
 > It's only for the first three people, so if you're interested (or know someone who might be), just tap this link: {company_website_link}/get-your-discount
 >
 > -{company_owner_first_name} from {company_name}
+>
+> Reply STOP to opt-out.
 
 **Interest notification (on ANY reply during the drip, then remove):**
 > Hey {company_owner_first_name},
@@ -128,12 +134,18 @@ Branches on Business Hours (separate setting). `{full_name}` internal, `{first_n
 >
 > We've let them know you'll be in touch soon.
 **SMS #1 to lead — DURING business hours only (single text, correctly spelled):**
-> Hey {first_name}! Just got your form! I'll be in touch shortly!
+> Hey {first_name}, just got your form! I'll be in touch shortly.
 > -{company_owner_first_name} with {company_name}
+>
+> Reply STOP to opt-out.
 
 **After-hours SMS to lead — OUTSIDE business hours (replaces #1):**
 > Hey {first_name}, just got your form. We'll be in touch as soon as possible!
 > -{company_owner_first_name} with {company_name}
+>
+> Reply STOP to opt-out.
+
+*(Both branches carry the opt-out line because only ONE of them ever sends — whichever fires is that lead's first message. Business-hours copy reworded 2026-07-29: was "Hey {first_name}! Just got your form! I'll be in touch shortly!" — three exclamation marks in two lines.)*
 
 **After-hours owner notification — outside business hours (after the after-hours SMS):**
 > Hey {company_owner_first_name}!
@@ -143,7 +155,7 @@ Branches on Business Hours (separate setting). `{full_name}` internal, `{first_n
 > Phone: {phone}
 >
 > Reach out when you're back.
-**Day-10 owner reminder — BOTH branches; suppress if lead's phone is now in the review automation; Auto-Enroll button is rendered from the notification `action` jsonb (NOT literal text in the body):**
+**Day-10 owner reminder — BOTH branches; suppress if lead's phone is now in the review automation; Auto-Enroll AND Open-conversation buttons are rendered from the notification `action` jsonb (`{auto_enroll: true, open_conversation: true}` — NEVER literal text in the body):**
 > Hey {company_owner_first_name},
 >
 > It's been about 10 days since {full_name} filled out a request on your website. If you've worked with them, please add their info into your Review Request form, or auto-enroll them below.
@@ -166,8 +178,12 @@ On submit of the discount form. If submitter is in the One-Year drip, the submit
 >
 > We've told them you'll be reaching out soon.
 **Wait 2 minutes → SMS to lead:**
-> Hey {first_name}, just got your discounted request! I'll be in touch shortly and get you that discount!
+> Hey {first_name}, just got your discount request! I'll be in touch shortly to get you that discount.
 > -{company_owner_first_name} with {company_name}
+>
+> Reply STOP to opt-out.
+
+*(Reworded 2026-07-29: was "your **discounted** request … in touch shortly **and get** you that discount!" — it's a request for a discount, and "I'll be in touch and get you" didn't parse.)*
 
 Then ends.
 
@@ -183,11 +199,13 @@ Fires 24/7 (live call; not gated by send window or Business Hours). Trigger: pro
 >
 > {quote_form_link}
 > -{company_owner_first_name} from {company_name}
+>
+> Reply STOP to opt-out.
 
-**SMS #2 (after 2-min wait, only if no reply):**
+**SMS #2 (after 2-min wait, only if no reply) — DELIBERATELY LEFT AS-IS (operator decision 2026-07-29): the `!...` and "for ya" are intentional; they read human rather than templated. Do not "correct" them.**
 > Look forward to hearing from you!... In the meantime are there any quick questions I can answer here for ya?
 
-**Internal notification (fires with SMS #1). The "Open conversation" button is rendered from the notification `action` jsonb (deep-links to the caller's conversation) — NOT literal text in the body, same pattern as the Drip-3 day-10 reminder Auto-Enroll button:**
+**Internal notification (fires with SMS #1). The "Open conversation" button is rendered from the notification `action` jsonb — NEVER literal text in the body. [SINCE 2026-07-29 ALL 12 notification types carry `{open_conversation: true}`](../mobile-app/SKILL.md), not just this one and the day-10 reminder; the button only draws when `related_contact_id` is set, and taps on a contact with no thread yet now toast rather than silently doing nothing:**
 > You missed a call from {caller_phone} at {call_time}, so we sent them a text.
 
 `{quote_form_link}` is fallback-only (no Settings editor) — blank auto-derives from `company_website_link` (the live homepage) at render. Dynamic keys: `{caller_phone}`, `{call_time}` (client tz). A brand-new caller has no name — notification keys off phone + time. If the caller submits the quote form, they also enter the Lead-Form drip (intentional, independent).
@@ -195,7 +213,7 @@ Fires 24/7 (live call; not gated by send window or Business Hours). Trigger: pro
 ---
 
 ## Drip 6 — Customer Review Reactivation
-Bulk-upload past customers → drip-fed slowly to win reviews organically (don't flag Google). Source `reactivation`. Per-drip safety caps: max 50 new enrollments/day, max 2 dripped every 20 min. Cadence: SMS 1 immediately → +24h → +24h → +24h, all within the send window. Dedup guard: skip contacts already through reactivation or already `Review Completed`. Click → exit + funnel + reactivation click notification. One-Year handoff only on `Review Completed`.
+Bulk-upload past customers → drip-fed slowly to win reviews organically (don't flag Google). Source `reactivation`. Per-drip safety caps: max 50 new enrollments/day, max 2 dripped every 20 min. Cadence: **SMS 1 immediately → +7 days → +7 days → +7 days** (day 0 / 7 / 14 / 21), all within the send window. **CHANGED 2026-07-29 from +24h gaps** (`sequences.steps_json[].offsetMinutes` 1440 → **10080**; the 4th step deliberately has NO `offsetMinutes` — that absence is what marks it terminal). A 4-text burst over 72 hours to bulk-uploaded past customers was the exact "looks like a blast" pattern this drip exists to avoid; 21 days is far better aligned with "drip-fed slowly, don't flag Google". Consequence: at the 50/day enrolment cap, steady-state concurrent enrolments go from ~150 to ~1,000 — the queue is deeper but nothing sends faster (the 2-per-20-min cap is unchanged). Dedup guard: skip contacts already through reactivation or already `Review Completed`. Click → exit + funnel + reactivation click notification. One-Year handoff only on `Review Completed`.
 
 **Uses the SAME 4 message texts as Drip 1 (Review Request §4)** — no separate copy. (No "pass" P.S. line; opt-out still functions via webhook.)
 
@@ -245,8 +263,8 @@ Bulk-upload past customers → drip-fed slowly to win reviews organically (don't
 >
 > We've told them you'll be reaching out soon. Open your app to see the details.
 
-**Subject: New Website Chat Lead** (chat-widget variant of New Website Lead — §7e; **renamed from "New Website AI Chat Lead" 2026-07-16 when the widget went CAPTURE-FIRST** (no AI — see /chat-widget); keys keep the `ai_chat_lead*` identifiers; same business-hours/after-hours branching as the website lead form, since it feeds the same lead-form drip). LIVE global template `ai_chat_lead_internal_notify` currently reads:
-> New Website Chat Lead
+**Subject: New Website Chat Widget Lead** (chat-widget variant of New Website Lead — §7e; **renamed from "New Website AI Chat Lead" 2026-07-16 when the widget went CAPTURE-FIRST** (no AI — see /chat-widget); keys keep the `ai_chat_lead*` identifiers; same business-hours/after-hours branching as the website lead form, since it feeds the same lead-form drip). LIVE global template `ai_chat_lead_internal_notify` currently reads:
+> New Website Chat Widget Lead
 >
 > Name: {full_name}
 > Phone: {phone}
@@ -256,6 +274,8 @@ Bulk-upload past customers → drip-fed slowly to win reviews organically (don't
 > We've already texted them to say you'll be in touch. Open the conversation to follow up.
 
 *(Closing line corrected 2026-07-20 to the capture-first truth — the DRIP texts them; nothing "replies in the chat." Verified live in the global template row.)*
+
+*(**2026-07-29 — the EMAIL twin had been MISSED by that 2026-07-20 correction.** `email_new_website_ai_chat_lead` was still shipping "Subject: New Website **AI Chat** Lead / a new lead from your website **AI chat** / **We've already replied to them in the chat**" — describing an AI that no longer exists and a reply that never happens. Both templates now read **"New Website Chat Widget Lead"** and the email closes with "We've already texted them to say you'll be in touch." **The `key` stays `email_new_website_ai_chat_lead`** — `TYPE_BY_TEMPLATE_KEY` maps the `ai_chat_lead*` identifiers to the NotificationType, so renaming the key breaks the lookup. Lesson: when correcting notification copy, ALWAYS check for the paired `email_*` template — in-app and email are separate rows.)*
 
 **Subject: We Saved You From a Negative Review** (fires when a contact submits `/api/public/r/feedback` below threshold):
 > Hey {company_owner_first_name},

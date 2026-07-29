@@ -20,6 +20,19 @@ Formatting standard (applies to every notification + email here): stack details 
 ## Tab 1 — Conversations
 SMS threads across all of this client's contacts (CRM). iMessage-style, mobile-first, newest first, status badges + relative time. Reply box sends an outbound SMS in the thread. (`app.inbox.tsx`.) **iPhone-style upgrade 2026-07-14:** the conversation list shows a **last-message text preview** per row (embedded latest message; outbound prefixed "You:"), an **unread dot + bold name** on conversations whose latest message is inbound and newer than last-open, and a **count badge on the Inbox/MessageSquare bottom-nav tab** — all via per-device localStorage `msg_last_read` (map conversationId→ISO; NO DB read/unread column), cleared on opening the thread. Same localStorage/badge pattern as the Alerts unread badge (`use-unread`).
 
+**ARCHIVE [BUILT 2026-07-28 — parked-scope features #3 + #4].** A client can archive a thread so it leaves their inbox. Schema: one nullable `conversations.archived_at timestamptz` + partial index `idx_conversations_active` on `(client_id, last_message_at desc) where archived_at is null` — **NOT** a repurposed `status`, and never a hard delete (a hard delete cascades and destroys SMS history). Write path = role-verified server fn `setConversationArchived({conversationId, archived})` in `src/lib/messages/archive.functions.ts`, gated on `isAdmin || isMemberOf` and scoped by BOTH `id` and `client_id`. UI: both `app.inbox.tsx` query branches filter on `archived_at`, an Inbox/Archived header toggle flips them (`showArchived` is IN the queryKey so the views refetch), and the action is **swipe-to-reveal on touch, hover/focus overlay on desktop** — never a plain row tap, which opens the thread. **`SwipeRow` contract [LOCKED — three bugs were shipped here, don't re-introduce them]:** (a) card is `relative overflow-hidden`; below `md` an action pane sits BEHIND a translated row layer, revealed by dragging left, clamped to `[-80, 0]`, snapping open past −40, `transition: none` while dragging; (b) **the inline `transform: translateX(${dx}px)` must be the ONLY transform on that layer** — a Tailwind `group-hover:-translate-x-*` class on the same element is silently overridden by the inline style, which is how the desktop reveal shipped dead; (c) at `md`+ the swipe pane is `md:hidden` and a SEPARATE overlay button (`hidden md:flex`, `z-10`, revealed by `group-hover`/`group-focus-within`/`focus-visible`) sits ABOVE the row, with `md:pr-24` on the tap button so it never covers the timestamp; (d) a horizontal swipe is distinguished from a vertical scroll by locking the axis after 6px of movement — without that the rows fight the list scroll; (e) **never put `aria-hidden` on the pane** — it contains a focusable button, and focusable content inside an aria-hidden subtree is an ARIA violation. **General trap this exposed:** every flex ancestor between the card and truncating text needs `min-w-0`, or `min-width:auto` stops the item shrinking and the text blows out past the frame.
+
+**LEAD-TYPE AVATAR [BUILT 2026-07-28].** The conversation-list circle shows the LEAD TYPE, not a name initial. `resolveLeadKind(contacts)` — **first match wins, order is load-bearing** because review/discount are ENGAGEMENT states that happen *after* acquisition and must outrank the acquisition source (a lead-form contact who later replies to the review drip shows the Star, not the message icon):
+1. **Review/reactivation → Star (amber)** — `contacts.status` ∈ `review_requested | review_clicked | review_completed | negative_review | reactivation`, or `source = 'review_enroll'`
+2. **Discount → Percent (emerald)** — any `enrollments.sequence_key = 'discount_claim'`
+3. **Missed call → PhoneMissed (rose)** — `source = 'missed_call'`
+4. **Form or chat → MessageSquare (indigo)** — `source ∈ web_form | chat_widget` (lead form, contact page AND webchat are ONE bucket)
+5. **Fallback → User (slate)** — manual/import/mobile_enroll/missing. Never fall back to the initial letter; a lone letter among icon rows reads as a bug.
+
+**⚠ WHY DISCOUNT NEEDS THE ENROLLMENT JOIN — a real platform fact:** the discount form writes `source: "web_form"` (`discount.ts:143`), **byte-identical to the lead form** (`intake.ts:159`), so `contacts.source` CANNOT distinguish a discount claimer from an ordinary lead. `enrollments.sequence_key` is the only honest signal, embedded nested under contacts in the same conversations select (`contacts(..., source, status, enrollments(sequence_key))`) — zero extra queries per row. This affects any future "where did this lead come from" work, not just the icon. A cleaner long-term fix is an additive `ALTER TYPE contact_source ADD VALUE 'discount_claim'` + writing it in `discount.ts`, but that only labels FUTURE claimers, so the enrollment lookup is still needed for history.
+
+**Two gotchas in this row:** the row has TWO `status` fields in scope — `conv.status` (conversation state, drives the pill) and `contacts.status` (drives the Star). Don't cross them. And the icon carries meaning, so it needs `title` + an `sr-only` label with the icon itself `aria-hidden` — color alone is not an accessible signal. `useUnreadMessageCount` also excludes archived, or the badge would count threads the client cannot reach. **Two invariants [LOCKED]:** (1) **`admin.conversations.tsx` stays untouched** — archiving is a client-side inbox tidy and the AGENCY keeps full visibility of every thread; (2) **a new inbound reply auto-unarchives**, enforced by the DB trigger `trg_unarchive_on_inbound` on `messages` (AFTER INSERT, `direction='inbound'`, SECURITY DEFINER, `search_path=public`). It MUST be a trigger, not app code — inbound arrives via Supabase Edge Functions and would bypass an app-side hook, silently burying a real lead in a hidden thread. Archiving is DISPLAY STATE ONLY: no send path, enrollment, or automation reads `archived_at`.
+
 ## Tab 2 — Review Request
 The client's enrollment form for the Review Request SMS drip.
 - Fields: First Name, Last Name, Phone. (Email field REMOVED 2026-07-14 — SMS/phone-only.)
@@ -28,7 +41,7 @@ The client's enrollment form for the Review Request SMS drip.
 - **Re-enrollment guard:** if the contact (client_id + phone) is already enrolled in the review automation, block and show "contact already enrolled."
 
 ## Tab 3 — Notifications
-A simple feed of notification records for this client. **Unread badge added 2026-07-14** (per-device localStorage `alerts_last_seen` marker — the Bell tab shows an unread count pill, Home shows an "N new alerts" banner, and opening the Alerts tab marks seen; no DB read/unread column). Each notification is just a message filled with the relevant data. Records are written by automations as they fire (timings follow the drip specs). All are informational EXCEPT two that carry actions: the day-10 lead reminder (Auto-Enroll button) and the missed-call notification (Open-conversation deeplink).
+A simple feed of notification records for this client. **Unread badge added 2026-07-14** (per-device localStorage `alerts_last_seen` marker — the Bell tab shows an unread count pill, Home shows an "N new alerts" banner, and opening the Alerts tab marks seen; no DB read/unread column). Each notification is just a message filled with the relevant data. Records are written by automations as they fire (timings follow the drip specs). **ALL 12 notification types now carry an Open-conversation button [CHANGED 2026-07-29, app `6f87c3f`]** — previously only two were actionable. `ACTION_BY_TEMPLATE_KEY` (`src/lib/notifications/write.server.ts` ~84) maps every template key to `{open_conversation: true}`, and the **day-10 lead reminder carries BOTH** `{auto_enroll: true, open_conversation: true}` (Auto-Enroll stays its primary action). The renderer only draws a button when `related_contact_id` is set, so the flag degrades silently on contactless notifications. Per-call `args.action` still overrides the map. **`OpenConversationButton` now checks first:** it queries `conversations` by `contact_id` before navigating and toasts *"No conversation yet for this contact"* if there is none — previously it navigated and silently did nothing. That case is real: `discount_claim` fires on form submit while its SMS (and therefore the thread) is created ~2 minutes later.
 
 - **Click-to-call:** render every phone number as a `tel:` link so the owner can tap to call directly.
 - **Day-10 lead reminder — actionable:** includes an **Auto-Enroll button** that enrolls the contact into the Review Request drip directly (no manual form entry). It runs the same re-enrollment guard — if already enrolled, it shows "contact already enrolled" instead of enrolling. Suppress the whole reminder if the lead's phone is already in the review automation.
@@ -99,7 +112,7 @@ Notification copy (sources: review drip §4, one-year §5, lead-form §7, discou
 > (Do NOT reply to this message; it's not the client!)
 
 **Website Chat widget — new lead (§7e; CAPTURE-FIRST chat widget → same lead-form drip; only this label differs. Renamed from "AI chat" 2026-07-16 — the widget is a lead form in a chat skin, no AI):**
-> New Website Chat Lead
+> New Website Chat Widget Lead
 >
 > Name: {full_name}
 > Phone: {phone}
@@ -109,19 +122,15 @@ Notification copy (sources: review drip §4, one-year §5, lead-form §7, discou
 >
 > (Do NOT reply to this message; it's not the client!)
 
-**Lead-form — day-10 reminder (BOTH branches; suppress if already in review automation; has Auto-Enroll button):**
+**Lead-form — day-10 reminder (BOTH branches; suppress if already in review automation; carries Auto-Enroll AND Open-conversation):**
 > Hey {company_owner_first_name},
 >
-> It's been about 10 days since {full_name} filled out a request on your website. If you've worked with them, please remember to add their info to your marketing form. This is important!
+> It's been about 10 days since {full_name} filled out a request on your website. If you've worked with them, please add their info into your Review Request form, or auto-enroll them below.
 >
 > Name: {full_name}
 > Phone: {phone}
->
-> If you haven't added them yet, add their info into the Review Request form — or auto-enroll them below.
->
-> [Auto-Enroll button]
->
-> (Do NOT reply to this message; it's not the client!)
+
+*(**Corrected 2026-07-29 against the live `lead_form_day10_owner_reminder` row.** The previous version of this block showed three things that are NOT in the live template: a "please remember to add their info to your marketing form. This is important!" paragraph, a literal `[Auto-Enroll button]` placeholder, and the "(Do NOT reply to this message; it's not the client!)" footer. Buttons come from the `action` jsonb — `{auto_enroll: true, open_conversation: true}` — never from body text.)*
 
 **Discount form — new discount lead:**
 > Hey {company_owner_first_name},
@@ -136,10 +145,10 @@ Notification copy (sources: review drip §4, one-year §5, lead-form §7, discou
 >
 > (Do NOT reply to this message; it's not the client!)
 
-**Missed-call textback — fires with SMS #1 (actionable: Open-conversation deeplink):**
+**Missed-call textback — fires with SMS #1 (Open-conversation button):**
 > You missed a call from {caller_phone} at {call_time}, so we sent them a text.
->
-> View the conversation here: [Open conversation button]
+
+*(**The body is exactly that one line.** The `View the conversation here: [Open conversation button]` text shown in older drafts of this doc was never meant to be literal — the button is rendered by the app from the `action` jsonb, and the LIVE `missed_call_internal_notify` template correctly contains no bracketed placeholder. Verified against the DB 2026-07-29. Never put bracketed button text in a template body.)*
 
 The Open-conversation button deep-links to that contact's thread in the Conversations tab. {caller_phone}/{call_time} are dynamic (client tz); a brand-new caller has no name yet.
 
@@ -181,7 +190,7 @@ Client-scoped (RLS) stat displays, computed in the client's timezone. **REDESIGN
 - **Payment-gate intercept** (in the shell): reads `access_suspended` from the RLS-scoped `clients` row; when `true`, renders ONLY a full-screen message ("There was an issue with your payment method. Please correct to regain access to your mobile app.") — bottom nav + ☰ hidden — instead of the app. Verified **TOTAL** (toggling `clients.access_suspended` flips access; agency/admin surfaces never gated). Fixed string for v1.
 
 ## Account · Request an Edit · Support [BUILT — B-design Slice 2b, 2026-06-20]
-- **Account (☰) — SIMPLIFIED 2026-07-14:** `app.account.tsx` now shows ONLY (1) the **business name** with a **subscription-tier pill** in the top-right (Starter/Growth/Pro, mapped from `clients.tier` `"297"`/`"397"`/`"749"` cheapest→priciest via `TIER_LABEL` in `src/lib/entitlements.ts`; null/empty = no pill), (2) an editable **"Notifications"** section (alert email input + on/off Switch, saved via `updateOwnerNotificationSettings` → `clients.notification_email` + `email_notifications_enabled`), and (3) the **"Request a change"** deep-link to Request-an-Edit. ALL other identity/branding/links fields were REMOVED from this page (still viewable in admin-view). `notification_email` + `email_notifications_enabled` are the only client-self-editable fields. *(Cosmetic: empty `hours` renders as `{}` — fix to em-dash; logged, non-blocking.)*
+- **Account (☰) — SIMPLIFIED 2026-07-14:** `app.account.tsx` now shows ONLY (1) the **business name** — **the subscription-tier pill was REMOVED 2026-07-29 when the product collapsed to a SINGLE tier**; clients see no plan name, no badge, no upsell anywhere, and `entitlements.ts`/`TIER_LABEL` no longer exist — (2) an editable **"Notifications"** section (alert email input + on/off Switch, saved via `updateOwnerNotificationSettings` → `clients.notification_email` + `email_notifications_enabled`), and (3) the **"Request a change"** deep-link to Request-an-Edit. ALL other identity/branding/links fields were REMOVED from this page (still viewable in admin-view). `notification_email` + `email_notifications_enabled` are the only client-self-editable fields. *(Cosmetic: empty `hours` renders as `{}` — fix to em-dash; logged, non-blocking.)*
 - **Request an Edit (Feature A) + Support (Feature B):** a shared **`TicketSurface`** component (exported from `app.support.tsx`, consumed by `app.edit.tsx` with `kind='edit_request'`): ticket list (status badge, 15s poll) + composer + bubble thread (10s poll, `sender_side` alignment) + resolution banner + a `resolved`/`closed` history filter. Reads via the RLS-scoped browser `supabase`; **writes via the Slice-1 service-role fns** (`openTicket` / `postClientMessage` / `recordTicketAttachment`). Attachments: client uploads to `client-assets` at `<client_id>/tickets/<ticket_id>/<uuid>-<file>` via **`src/lib/tickets/ticket-upload.ts`** (NOT `*.client.*` — Lovable's SSR build strips `*.client.*` files from the server bundle), then registers via `recordTicketAttachment`; downloads via **signed URL** (the bucket is private). **Storage caps [set 2026-06-20]:** bucket `file_size_limit = 25 MB`; **MIME enforced at the app layer** (the helper + `recordTicketAttachment`), NOT a bucket-wide MIME list (which would break existing logo uploads).
 - **`open_ticket` notification action:** the Notifications/Alerts feed renders an "Open" deep-link for `action.open_ticket` (→ the Edit/Support thread by `kind`), alongside the existing `auto_enroll` / `open_conversation` actions. Written by `notify.server.ts` on agency reply / status change (in-app notification + owner-email stub).
 - **Agency side** (admin reply / approve / deny via `postAgencyReply` / `setTicketStatus`) = the per-client **admin-view** surfaces (see `admin-view`; B-design Prompt 3). The client surfaces here consume what the agency writes.
@@ -225,7 +234,7 @@ Client-scoped (RLS) stat displays, computed in the client's timezone. **REDESIGN
 >
 > We've told them you'll be reaching out soon. Open your app to see the details.
 
-**Subject: New Website Chat Lead** (§7e capture-first chat-widget variant; same business-hours/after-hours branching as the website lead; renamed from "AI Chat" 2026-07-16):
+**Subject: New Website Chat Widget Lead** (§7e capture-first chat-widget variant; same business-hours/after-hours branching as the website lead; renamed from "AI Chat" 2026-07-16):
 > Hey {company_owner_first_name},
 >
 > You've got a new lead from your website chat!
