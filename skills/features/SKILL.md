@@ -92,7 +92,7 @@ The inbound-SMS webhook is **LIVE on the Supabase edge functions** (the old `/ap
 ---
 
 ## Cross-feature build notes
-- New SMS sequences MUST include an opt-out exit path; STOP/HELP/START + `pass` is global at the inbound webhook.
+- New SMS sequences MUST include an opt-out exit path; STOP(+synonyms: STOPALL/UNSUBSCRIBE/CANCEL/QUIT/END)/START + sole-word `pass` is global at the inbound webhook. (HELP is NOT app-handled — see /launch-check; auto-response belongs to the Telnyx profile layer.)
 - Marketing sends honor SMS Send Window + daily send cap + batch pacing in the cron runner; blocked sends reschedule without advancing. Lead-form/missed-call sends are transactional (Business-Hours branch / immediate), not deferred by the marketing window.
 - Outbound senders write `events` in live and stub mode, so all click/cap/dedupe logic reads `events`, never a provider round-trip.
 - Notifications subsystem (table + automations writing to it + mobile-app UI reading it, incl. the interactive Auto-Enroll button) is net-new and required by multiple features — build it as part of the mobile-app layer.
