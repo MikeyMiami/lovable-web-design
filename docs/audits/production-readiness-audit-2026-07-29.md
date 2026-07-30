@@ -259,3 +259,15 @@ The FALLBACK_CLIENT UUID is the **agency's own client row** (operator-confirmed)
 **Consequences accepted (deliberately NOT fixed):** the admin health tile (`health.functions.ts:102`) reads the newest `runner_ticks` row as `lastTick`, so it shows a stale timestamp on any quiet day. A prompt to make the runner write idle ticks was drafted and **REJECTED** at second-wave review: it edits the most critical file in the system for observability convenience, and would add ~263k idle rows/yr. Correct fix if ever wanted: derive cron liveness in the health tile from `cron.job_run_details` (read-only admin surface, never the send path) — post-launch, ~5%. Also worth folding into any future runner-touching prompt: correct the false header comment.
 
 **Also confirmed 2026-07-30:** the A-6 retention purges are live and working — `purge-rate-limit-hits` first run `DELETE 172`; `purge-send-attempts` `DELETE 0` (correct, nothing 180d old). And `?ping=1` returned `runner_version v20260729-1`, proving the 429-retryable fix is deployed.
+
+### §11b — Second-audit correction to the §11 reading rule (2026-07-30)
+
+The rule first written in §11 ("`backlogDue > 0` + stale `lastTick` = genuinely broken") was **incomplete and would have produced the same class of false alarm one layer up.** Found on a deliberate re-audit.
+
+**Why:** `backlogDue` = `headCount("enrollments", status='active' AND next_run_at <= now)` (`health.functions.ts:83`) — **no client join.** But `claim_due_enrollments` JOINs `clients` on `status='active' AND deleted_at IS NULL` (migration `20260615211906`, comment: "skip enrollments belonging to archived/deleted clients"), and `archive_client` only runs `UPDATE public.clients` — it never deletes enrollments (CASCADE fires on DELETE, not UPDATE). Note the asymmetry is visible in the same function: `activeClients` filters client status, `backlogDue` does not.
+
+**Consequence:** archive a client holding active enrollments and `backlogDue` stays elevated **forever** while the runner is perfectly healthy and correctly skipping them.
+
+**Corrected rule (now in `/launch-check` + `software-constraints-at-scale.md` §6):** `backlogDue > 0` + stale tick = **investigate**, and disambiguate with a client-joined query — only due enrollments belonging to an ACTIVE, non-soft-deleted client mean the runner is actually broken.
+
+**Meta-lesson (the reason this keeps recurring):** every metric here is a *proxy*, and each proxy has a scope that differs subtly from the thing it is proxying. `runner_ticks` proxies "runner ran" but scopes to "runner had work." `backlogDue` proxies "work the runner owes" but scopes to "work rows exist, regardless of whether the runner is allowed to touch them." **Before treating any counter as an alarm, check what it EXCLUDES versus what the consuming code excludes.**

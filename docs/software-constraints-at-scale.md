@@ -75,7 +75,14 @@ Manual remix propagation (every template improvement × N client remixes), manua
 >
 > **THE READING RULE — `backlogDue` is the disambiguator, and it is already on the same tile** (`admin.health.tsx:141`, from `headCount("enrollments", active AND next_run_at <= now)`):
 > - **`backlogDue = 0` + stale `lastTick` -> HEALTHY AND IDLE.** No enrollment is due, so no tick claims work, so no row is written. Nothing is wrong.
-> - **`backlogDue > 0` + stale `lastTick` -> GENUINELY BROKEN.** Work is due and nothing is processing it. Escalate: run A-8.
+> - **`backlogDue > 0` + stale `lastTick` -> INVESTIGATE, not automatically broken.** `backlogDue` counts enrollments with NO client join, but `claim_due_enrollments` deliberately skips enrollments whose client is archived/soft-deleted — and `archive_client` only UPDATEs `clients`, it never deletes enrollments. So an archived client holding active enrollments inflates `backlogDue` **permanently** while the runner is perfectly healthy. Disambiguate before escalating:
+> ```sql
+> SELECT c.status, (c.deleted_at IS NOT NULL) AS soft_deleted, count(*) AS due
+> FROM enrollments e JOIN clients c ON c.id = e.client_id
+> WHERE e.status = 'active' AND e.next_run_at <= now()
+> GROUP BY 1,2;
+> ```
+> All rows archived/soft-deleted -> **HEALTHY** (orphan noise; exit those enrollments to clean the metric). Any row `status='active'` + `deleted_at IS NULL` -> **GENUINELY BROKEN**, escalate to A-8.
 >
 > The 2026-07-30 false alarm happened because only `runner_ticks` was checked and `backlogDue` was never looked at. **No new instrumentation is needed — the signal already exists and is visible.** A prompt to make the runner write idle ticks was drafted and REJECTED for this reason (see audit §11): it would add a second way to answer a question the tile can already answer, at the cost of editing the send path.
 
