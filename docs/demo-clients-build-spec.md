@@ -98,7 +98,7 @@ $$);
 ```
 Guarded on `is_demo = true`. Storage objects are not reclaimed by this — run the manual button periodically, or leave the tiny logo files.
 
-## §8 — Template change (`?demo=<slug>`) — apply to BOTH templates
+## §8 — SUPERSEDED — the `?demo=` param was NOT built (see §10)
 
 In `src/lib/client-data.tsx`:
 - Add a runtime demo-slug resolver: read `?demo=` from the URL, persist to `sessionStorage` (so internal navigation keeps it), **and only honor it when the baked `VITE_CLIENT_SLUG` is blank** — a real client remix has a slug baked in and is therefore completely immune.
@@ -114,3 +114,21 @@ In `src/lib/client-data.tsx`:
 5. Demo absent from: admin client switcher, Payment Access, SEO Status worklist.
 6. Purge → row gone; the demo link now shows Evergreen.
 7. Live-client regression: one real client's site still renders and its lead form still posts.
+
+---
+
+## §10 — AS-BUILT (2026-07-29) — supersedes §8 and the "shareable link" framing
+
+**Operator's actual workflow (clarified during the build):** no per-prospect links. Fill the agency form → copy the generated slug → remix the template → paste the slug into `VITE_CLIENT_SLUG` → publish → view the demo.
+
+That works with **zero template data-layer changes**, because `get_client_public` filters only `status='active' AND deleted_at IS NULL` and has no `is_demo` filter — a demo client is anon-readable exactly like a real one. **The `?demo=<slug>` runtime param (§8) was designed, then discarded as unnecessary.** So were the two intermediate designs it spawned (a demo-only `get_demo_client_public` RPC, and forcing `isDemoMode()` true on override). None were built.
+
+**What SHIPPED:**
+- App `ba440e2` — migration (`is_demo`, `demo_expires_at`, partial index), `demo.functions.ts` (createDemoClient / listDemoClients / purgeDemoClient), the 3 `is_demo` filters (agency.access, admin client-switcher, listSeoStatus), and the tenant-resolver demo guard.
+- App `320f8e8` — `agency.demos.tsx` + the "Demo Clients" nav entry.
+- App `2720182` — Copy-**slug** button (replaced the dead placeholder copy-link buttons) + optional demo photos → `template_vars.site_assets.work_examples`.
+- Template `02ebe98` (`professional-landscpaing-template`) — split the overloaded demo flag: new `isPreviewClient()` (`SLUG.startsWith("demo-")`) gates form SUBMISSION only in LeadForm / DiscountForm / ChatWidget. `isDemoMode()`, `getClientSlug()` and `fetchClient()` deliberately UNCHANGED — that is load-bearing: `isDemoMode()` gates the live RPC fetch, so making it true for `demo-` slugs would render the built-in Evergreen demo instead of the prospect. **Real data renders; forms are inert.**
+
+**Template inventory [CORRECTED 2026-07-29]:** there is **ONE** style template — `professional-landscpaing-template`. `pro-style-shell` is a REMIX of the purged CFL client and is being deleted; an earlier audit pass wrongly counted it as a second template.
+
+**Known residue (accepted):** purge deletes a demo's logo object but not its uploaded demo photos (`demo-{uuid}/site/work/…`) — tiny WebP orphans; optional fix noted in the session. Demo photos are the one thing that determines whether a demo lands outside the template's landscaping niche.
