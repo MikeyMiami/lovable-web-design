@@ -54,7 +54,7 @@ All 4 `telnyx-*` edge fns + legacy voice fns write a debug `events` row **before
 `parseIntent` handles STOP synonyms/START/PASS only (`_shared/core.ts:14-26`); HELP routes as a plain reply, nothing responds. Docs claimed "STOP/HELP/START" — corrected 2026-07-29 (launch-check, features, project-app knowledge). **Action:** verify a HELP auto-response is enabled on the Telnyx messaging profile, or add an app-side responder (prompt sketch in P-4) before a real client goes live. 10DLC reviewers test HELP.
 
 ### F-8 · LOW-MED (ops) — Four unbounded tables, zero retention
-`rate_limit_hits` (no purge anywhere), `send_attempts`, `runner_ticks` (720 rows/day), `events` (the dominant grower: ~10-14 rows per send + every webhook + funnel + decisions). Growth estimate at 100 moderately active clients: ~60-70k events/day ≈ **25M rows/yr (~10-15 GB)**. Nothing breaks (the hot queries are index-covered), but storage + query drift accumulate. **Fix:** retention SQL A-6 (pg_cron purge jobs) — safe to run now; `events` retention is an operator decision (audit value), monitor with A-7.
+`rate_limit_hits` (no purge anywhere), `send_attempts`, `runner_ticks` (**correction 2026-07-30: NOT 720 rows/day** — only ticks that CLAIM work write a row, so an idle platform writes ~0/day; see §11), `events` (the dominant grower: ~10-14 rows per send + every webhook + funnel + decisions). Growth estimate at 100 moderately active clients: ~60-70k events/day ≈ **25M rows/yr (~10-15 GB)**. Nothing breaks (the hot queries are index-covered), but storage + query drift accumulate. **Fix:** retention SQL A-6 (pg_cron purge jobs) — safe to run now; `events` retention is an operator decision (audit value), monitor with A-7.
 
 ### F-9 · MED (observability) — Stall-loops are invisible
 `template_missing`, `render_incomplete`, `send_config_missing` reschedule +15 min forever by design (correct — never terminal), but `health.functions.ts` surfaces only `failed24h` + tick stats. A typo'd template var = a drip silently stalling for weeks, emitting 96 events/day. **Fix now:** monitoring SQL A-3 (run weekly / after any template edit). **Recommend:** add these counts to the admin health tile (small additive change, post-launch fine).
@@ -241,3 +241,21 @@ The FALLBACK_CLIENT UUID is the **agency's own client row** (operator-confirmed)
 
 ### P-1 — unchanged, operator-approved, ready to fire (§6).
 ### Day-0 canary spec corrected: the STOP canary now EXPECTS Telnyx's confirmation + a 40300 on the follow-up send + a HELP auto-reply check (/telnyx-provider §8 step 7).
+
+---
+
+## §11 — 2026-07-30 — `runner_ticks` is NOT a heartbeat (false-alarm post-mortem)
+
+**A false "the drip runner has been dead 27 hours" alarm was raised during routine verification. The runner was healthy the entire time.** Recording the mechanism so it never recurs.
+
+**What was observed:** latest `runner_ticks` row was `2026-07-29 16:08`, ~27h stale, and the latest `cron_decision` event matched it. Inferred: cron active but not executing.
+
+**What was actually true:** `drip-runner` was firing every 2 minutes without a miss — `cron.job_run_details` showed `succeeded` at `03:40, 03:42 … 04:26`, and `net._http_response` showed matching `200 {"ok":true,"claimed":0,...}` for each. pg_net request ids `188→369` spanned exactly 6 hours = 181 two-minute ticks (pg_net prunes responses after ~6h, which made `max_id` look deceptively low).
+
+**Root cause of the wrong inference:** `runDripTick()` early-returns at `runner.server.ts:253` (`if (due.length === 0) return summary;`) **before** the `runner_ticks` insert at ~832. **A tick that claims zero enrollments writes no `runner_ticks` row and no events.** With no active enrollments due, the table is frozen at the last tick that had work. **An idle runner is indistinguishable from a dead one in that table.** The file's header comment ("Every tick writes one `runner_ticks` row") is FALSE and is the trap.
+
+**Process failure, not a code defect.** This audit's own **A-8** already prescribes the correct three-layer check (`cron.job` + `cron.job_run_details` + `net._http_response`) and the app knowledge doc says "Verify BOTH `cron.job_run_details` AND `net._http_response`." The alarm came from substituting an ad-hoc `runner_ticks` query for the documented method. **Follow A-8; never treat `runner_ticks` as liveness.**
+
+**Consequences accepted (deliberately NOT fixed):** the admin health tile (`health.functions.ts:102`) reads the newest `runner_ticks` row as `lastTick`, so it shows a stale timestamp on any quiet day. A prompt to make the runner write idle ticks was drafted and **REJECTED** at second-wave review: it edits the most critical file in the system for observability convenience, and would add ~263k idle rows/yr. Correct fix if ever wanted: derive cron liveness in the health tile from `cron.job_run_details` (read-only admin surface, never the send path) — post-launch, ~5%. Also worth folding into any future runner-touching prompt: correct the false header comment.
+
+**Also confirmed 2026-07-30:** the A-6 retention purges are live and working — `purge-rate-limit-hits` first run `DELETE 172`; `purge-send-attempts` `DELETE 0` (correct, nothing 180d old). And `?ping=1` returned `runner_version v20260729-1`, proving the 429-retryable fix is deployed.

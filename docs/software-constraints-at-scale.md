@@ -71,6 +71,8 @@ Manual remix propagation (every template improvement × N client remixes), manua
 
 ## 6. Trigger dashboard (run monthly, or when mornings feel slow)
 
+> **⚠ `runner_ticks` IS NOT A HEARTBEAT — do not use it to judge whether cron is alive [verified 2026-07-30].** `runDripTick()` returns at `runner.server.ts:253` (`if (due.length === 0) return summary;`) **before** the `runner_ticks` insert at ~832, so a tick that claims nothing writes NO row and NO events. An idle runner and a dead runner look IDENTICAL in this table. (The file's own header comment claiming "every tick writes one `runner_ticks` row" is wrong.) This produced a false "cron has been down 27 hours" alarm during the 2026-07-30 check; the runner was firing perfectly every 2 minutes. **Liveness = `cron.job_run_details` + `net._http_response`** (audit report SQL A-8). `runner_ticks` answers "how hard did working ticks work" — a capacity question, which is all the queries below use it for. Corollary: the admin health tile's `lastTick` (`health.functions.ts:102`) reads the latest `runner_ticks` row, so it will show a stale timestamp on any quiet day — that is expected, not a fault.
+
 ```sql
 -- How often did ticks hit the 25s budget? (recurring TRUE = pull lever 1)
 SELECT count(*) FILTER (WHERE hit_time_budget) AS budget_hits, count(*) AS ticks
