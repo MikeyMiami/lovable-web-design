@@ -11,6 +11,7 @@ The admin dashboard lives at `/admin` on the client website, gated to `admin` / 
 
 ## Tabs
 - **Dashboard** (`/admin`) — KPIs (contacts in/out, sends, reviews) for the active client.
+- **Client switcher [2026-07-29]:** the `/admin` shell's client list filters `.eq("is_demo", false)`, so sales-demo clients never appear here. Demos are created and managed ONLY from **agency → Demo Clients** (`/agency/demos`, see `/agency-view`); there is deliberately no per-client admin surface for them. If a client seems "missing" from the switcher, check whether it was created as a demo.
 - **Contacts** (`/admin/contacts`) — CRM list + detail.
 - **Conversations** (`/admin/conversations`) — full SMS inbox + threads.
 - **Feedback** (`/admin/feedback`) — low-star private feedback submissions.
