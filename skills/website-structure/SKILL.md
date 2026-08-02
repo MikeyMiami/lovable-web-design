@@ -73,7 +73,7 @@ Two related invariants the writer also relies on: the anon RPCs return **publish
 
 Two elements sit OUTSIDE the page registry because they are shell-level, not pages:
 - **Call-Now button** — a compact click-to-call pill rendered INSIDE the header, centered between the logo and the nav (**placement revised 2026-07-27**; it is not a full-width strip and is not mounted in the shells — being in the header already puts it on every page). `tel:` href from `phone_e164`, visible number via `formatPhoneUS(phone_display)`, label from the copy slot `home.call_bar_label` (default "Call Now"). Renders nothing when the client has no `phone_e164`. Must stay reachable on mobile (header or mobile menu, ≥44px target) — desktop-only is a defect.
-- **Hero chat CTA** — a button directly under the homepage H1, label from the copy slot `home.cta_button` (default "Chat with us now"), which opens the EXISTING chat widget via a window `"open-chat-widget"` CustomEvent. Rendered only when `chat_widget_enabled !== false`. Never a second chat implementation — see `/chat-widget` §1b.
+- **Hero chat CTA** — a button at the bottom of the homepage hero text block, label from the copy slot `home.cta_button` (default "Chat with us now"), which opens the EXISTING chat widget via a window `"open-chat-widget"` CustomEvent. Rendered only when `chat_widget_enabled !== false`. Never a second chat implementation — see `/chat-widget` §1b.
 
 Both labels are per-client editable in Admin → Content. Full build contract in `/template-builder` §9.
 

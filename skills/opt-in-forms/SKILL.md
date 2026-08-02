@@ -47,7 +47,7 @@ The public-write routes accept these EXACT keys (Zod-validated). **Never send `c
 - **Side effect [LOCKED]:** if the submitter is currently in the One-Year drip, the submission EXITS them from it (re-engagement). A form submit is distinct from a raw link click (which does not exit the one-year drip).
 
 ## 3b. Chat Widget (customer-facing) [LOCKED — CAPTURE-FIRST since 2026-07-16; see /chat-widget skill]
-- **Location:** corner chat bubble on the client's main website — **a lead form in a chat skin; NO AI conversation** (the AI Q&A path is PARKED — /chat-widget skill). Renders only when `chat_widget_enabled` (default true); greeting = `template_vars.chat_widget_greeting` (default: "Hi! This goes right to the owner's phone. What can I help you with?"). **SECOND ENTRY POINT [2026-07-27]:** the same widget also opens from a CTA button under the homepage H1 via a window `"open-chat-widget"` CustomEvent — ONE widget, MULTIPLE triggers. Any new entry point dispatches that event and must NEVER duplicate this form, its consent checkbox, its payload, or its PoW shield (a second chat form = a second unshielded intake path). Button label = the `home.cta_button` copy slot; gated on `chat_widget_enabled !== false` so it cannot open something that doesn't render.
+- **Location:** corner chat bubble on the client's main website — **a lead form in a chat skin; NO AI conversation** (the AI Q&A path is PARKED — /chat-widget skill). Renders only when `chat_widget_enabled` (default true); greeting = `template_vars.chat_widget_greeting` (default: "Hi! This goes right to the owner's phone. What can I help you with?"). **SECOND ENTRY POINT [2026-07-27]:** the same widget also opens from a CTA button in the homepage hero via a window `"open-chat-widget"` CustomEvent — ONE widget, MULTIPLE triggers. Any new entry point dispatches that event and must NEVER duplicate this form, its consent checkbox, its payload, or its PoW shield (a second chat form = a second unshielded intake path). Button label = the `home.cta_button` copy slot; gated on `chat_widget_enabled !== false` so it cannot open something that doesn't render.
 - **Fields:** First Name, Last Name, Phone (+ optional message "What do you need help with?"). Email optional in the schema, not shown by the widget.
 - **Consent [LOCKED — SINGLE required checkbox, same posture as the discount form §3]:** reuses the a2p MARKETING skeleton verbatim, gates submission, sends `consent: true`. Plus the invisible native PoW bot-shield (Turnstile RETIRED 2026-07-22).
 - **Wire payload → `POST /api/public/chat/optin`:** `{ slug?, first_name, last_name, phone_e164, email?, your_message?, consent, website?, pow_token }` — `phone_e164` REQUIRED; `consent: z.literal(true)`; message key = **`your_message`** (stored to `contacts.notes`). CORS allowlist + IP/client rate limits; contact deduped by (client_id, phone_e164); **source `chat_widget`** (distinct from `web_form`, so widget leads are attributable).
@@ -61,6 +61,26 @@ Destination of BOTH the review-drip tracked link and the reactivation link. Land
   - < threshold → status `Negative Review` → `/api/public/r/feedback`. Does NOT enroll into One-Year.
 - `/api/public/r/feedback` — below-threshold private feedback. Collects **Name, Email, Feedback**; **phone auto-fills** from the mapped contact. Stores in `review_feedback` → fires owner email ("We Saved You From a Negative Review") + mobile notification → shows the completion screen. No SMS consent needed (not a texting opt-in). **Page copy [LOCKED — operator-set 2026-07-28, do not reword]:** form page h1 `Sorry we missed the mark`, subtext `Tell {business_name} what went wrong.` (the old "— this goes straight to the owner, not Google" clause was REMOVED on purpose; do not reinstate it), submit button `Submit Feedback`; completion page h1 `We received your feedback.`, subtext `All feedback is taken seriously and reviewed personally by our team. We'll be in touch.` All of it lives in `src/routes/api/public/r/feedback.ts` — it is SHARED-BACKEND copy rendered for every client, NOT a per-client copy slot, so changing it changes it for everyone.
 - `/api/public/r/enroll` — REMOVED. Review enrollment happens via the mobile-app Review Request form (#1), not public self-enroll.
+
+---
+
+## 5. DEMO MODE — per-client kill switch on all three public forms [SHIPPED 2026-08-01]
+`template_vars.demo_mode === true` on a client makes forms 2, 3 and 3b **capture but never send**. Toggled from **Admin → Settings → Business Identity**; a "Demo mode ON" badge shows in the Settings header. OFF **removes** the key (never stores `false`) — it is read strictly as `=== true`.
+
+**What happens on submit while ON** (identical across `intake` / `discount` / `chat/optin`):
+1. Contact created, deduped, consent recorded — **unchanged**.
+2. **Enrollment SKIPPED** — so the runner never later ships the sequence.
+3. Owner notification written **directly** (`writeNotification`) — in live mode the drip's step 0 produces it, so without this it would be missed. Intake's in-hours / after-hours branch is computed **before** the demo split and is preserved (`lead_form_business_hours` | `lead_form_after_hours`).
+4. The drip's **step-0 SMS is synthesized** as an outbound `messages` row on the conversation (`sid: null`, `status: 'delivered'`) so the thread looks live. **No provider call.**
+5. Event payload carries `demo: true`.
+
+Shared implementation: `src/lib/demo/demo-mode.server.ts` (`isDemoMode`, `synthesizeDemoReply`). `chat/optin.ts` keeps its original inline copy — it is the behavioural reference and is deliberately byte-identical to pre-2026-08-01.
+
+**⚠️ The runner guard is TERMINAL — flipping demo mode ON is destructive to in-flight drips.** `runner.server.ts` `[D0]` exits any claimed enrollment belonging to a demo-mode client: `exitEnrollment(enr, "exited_demo_mode")` sets `status='exited', next_run_at=null` and logs a `demo_skipped` event. That makes the toggle honest ("nothing is actually sent" also silences enrollments that were already running) — **but turning demo mode back OFF does NOT resume them.** Those contacts are permanently out of their sequence.
+- Safe on a fresh/demo client with no live traffic.
+- **On a client with active drips, flipping ON ends every one of them.** Warn before using it as a temporary "show a prospect" switch on a live account; clear or re-enrol deliberately afterwards.
+
+Demo mode is per-client and unrelated to the global `SMS_MODE=stub|live` env, and unrelated to `is_demo` demo-clients (a separate feature — those are refused by the tenant resolver entirely and their forms are inert).
 
 ---
 
