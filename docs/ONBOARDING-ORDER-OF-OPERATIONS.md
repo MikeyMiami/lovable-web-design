@@ -18,6 +18,35 @@ Sources: `docs/client-onboarding-process.md`, `docs/1f-*`, `skills/launch-check/
 
 ---
 
+## 1b. ⚠️ WHICH TIER? Decide before Phase 0 — it changes the path
+
+Everything below is the **FULL ($297)** path. A **STARTER ($97)** client — website + forms,
+email-only lead alerts, no SMS automations, no A2P, no mobile app — takes a shorter route
+and **skips phases that would otherwise block you**.
+
+**Read `skills/starter-tier/SKILL.md` FIRST if the client is Starter.** In brief:
+
+| Phase | Starter |
+|---|---|
+| 0 — kick off A2P early | **SKIP ENTIRELY** — no 10DLC, no campaign, no carrier registration |
+| A — onboarding wizard | Same form, but **step 5 (EIN / legal name / TCPA) is skipped**. Needs the tier selector — see starter-tier §5a |
+| A.5 — provision login | **SKIP** — a Starter client gets no app login |
+| B — agency config | Same, plus set `clients.tier = 'starter'` **FIRST, before anything else** |
+| C — telephony + A2P | **SKIP ENTIRELY** |
+| D — remix the site | Same |
+| E — design + compliance | Same |
+| F — launch-check | **Starter branch** — skips A2P/provider/runner checks, keeps CORS, bot shield, RLS, review link, and owner-email delivery |
+| Delivery | **DO NOT send the welcome email.** Tell the client their site is live and enquiries go straight to their email |
+
+**The trap:** set the tier **before the first form submission**. A lead captured while `tier`
+is unset takes the Full path and gets enrolled into a drip — on a client with no consent
+record and no A2P registration.
+
+**Downgrades are destructive.** Moving an existing Full client to Starter permanently exits
+every in-flight drip and turning it back does not resume them.
+
+---
+
 ## 2. Critical path at a glance (9 phases, in order)
 
 1. **Phase 0 — Sign + provision provider + kick off A2P.** Collect onboarding form; **new clients go on Telnyx (the default + only selectable provider — TextGrid is frozen legacy; `clients.provider`) and kick off the Telnyx Brand→Campaign** (2–4 day vet overlaps the build — the single longest external dependency).
