@@ -69,6 +69,54 @@ This skill VERIFIES; it does not build. If a check fails, fix it in the owning s
 - [ ] **The inbound webhook (LIVE on the edge functions, BOTH providers) drives REAL-TIME drip exits** (not deferred to the next pre-step check): one-year reply → exit + interest notification immediately (gaps are weeks/months — pre-step-only would delay the notification ~a month); missed-call reply-skip; opt-out. (Pre-step checking is the stub-mode fallback only.)
 - [ ] Per-client number provisioned, forwarded to call_forwarding_number, placed on site + GBP.
 
+## E0. ⚠️ STARTER PLAN clients — run this SUBSET, not the full gate
+
+A **Starter** ($97) client has **no A2P registration, no messaging provider, and no drip
+enrollments** — by design, not by oversight. Running the full gate against one fails on
+§B, §C and §D every time, and a gate that always fails is a gate people learn to ignore.
+
+**Confirm the plan first:** `template_vars.starter_mode === true`. If it is not set, this
+is a Full client — run the normal gate.
+
+### SKIP entirely for Starter
+- **§B Automation / cron engine** — no enrollments exist to run. (The runner still ticks
+  for other clients; it simply never has work for this one.)
+- **§D Telephony** — no number, no provider, no webhooks.
+- Any §C item whose end-to-end path is an SMS drip: review-request drip, 1-year drip,
+  reactivation, missed-call textback.
+- A2P / 10DLC registration, campaign approval, sample messages, EIN verification.
+
+### KEEP — and one of these is now the most important check you run
+- [ ] **OWNER EMAIL DELIVERY — this is the ONLY lead path on Starter.** Submit a real lead
+      on the live site and confirm the owner receives the email. On a Full client a failed
+      email is an annoyance because the drip still fires; on Starter it means **the lead is
+      silently lost**. Check `events` for `owner_email_sent`, and confirm
+      `clients.email_notifications_enabled` is not false and `notification_email`/`email`
+      resolves to a real inbox the owner reads.
+- [ ] **The email sign-off reads "Reply to this lead directly."** — not "Open your app to
+      respond." If it says the latter, `starter_mode` is not actually set.
+- [ ] **No enrollment row was created** by that submission:
+      `select count(*) from enrollments where client_id = '<id>'` → **0**.
+- [ ] CORS + per-client domain allowlist + OPTIONS on the public lead routes.
+- [ ] Bot shield (native PoW) + rate limits on `intake`, `discount`, `chat/optin`.
+- [ ] RLS + secrets hygiene — unchanged, still applies.
+- [ ] Review link: the tracked-link endpoint resolves and the funnel renders. Starter
+      clients use this identically; it is independent of drips.
+- [ ] Site, SEO pages, photos, forms render — the whole §E data-QA subset below.
+
+### Starter-specific gotchas
+- [ ] **`starter_mode` was set BEFORE the site went live**, not after. A lead captured while
+      it was off enrolled into a drip on a client with no consent record. Check
+      `enrollments` for that client is 0 — if it is not, investigate before launch.
+- [ ] **No welcome email was sent.** It is what reveals the app and carries the
+      set-password link. `select * from events where client_id = '<id>' and type like
+      '%welcome%'` → empty.
+- [ ] **The client has not been told the app exists** and has no login.
+- [ ] If the AI chat widget is enabled, confirm it was a deliberate decision — it can run
+      email-only, but it must be decided per plan, not per client.
+
+---
+
 ## E. Per-client go-live subset (lighter — backend already proven)
 - [ ] **GATE — Stage 1f shipped (the deliberate FINAL pre-launch hardening, AFTER the Stage-4 freeze):** verify `clients.provider` first, then confirm the client's provider path is live — **TextGrid [FROZEN]:** real-provider swap; **Telnyx [go-forward]:** `TELNYX_API_KEY` set + the REAL `TELNYX_PUBLIC_KEY` swapped in for the throwaway TEST key — plus the inbound/status webhook layer (Supabase edge functions) + message testing + the LIVE native bot-shield (PoW — Turnstile RETIRED 2026-07-22) + rate-limiting on all public lead-intake routes before this client goes public — incl. the 2f chat endpoints `/api/public/chat/optin` + `/api/public/chat/request` (carried forward from 2f-F2). These (provider path + webhook layer + bot-shield/rate-limit) are the ONLY changes permitted to touch the frozen backend. CORS is browser-only — without 1f, a direct/non-browser POST with this client's slug or allowed-origin can spam-insert. NO client launches pre-1f.
 - [x] **✅ DONE 2026-07-29 — Drip runner SCHEDULED + ON via pg_cron.** (Was the standalone go-live blocker; nothing auto-fired until it was scheduled.) As installed: job **`drip-runner`**, schedule **`*/2 * * * *`**, `cron.schedule` → `net.http_post` to **`https://app.pierceworks.co/api/public/cron/sequences`** with the `x-cron-secret` header and **`timeout_milliseconds := 30000`**.
