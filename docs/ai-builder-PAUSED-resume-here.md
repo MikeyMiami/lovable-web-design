@@ -77,6 +77,42 @@ PierceWorks is `status='active'`, `is_demo=false`, `is_internal=true` → **it r
 
 ---
 
+## ⚠️ Template drift — the demo_request body is NOT in migration history
+
+**2026-08-03.** The `demo_request_internal_notify` body was reordered (business
+name + business phone first, the person's cell below) as a **live data edit**,
+per a workspace rule against committing data ops as migrations.
+
+Migration `20260801150417` still seeds the OLD body — the one without
+`{business_phone}`. **If this database is ever rebuilt from migrations, or a
+fresh environment is stood up, the alert silently reverts**: the business phone
+disappears, nothing errors, and the first sign is an alert that looks wrong.
+
+Note the precedent cuts the other way: that original body WAS seeded by a
+migration in this repo, so an idempotent upsert would be consistent with
+existing practice rather than a new data-op exception. A prompt for that fix
+was written 2026-08-03; if it was never run, this note is the only record.
+
+Current intended body:
+
+```
+New demo request
+
+{business_name}
+{business_phone}
+
+{full_name}
+{phone}
+{email}
+{city}
+
+{build_notes}
+
+Submitted {request_time}
+```
+
+---
+
 ## Open items carried into the backlog
 
 1. **[DEFERRED, no longer a blocker] Google Cloud billing** — ~$10 verification. Now gates only prompt 3's checks 5–7 and the eventual `BusinessStep` → `PlacesStep` upgrade. The funnel ships without it.
