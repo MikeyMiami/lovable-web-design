@@ -18,32 +18,33 @@ Sources: `docs/client-onboarding-process.md`, `docs/1f-*`, `skills/launch-check/
 
 ---
 
-## 1b. ⚠️ WHICH TIER? Decide before Phase 0 — it changes the path
+## 1b. ⚠️ STARTER or FULL? Decide before Phase 0 — it changes the path
 
 Everything below is the **FULL ($297)** path. A **STARTER ($97)** client — website + forms,
-email-only lead alerts, no SMS automations, no A2P, no mobile app — takes a shorter route
-and **skips phases that would otherwise block you**.
+email-only lead alerts, no SMS automations, no app handover — is a per-client **switch**
+(`template_vars.starter_mode`) and takes a shorter route.
 
 **Read `skills/starter-tier/SKILL.md` FIRST if the client is Starter.** In brief:
 
 | Phase | Starter |
 |---|---|
 | 0 — kick off A2P early | **SKIP ENTIRELY** — no 10DLC, no campaign, no carrier registration |
-| A — onboarding wizard | Same form, but **step 5 (EIN / legal name / TCPA) is skipped**. Needs the tier selector — see starter-tier §5a |
-| A.5 — provision login | **SKIP** — a Starter client gets no app login |
-| B — agency config | Same, plus set `clients.tier = 'starter'` **FIRST, before anything else** |
+| A — onboarding wizard | **Same form, unchanged.** At step 5 tick "No EIN" and move through |
+| A.5 — provision login | **SKIP** — no app, so no login |
+| B — agency config | Same, plus flip `starter_mode` ON **before the first form submission** |
 | C — telephony + A2P | **SKIP ENTIRELY** |
 | D — remix the site | Same |
 | E — design + compliance | Same |
-| F — launch-check | **Starter branch** — skips A2P/provider/runner checks, keeps CORS, bot shield, RLS, review link, and owner-email delivery |
+| F — launch-check | **Starter branch** — skip A2P/provider/runner; keep CORS, bot shield, RLS, review link, owner-email delivery |
 | Delivery | **DO NOT send the welcome email.** Tell the client their site is live and enquiries go straight to their email |
 
-**The trap:** set the tier **before the first form submission**. A lead captured while `tier`
-is unset takes the Full path and gets enrolled into a drip — on a client with no consent
-record and no A2P registration.
+**The trap:** flip the switch **before the first lead arrives**. A lead captured while
+`starter_mode` is off takes the Full path and enrolls into a drip — on a client with no
+consent record and no A2P registration.
 
-**Downgrades are destructive.** Moving an existing Full client to Starter permanently exits
-every in-flight drip and turning it back does not resume them.
+**Upgrades are clean; downgrades are not.** Starter → Full just starts enrolling new leads.
+Full → Starter **permanently exits every in-flight drip**, and flipping back does not
+resume them.
 
 ---
 
