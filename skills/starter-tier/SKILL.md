@@ -7,7 +7,9 @@ description: Use when onboarding, delivering, or supporting a client on the $97/
 
 **One sentence:** the same site, the same forms, the same review funnel — but a lead notifies the owner **by email only**, nothing is ever texted, and the client is never told an app exists.
 
-> **STATUS 2026-08-04: SPECIFIED, NOT BUILT.**
+> **STATUS 2026-08-04: BUILT AND LIVE-VERIFIED.** Switch, email suffix, form
+> gating, runner `[D0b]` guard, `_starter` template variants, admin toggle with
+> downgrade confirmation, and `enroll()` gated at every reachable source.
 
 ---
 
@@ -52,19 +54,19 @@ if (demoModeClients.has(cid)) {
 
 One call site, **no resume path anywhere in the codebase**. Flipping Starter on for an existing Full client permanently exits every in-flight drip; flipping back does not revive them. Those contacts never receive the rest of their sequence.
 
-**Selling Starter to new clients is safe. Downgrading an existing client is not.** Block it or warn hard.
+**Selling Starter to new clients is safe. Downgrading an existing client is not.** The admin toggle counts that client's `status='active'` enrollments and confirms — *"N active sequences will be permanently ended and cannot be resumed."* Turning Starter **off** has no guard and needs none.
 
 ## 4. Copy — the complete audit [repo side verified 2026-08-04]
 
 **Only two places in the entire codebase mention the app to a client:**
 
-### 4a. `src/lib/notifications/email.server.ts:45` — MUST FIX
+### 4a. `src/lib/notifications/email.server.ts` — ✅ FIXED
 
 ```ts
 text: body + "\n\n— Open your app to respond.",
 ```
 
-Hardcoded, appended to **every** owner email of **every** type. A Starter client has no app. Make the suffix starter-aware — e.g. `— Reply to this lead directly.` This one line covers all 13 notification types.
+Was hardcoded and appended to **every** owner email of **every** type. The suffix is now starter-aware — `— Reply to this lead directly.` on Starter, the original line on Full. `template_vars` is read in the same query as the existing `email_notifications_enabled` gate, so no extra round trip. One change, all 13 types.
 
 ### 4b. `src/lib/clients/welcome.functions.ts` — DO NOT SEND
 
@@ -80,7 +82,7 @@ Triggered **manually** from `admin.review.tsx`; nothing sends it automatically. 
 
 **Push is safe:** dispatch is fire-and-forget with `.catch()`, so a Starter client with no registered device fails silently and cannot error a request.
 
-### 4d. Template bodies — check, do not assume
+### 4d. Template bodies — ✅ AUDITED 2026-08-04
 
 **11 of 13 notification templates live only in the database**, not in migrations. Only `demo_request_internal_notify` and `ai_chat_lead_internal_notify` are seeded in the repo.
 
@@ -92,7 +94,9 @@ Only **five** are reachable on Starter — the rest require an enrollment, which
 - `ai_chat_lead_internal_notify`
 - `negative_review_feedback_internal` *(the review link stays live)*
 
-These are lead alerts — name, phone, email, message — so they most likely contain **no** app or automation language. Check them; do not rewrite them on spec. **Also confirm no per-client overrides exist** (`client_id is not null`), or a global fix will not reach those clients.
+**Four of the five promised something Starter never does** — "we've let them know", "we sent them an after-hours reply", "we've already texted them. Open the conversation". Each now has a `<key>_starter` variant selected by the flag; the **shared bodies are untouched**, because Full clients rely on them being true. `negative_review_feedback_internal` needed no change — its "read about this customer's experience here:" resolves to the lines directly below it.
+
+**Per-client overrides: 9 rows, ZERO on any of these five keys** (all are SMS drip templates). The global variants reach every client.
 
 ## 5. Delivery order [FINITE]
 
@@ -119,6 +123,18 @@ These are lead alerts — name, phone, email, message — so they most likely co
 - **Never `demo_mode` on a paying client** — §1.
 - **Never enroll a Starter lead into anything**, not even "just the review drip". No consent path exists for this plan.
 - **The chat widget is INCLUDED in Starter** (decided 2026-08-04) and needs no special handling. It is **not AI** — capture-first since 2026-07-16, a chat-skinned opt-in form that posts to `/api/public/chat/optin` exactly like the lead form. The `ai_chat_lead*` template keys are legacy identifiers from a PARKED design; see `/chat-widget`.
+
+## 7b. `enroll()` is gated at every reachable source [2026-08-04]
+
+There are **11 `enroll()` call sites**; only three were gated in the first pass. The rest were found in an end-to-end audit and patched, because relying on `[D0b]` alone created junk enrollments that were immediately destroyed — and broke the launch-check assertion that a healthy Starter client has zero.
+
+**Now gated:** `intake` · `discount` · `chat/optin` · `r/$token` · `r/rate` · `chat/request` · `missed-call.server`
+
+**Deliberately NOT gated:** `runner.server.ts:977` (chained handoff — `[D0b]` exits before execution reaches it) · `app.notifications.tsx` / `app.review.tsx` (in-app buttons; Starter has no app handover and no login).
+
+**On the review paths, ONLY the drip handoff is skipped.** The `contacts` update, the `review_completed` event and the 302 to `review_link` all still fire — the review is real and must stay recorded, or review reporting silently under-counts for every Starter client.
+
+`[D0b]` remains as the backstop. These patches reduce how often it fires; they do not replace it.
 
 ## 8. Boundaries
 
