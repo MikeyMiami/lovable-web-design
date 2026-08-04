@@ -35,6 +35,7 @@ Both point at the **same existing branch**: capture the contact, skip the enroll
 | Mobile app | built, **never handed over** | handed over |
 | Welcome email | **never sent** | sent |
 | Google review link + funnel | ✅ identical | ✅ |
+| Chat widget | ✅ included, email-only | ✅ |
 
 **Commercially:** no 10DLC campaign, no per-message cost, no TCPA exposure. That removes the slowest and riskiest part of onboarding, which is most of why the plan is worth selling.
 
@@ -117,7 +118,7 @@ These are lead alerts — name, phone, email, message — so they most likely co
 - **Set the switch before the first lead** — §5.1.
 - **Never `demo_mode` on a paying client** — §1.
 - **Never enroll a Starter lead into anything**, not even "just the review drip". No consent path exists for this plan.
-- **Decide the AI chat widget once**, before the first client. It can run email-only; changing it later changes what someone already bought.
+- **The chat widget is INCLUDED in Starter** (decided 2026-08-04) and needs no special handling. It is **not AI** — capture-first since 2026-07-16, a chat-skinned opt-in form that posts to `/api/public/chat/optin` exactly like the lead form. The `ai_chat_lead*` template keys are legacy identifiers from a PARKED design; see `/chat-widget`.
 
 ## 8. Boundaries
 

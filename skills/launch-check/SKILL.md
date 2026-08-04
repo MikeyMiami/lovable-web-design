@@ -16,7 +16,7 @@ This skill VERIFIES; it does not build. If a check fails, fix it in the owning s
 - [ ] NO anon INSERT/UPDATE/DELETE anywhere; **anon has NO direct `clients` base SELECT** (42501) — public client data is read ONLY via the `get_client_public` RPC (RPC-only model; see the §A row below).
 - [x] **[STAGE 3.5 §A — SECURITY — DONE; MECHANISM RECONCILED 2026-06-15] anon public-read = `get_client_public` RPC (closed `clients_anon_select_sensitive_fields`):** base `clients` has **ZERO anon grants + NO anon RLS policy** → direct anon SELECT = 42501. Sole anon path = **`public.get_client_public(slug)`** (`SECURITY DEFINER`, `STABLE`, `SET search_path=public`, EXECUTE to anon) → 13-col projection (`slug, business_name, tagline, phone_display, address, hours, license_number, logo_url, brand_color, service_area, social_links, template_vars, review_link`) with `template_vars - 'notification_email'` stripped + `status='active' AND deleted_at IS NULL` filtered IN-BODY. **No `clients_public` view.** Sensitive cols (`twilio_*`/`call_forwarding_number`/`email`/`notification_email`/`allowed_origins`) never projected. Data-loader (Project 2) calls the RPC. Introspection-backed (`pg_proc`/`pg_policies`/`proacl`).
 - [ ] All public writes go through server fns (admin client + Zod + slug→client_id + server-set source).
-- [ ] CORS + per-client domain allowlist + OPTIONS on public lead-intake routes — incl. the AI-chat-widget endpoints `/api/public/chat/optin` + `/api/public/chat/request` (new public lead-writes at 2f), not just `/api/public/intake`; NO CORS on webhook/cron routes. *(This structure is proven at FREEZE. The LIVE bot-shield (invisible native PoW — Turnstile/hCaptcha RETIRED 2026-07-22) + rate-limit enforcement is the **1f launch gate (§E)** — NOT a freeze blocker; it is the deliberate final pre-launch hardening that may touch the frozen backend.)*
+- [ ] CORS + per-client domain allowlist + OPTIONS on public lead-intake routes — incl. the chat-widget endpoints (capture-first, NOT AI) `/api/public/chat/optin` + `/api/public/chat/request` (new public lead-writes at 2f), not just `/api/public/intake`; NO CORS on webhook/cron routes. *(This structure is proven at FREEZE. The LIVE bot-shield (invisible native PoW — Turnstile/hCaptcha RETIRED 2026-07-22) + rate-limit enforcement is the **1f launch gate (§E)** — NOT a freeze blocker; it is the deliberate final pre-launch hardening that may touch the frozen backend.)*
   - [ ] **[1f step 3 — as built; Turnstile RETIRED 2026-07-22, replaced by the invisible native PoW shield — see §E] Bot-shield** verified server-side on the 3 bare lead forms (`intake`, `discount`, `chat/optin`); `chat/request` is rate-limit-only (token-gated); webhooks/cron EXCLUDED. **Rate-limiter is DB-backed** (`rate_limit_hits` table + atomic `check_rate_limit()` RPC — no KV/DO in the Lovable/Nitro runtime), **per-IP AND per-client** (`CF-Connecting-IP`); 429+`Retry-After` on exceed. siteverify: fail-CLOSED on invalid token, fail-OPEN+alert on a siteverify call failure. (`docs/1f-step3-turnstile-ratelimit-build-spec.md`.)
 - [ ] `enrollments` UNIQUE (client_id, contact_id, sequence_key) present (and existing dupes removed first).
 - [ ] Index set present incl. partial `enrollments(next_run_at) WHERE status='active'`; client_id-leading indexes on contacts/messages/events; user_roles(user_id).
@@ -112,8 +112,9 @@ is a Full client — run the normal gate.
       set-password link. `select * from events where client_id = '<id>' and type like
       '%welcome%'` → empty.
 - [ ] **The client has not been told the app exists** and has no login.
-- [ ] If the AI chat widget is enabled, confirm it was a deliberate decision — it can run
-      email-only, but it must be decided per plan, not per client.
+- [ ] Chat widget (if enabled) behaves exactly like the lead form: opt-in → contact →
+      **no enrollment** → owner email. It is **not AI** and makes no model call — the
+      template posts only to `/api/public/chat/optin`.
 
 ---
 
